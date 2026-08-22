@@ -22,6 +22,11 @@ const CANONICAL_HEADERS = [
   "city",
   "image_url",
   "image_alt",
+  "why_it_matters",
+  "what_to_know",
+  "best_time",
+  "duration_text",
+  "location_note",
   "featured",
   "is_public",
 ];
@@ -74,6 +79,11 @@ describe("toExperienceExcelRow", () => {
       city: "",
       image_url: "",
       image_alt: "",
+      why_it_matters: "",
+      what_to_know: "",
+      best_time: "",
+      duration_text: "",
+      location_note: "",
       featured: false,
       is_public: false,
     });
@@ -92,6 +102,11 @@ describe("toExperienceExcelRow", () => {
       city: null,
       image_url: null,
       image_alt: null,
+      why_it_matters: null,
+      what_to_know: null,
+      best_time: null,
+      duration_text: null,
+      location_note: null,
       featured: true,
       is_public: true,
     });
@@ -136,6 +151,11 @@ describe("buildExperiencesWorkbook", () => {
       city: null,
       image_url: "https://example.com/image.jpg",
       image_alt: "A potluck table",
+      why_it_matters: null,
+      what_to_know: null,
+      best_time: null,
+      duration_text: null,
+      location_note: null,
       featured: false,
       is_public: true,
     });
@@ -157,6 +177,11 @@ describe("buildExperiencesWorkbook", () => {
       "",
       "https://example.com/image.jpg",
       "A potluck table",
+      "",
+      "",
+      "",
+      "",
+      "",
       false,
       true,
     ]);
@@ -173,7 +198,9 @@ describe("buildExperiencesWorkbook", () => {
   it("gives the difficulty column a dropdown listing all four values, without padding the sheet with empty rows", () => {
     const workbook = buildExperiencesWorkbook([]);
     const sheet = workbook.getWorksheet(EXPERIENCES_SHEET_NAME)! as unknown as {
-      dataValidations: { model: Record<string, { type: string; formulae: string[] }> };
+      dataValidations: {
+        model: Record<string, { type: string; formulae: string[] }>;
+      };
       rowCount: number;
       getColumn(key: string): { letter: string };
     };
@@ -202,6 +229,11 @@ describe("buildExperiencesWorkbook", () => {
       city: null,
       image_url: null,
       image_alt: null,
+      why_it_matters: null,
+      what_to_know: null,
+      best_time: null,
+      duration_text: null,
+      location_note: null,
       featured: false,
       is_public: true,
     });
@@ -217,6 +249,11 @@ describe("buildExperiencesWorkbook", () => {
       city: null,
       image_url: null,
       image_alt: null,
+      why_it_matters: null,
+      what_to_know: null,
+      best_time: null,
+      duration_text: null,
+      location_note: null,
       featured: false,
       is_public: true,
     });
