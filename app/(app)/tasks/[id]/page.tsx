@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CheckCircle2, ChevronLeft } from "lucide-react";
+import { ChevronLeft, Sparkles } from "lucide-react";
 
 import { ExperienceMeta } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
@@ -9,6 +9,7 @@ import type { ListStatus } from "@/app/(app)/browse/types";
 import type { ExperienceLocationType } from "@/lib/experiences/types";
 
 import { ExperienceDetailHero } from "./ExperienceDetailHero";
+import { ExperienceDetailFacts } from "./ExperienceDetailFacts";
 
 interface TaskRow {
   id: string;
@@ -22,6 +23,11 @@ interface TaskRow {
   city: string | null;
   country_code: string | null;
   saved_count: number;
+  why_it_matters: string | null;
+  what_to_know: string[] | null;
+  best_time: string | null;
+  duration_text: string | null;
+  location_note: string | null;
 }
 
 interface SimilarExperience {
@@ -30,13 +36,6 @@ interface SimilarExperience {
   category: string | null;
   difficulty: string | null;
 }
-
-const PRACTICAL_TIPS: readonly string[] = [
-  "Block a fixed time on your calendar instead of waiting for motivation.",
-  "Tell a friend you're doing this - accountability makes it stick.",
-  "Break it into one small first step you can do today.",
-  "Take a photo when you finish. It's optional, but future-you will thank you.",
-];
 
 export default async function TaskDetailPage({
   params,
@@ -61,6 +60,11 @@ export default async function TaskDetailPage({
         "city",
         "country_code",
         "saved_count",
+        "why_it_matters",
+        "what_to_know",
+        "best_time",
+        "duration_text",
+        "location_note",
       ].join(", "),
     )
     .eq("id", id)
@@ -110,14 +114,13 @@ export default async function TaskDetailPage({
   const difficulty = getDifficulty(task.id, task.difficulty);
 
   return (
-    <main className="mx-auto w-full max-w-[1440px] px-4 pb-12 pt-4 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-[1440px] px-4 pb-14 pt-4 sm:px-6 lg:px-8">
       <Link
         href="/"
         className={[
-          "inline-flex items-center gap-1 text-sm font-semibold text-muted",
+          "inline-flex items-center gap-1 rounded-control text-sm font-semibold text-muted",
           "transition-colors hover:text-ink",
-          "rounded-control outline-none",
-          "focus-visible:ring-2 focus-visible:ring-accent/30",
+          "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
         ].join(" ")}
       >
         <ChevronLeft aria-hidden="true" className="h-4 w-4" />
@@ -135,79 +138,113 @@ export default async function TaskDetailPage({
         />
       </div>
 
-      <div className="mt-12 max-w-4xl">
-        <section>
-          <h2 className="text-lg font-extrabold tracking-[-0.02em] text-ink">
+      <div className="mt-12 max-w-[1120px]">
+        <section className="max-w-[780px]">
+          <h2 className="text-xl font-extrabold tracking-[-0.025em] text-ink sm:text-2xl">
             About this experience
           </h2>
 
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-secondary sm:text-base">
-            {task.description ||
-              "No description yet — just a good idea worth doing."}
-          </p>
+          {task.description ? (
+            <p className="mt-4 text-base leading-8 text-secondary sm:text-[18px]">
+              {task.description}
+            </p>
+          ) : (
+            <p className="mt-4 text-base leading-8 text-muted">
+              No description yet — just a good idea worth doing.
+            </p>
+          )}
         </section>
 
-        <section className="mt-10">
-          <h2 className="text-lg font-extrabold tracking-[-0.02em] text-ink">
-            Practical tips
-          </h2>
+        {task.why_it_matters && (
+          <section className="mt-8 max-w-[920px] rounded-[24px] bg-[#FFF9F2] px-5 py-6 sm:px-7 sm:py-7">
+            <div className="grid gap-4 sm:grid-cols-[44px_minmax(0,1fr)] sm:gap-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm">
+                <Sparkles aria-hidden="true" className="h-5 w-5 text-accent" />
+              </div>
 
-          <ul className="mt-4 flex max-w-3xl flex-col gap-3">
-            {PRACTICAL_TIPS.map((tip) => (
-              <li
-                key={tip}
-                className="flex items-start gap-3 text-sm leading-6 text-secondary"
-              >
-                <CheckCircle2
-                  aria-hidden="true"
-                  className="mt-0.5 h-4 w-4 shrink-0 text-accent"
-                />
+              <div className="max-w-[760px]">
+                <h2 className="text-lg font-extrabold tracking-[-0.02em] text-ink sm:text-xl">
+                  Why it&rsquo;s worth doing
+                </h2>
 
-                <span>{tip}</span>
-              </li>
-            ))}
-          </ul>
-        </section>
-
-        {similar && similar.length > 0 && (
-          <section className="mt-10">
-            <div className="flex items-baseline justify-between gap-4">
-              <h2 className="text-lg font-extrabold tracking-[-0.02em] text-ink">
-                Related experiences
-              </h2>
+                <p className="mt-2.5 text-base leading-7 text-secondary sm:text-[17px] sm:leading-8">
+                  {task.why_it_matters}
+                </p>
+              </div>
             </div>
+          </section>
+        )}
 
-            <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-              {similar.map((item) => {
-                const itemDifficulty = getDifficulty(item.id, item.difficulty);
+        <div className="mt-8 max-w-[1080px]">
+          <ExperienceDetailFacts
+            bestTime={task.best_time}
+            durationText={task.duration_text}
+            locationNote={task.location_note}
+          />
+        </div>
 
-                return (
-                  <li key={item.id}>
-                    <Link
-                      href={`/tasks/${item.id}`}
-                      className={[
-                        "flex h-full flex-col gap-2 rounded-card border border-border bg-surface p-3.5",
-                        "transition-colors hover:border-border-strong",
-                        "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                      ].join(" ")}
-                    >
-                      <p className="line-clamp-2 text-sm font-semibold leading-5 text-ink">
-                        {item.title}
-                      </p>
+        {task.what_to_know && task.what_to_know.length > 0 && (
+          <section className="mt-10 max-w-[900px]">
+            <h2 className="text-xl font-extrabold tracking-[-0.025em] text-ink sm:text-2xl">
+              What to know
+            </h2>
 
-                      <ExperienceMeta
-                        className="mt-auto"
-                        category={item.category}
-                        difficulty={itemDifficulty.label}
-                      />
-                    </Link>
-                  </li>
-                );
-              })}
-            </ul>
+            <ol className="mt-4">
+              {task.what_to_know.map((item, index) => (
+                <li
+                  key={`${index}-${item}`}
+                  className="grid grid-cols-[36px_minmax(0,1fr)] gap-3 border-b border-border py-4 first:pt-1 last:border-b-0"
+                >
+                  <span className="pt-0.5 text-xs font-extrabold tabular-nums text-accent">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+
+                  <p className="text-[15px] leading-7 text-secondary sm:text-base">
+                    {item}
+                  </p>
+                </li>
+              ))}
+            </ol>
           </section>
         )}
       </div>
+
+      {similar && similar.length > 0 && (
+        <section className="mt-12">
+          <h2 className="text-lg font-extrabold tracking-[-0.02em] text-ink">
+            Related experiences
+          </h2>
+
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {similar.map((item) => {
+              const itemDifficulty = getDifficulty(item.id, item.difficulty);
+
+              return (
+                <li key={item.id}>
+                  <Link
+                    href={`/tasks/${item.id}`}
+                    className={[
+                      "flex h-full flex-col gap-2 rounded-card border border-border bg-surface p-3.5",
+                      "transition-colors hover:border-border-strong",
+                      "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+                    ].join(" ")}
+                  >
+                    <p className="line-clamp-2 text-sm font-semibold leading-5 text-ink">
+                      {item.title}
+                    </p>
+
+                    <ExperienceMeta
+                      className="mt-auto"
+                      category={item.category}
+                      difficulty={itemDifficulty.label}
+                    />
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      )}
     </main>
   );
 }

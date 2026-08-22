@@ -64,12 +64,6 @@ export function ExperienceDetailHero({
           {experience.title}
         </h1>
 
-        {experience.description && (
-          <p className="mt-5 max-w-[580px] text-[15px] leading-7 text-secondary sm:text-base">
-            {experience.description}
-          </p>
-        )}
-
         <ExperienceSocialProof
           savedCount={experience.saved_count}
           variant="full"
