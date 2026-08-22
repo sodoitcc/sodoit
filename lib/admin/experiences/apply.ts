@@ -40,6 +40,11 @@ function toWriteRow(candidate: ExperienceImportCandidate) {
     city: candidate.city,
     image_url: candidate.image_url,
     image_alt: candidate.image_alt,
+    why_it_matters: candidate.why_it_matters,
+    what_to_know: candidate.what_to_know,
+    best_time: candidate.best_time,
+    duration_text: candidate.duration_text,
+    location_note: candidate.location_note,
     featured: candidate.featured,
     is_public: candidate.is_public,
   };

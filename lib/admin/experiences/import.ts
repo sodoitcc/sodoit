@@ -15,6 +15,14 @@ import {
 
 export { hasXlsxSignature, MAX_IMPORT_UPLOAD_BYTES };
 
+function parseWhatToKnow(cellValue: string | undefined): string[] | null {
+  const items = String(cellValue ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
+  return items.length > 0 ? items : null;
+}
+
 export interface ExperienceImportCandidate {
   id: string | null;
   title: string;
@@ -27,6 +35,11 @@ export interface ExperienceImportCandidate {
   city: string | null;
   image_url: string | null;
   image_alt: string | null;
+  why_it_matters: string | null;
+  what_to_know: string[] | null;
+  best_time: string | null;
+  duration_text: string | null;
+  location_note: string | null;
   featured: boolean;
   is_public: boolean;
 }
@@ -148,6 +161,11 @@ export async function parseExperiencesWorkbook(
       city: (values.city as string) || null,
       image_url: (values.image_url as string) || null,
       image_alt: (values.image_alt as string) || null,
+      why_it_matters: (values.why_it_matters as string) || null,
+      what_to_know: parseWhatToKnow(values.what_to_know as string),
+      best_time: (values.best_time as string) || null,
+      duration_text: (values.duration_text as string) || null,
+      location_note: (values.location_note as string) || null,
       featured: values.featured as boolean,
       is_public: values.is_public as boolean,
     };
@@ -213,6 +231,11 @@ function toValidationInput(
     city: candidate.city ?? "",
     image_url: candidate.image_url ?? "",
     image_alt: candidate.image_alt ?? "",
+    why_it_matters: candidate.why_it_matters ?? "",
+    what_to_know: candidate.what_to_know ?? [],
+    best_time: candidate.best_time ?? "",
+    duration_text: candidate.duration_text ?? "",
+    location_note: candidate.location_note ?? "",
     featured: candidate.featured,
     is_public: candidate.is_public,
   };
@@ -234,7 +257,8 @@ function diffCandidate(
   for (const field of CANDIDATE_FIELDS) {
     const after = candidate[field];
     const before = existing[field] ?? null;
-    if (before !== after) changes.push({ field, before, after });
+    if (JSON.stringify(before) !== JSON.stringify(after))
+      changes.push({ field, before, after });
   }
 
   return changes;

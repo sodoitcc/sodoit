@@ -90,7 +90,7 @@ export async function getExperienceAdmin(
 }
 
 const EXPORT_COLUMNS =
-  "id, title, slug, description, category, difficulty, location_type, country_code, city, image_url, image_alt, featured, is_public";
+  "id, title, slug, description, category, difficulty, location_type, country_code, city, image_url, image_alt, why_it_matters, what_to_know, best_time, duration_text, location_note, featured, is_public";
 const EXPORT_ROW_LIMIT = 10_000;
 
 export type ExperienceExportItem = Pick<
@@ -106,6 +106,11 @@ export type ExperienceExportItem = Pick<
   | "city"
   | "image_url"
   | "image_alt"
+  | "why_it_matters"
+  | "what_to_know"
+  | "best_time"
+  | "duration_text"
+  | "location_note"
   | "featured"
   | "is_public"
 >;
