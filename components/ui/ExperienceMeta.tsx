@@ -12,7 +12,14 @@ function countryName(code: string | null): string | null {
   }
 }
 
-export function experienceLocation(experience: Experience): string | null {
+export type ExperienceLocationFields = Pick<
+  Experience,
+  "location_type" | "city" | "country_code"
+>;
+
+export function experienceLocation(
+  experience: ExperienceLocationFields,
+): string | null {
   if (experience.location_type === "city") {
     const country = countryName(experience.country_code);
     if (experience.city && country) return `${experience.city}, ${country}`;
