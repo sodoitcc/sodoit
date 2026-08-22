@@ -66,14 +66,6 @@ export function BrowseBoard({
   });
 
   useEffect(() => {
-    setCompleted(new Set(completedIds));
-  }, [completedIds]);
-
-  useEffect(() => {
-    setSearchText(q);
-  }, [q]);
-
-  useEffect(() => {
     if (firstSearchRender.current) {
       firstSearchRender.current = false;
       return;
@@ -84,7 +76,7 @@ export function BrowseBoard({
     }, SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeout);
-  }, [searchText]);
+  }, [searchText, navigate]);
 
   async function toggle(id: string) {
     if (!signedIn) {
