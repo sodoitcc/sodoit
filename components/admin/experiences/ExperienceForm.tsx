@@ -215,6 +215,66 @@ export function ExperienceForm({ experience }: ExperienceFormProps) {
         </AdminField>
       </AdminFormSection>
 
+      <AdminFormSection title="Detail content">
+        <AdminField
+          label="Why it's worth doing"
+          htmlFor="why_it_matters"
+          hint="Shown on the detail page when set. Leave blank to hide."
+          full
+        >
+          <textarea
+            id="why_it_matters"
+            name="why_it_matters"
+            defaultValue={experience?.why_it_matters ?? ""}
+            rows={3}
+            maxLength={600}
+            className={`${ADMIN_INPUT_CLASS} resize-none`}
+          />
+        </AdminField>
+
+        <AdminField
+          label="What to know"
+          htmlFor="what_to_know"
+          hint="One item per line. Leave blank to hide the section."
+          full
+        >
+          <textarea
+            id="what_to_know"
+            name="what_to_know"
+            defaultValue={(experience?.what_to_know ?? []).join("\n")}
+            rows={4}
+            className={`${ADMIN_INPUT_CLASS} resize-none`}
+          />
+        </AdminField>
+
+        <AdminField label="Best time" htmlFor="best_time">
+          <input
+            id="best_time"
+            name="best_time"
+            defaultValue={experience?.best_time ?? ""}
+            className={ADMIN_INPUT_CLASS}
+          />
+        </AdminField>
+
+        <AdminField label="Time needed" htmlFor="duration_text">
+          <input
+            id="duration_text"
+            name="duration_text"
+            defaultValue={experience?.duration_text ?? ""}
+            className={ADMIN_INPUT_CLASS}
+          />
+        </AdminField>
+
+        <AdminField label="Location note" htmlFor="location_note" full>
+          <input
+            id="location_note"
+            name="location_note"
+            defaultValue={experience?.location_note ?? ""}
+            className={ADMIN_INPUT_CLASS}
+          />
+        </AdminField>
+      </AdminFormSection>
+
       <AdminFormSection title="Visibility">
         <label className="flex items-center gap-2 text-sm text-ink">
           <input

@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Check, ListPlus } from "lucide-react";
+
 import { Button, ShareButton } from "@/components/ui";
-import { setListStatus, removeFromMyList } from "@/app/(app)/browse/actions";
+import { removeFromMyList, setListStatus } from "@/app/(app)/browse/actions";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
 import type { ListStatus } from "@/app/(app)/browse/types";
 
@@ -25,67 +26,79 @@ export function ActionPanel({
 }: ActionPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
+
   const [status, setStatus] = useState<ListStatus | null>(initialStatus);
   const [, startTransition] = useTransition();
 
   function apply(next: ListStatus | null) {
     setStatus(next);
+
     startTransition(() => {
-      if (next) setListStatus(taskId, next);
-      else removeFromMyList(taskId);
+      if (next) {
+        setListStatus(taskId, next);
+      } else {
+        removeFromMyList(taskId);
+      }
     });
+  }
+
+  function requireLogin() {
+    router.push(loginHrefWithNext(pathname));
   }
 
   function toggleComplete() {
     if (!signedIn) {
-      router.push(loginHrefWithNext(pathname));
+      requireLogin();
       return;
     }
+
     apply(status === "completed" ? null : "completed");
   }
 
   function toggleSave() {
     if (!signedIn) {
-      router.push(loginHrefWithNext(pathname));
+      requireLogin();
       return;
     }
+
     if (status === "completed") return;
+
     apply(status === "saved" ? null : "saved");
   }
 
   const completed = status === "completed";
-  const saveLabel = completed
-    ? "In My List"
-    : status === "saved"
-      ? "Saved"
-      : "Add to My List";
+  const saved = status === "saved";
 
   return (
-    <div className="rounded-card border border-border bg-surface p-4">
-      <div className="flex flex-col gap-2">
+    <div>
+      <div className="flex flex-wrap items-center gap-2.5">
         <Button
           type="button"
-          variant={completed ? "soft" : "primary"}
+          variant={saved || completed ? "soft" : "primary"}
+          onClick={toggleSave}
+          disabled={completed}
+        >
+          <ListPlus aria-hidden="true" className="h-4 w-4" />
+          {completed
+            ? "In My List"
+            : saved
+              ? "Saved to Life List"
+              : "Save to Life List"}
+        </Button>
+
+        <Button
+          type="button"
+          variant={completed ? "soft" : "outline"}
           onClick={toggleComplete}
         >
           <Check aria-hidden="true" className="h-4 w-4" />
           {completed ? "Completed" : "Mark as complete"}
         </Button>
 
-        <Button
-          type="button"
-          variant="outline"
-          onClick={toggleSave}
-          disabled={completed}
-        >
-          <ListPlus aria-hidden="true" className="h-4 w-4" />
-          {saveLabel}
-        </Button>
-
         <ShareButton url={`/tasks/${taskId}`} title={taskTitle} />
       </div>
 
-      <p className="mt-4 border-t border-border pt-3 text-xs leading-5 text-muted">
+      <p className="mt-4 text-xs leading-5 text-muted">
         {signedIn ? (
           <>
             You&apos;ve completed{" "}
@@ -93,7 +106,7 @@ export function ActionPanel({
             experience{totalCompleted === 1 ? "" : "s"} so far.
           </>
         ) : (
-          "Log in to save this and track your progress."
+          "Log in to save experiences and build your Life List."
         )}
       </p>
     </div>

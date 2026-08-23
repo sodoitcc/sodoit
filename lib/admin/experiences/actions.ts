@@ -26,6 +26,11 @@ function toRow(input: ReturnType<typeof readExperienceInput>) {
     city: input.city || null,
     image_url: input.image_url || null,
     image_alt: input.image_alt || null,
+    why_it_matters: input.why_it_matters || null,
+    what_to_know: input.what_to_know.length > 0 ? input.what_to_know : null,
+    best_time: input.best_time || null,
+    duration_text: input.duration_text || null,
+    location_note: input.location_note || null,
     featured: input.featured,
     is_public: input.is_public,
   };
@@ -74,7 +79,8 @@ export async function updateExperience(
   id: string,
   formData: FormData,
 ): Promise<AdminActionResult> {
-  if (!UUID_RE.test(id)) return { success: false, error: "Invalid experience." };
+  if (!UUID_RE.test(id))
+    return { success: false, error: "Invalid experience." };
 
   const admin = await requireAdmin();
   if (!admin.ok) return { success: false, error: admin.error };
@@ -109,7 +115,8 @@ export async function setExperienceVisibility(
   id: string,
   isPublic: boolean,
 ): Promise<AdminActionResult> {
-  if (!UUID_RE.test(id)) return { success: false, error: "Invalid experience." };
+  if (!UUID_RE.test(id))
+    return { success: false, error: "Invalid experience." };
 
   const admin = await requireAdmin();
   if (!admin.ok) return { success: false, error: admin.error };

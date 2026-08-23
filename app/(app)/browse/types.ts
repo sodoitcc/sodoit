@@ -1,6 +1,21 @@
 import { EXPERIENCE_DIFFICULTIES } from "@/lib/experiences/difficulty.mjs";
+import type { Experience } from "@/lib/experiences/types";
 
 export type { Experience } from "@/lib/experiences/types";
+
+export type ExperienceCardData = Pick<
+  Experience,
+  | "id"
+  | "title"
+  | "image_url"
+  | "image_alt"
+  | "difficulty"
+  | "category"
+  | "saved_count"
+  | "location_type"
+  | "city"
+  | "country_code"
+>;
 export {
   EXPERIENCE_DIFFICULTIES,
   getDifficultyPresentation,

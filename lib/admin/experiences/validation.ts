@@ -4,6 +4,7 @@ import { SLUG_RE } from "@/lib/admin/slug";
 
 export const EXPERIENCE_TITLE_MAX = 120;
 export const EXPERIENCE_DESCRIPTION_MAX = 2000;
+export const EXPERIENCE_WHY_IT_MATTERS_MAX = 600;
 export const DIFFICULTY_VALUES = EXPERIENCE_DIFFICULTIES;
 export const LOCATION_TYPES = ["global", "country", "city"] as const;
 
@@ -20,6 +21,11 @@ export interface ExperienceInput {
   image_alt: string;
   featured: boolean;
   is_public: boolean;
+  why_it_matters: string;
+  what_to_know: string[];
+  best_time: string;
+  duration_text: string;
+  location_note: string;
 }
 
 function isValidUrl(value: string) {
@@ -44,11 +50,17 @@ export function validateExperienceInput(input: ExperienceInput): string | null {
 
   if (
     input.difficulty &&
-    !DIFFICULTY_VALUES.includes(input.difficulty as (typeof DIFFICULTY_VALUES)[number])
+    !DIFFICULTY_VALUES.includes(
+      input.difficulty as (typeof DIFFICULTY_VALUES)[number],
+    )
   )
     return "Choose a valid difficulty.";
 
-  if (!LOCATION_TYPES.includes(input.location_type as (typeof LOCATION_TYPES)[number]))
+  if (
+    !LOCATION_TYPES.includes(
+      input.location_type as (typeof LOCATION_TYPES)[number],
+    )
+  )
     return "Choose a valid location type.";
 
   if (input.location_type !== "global" && !input.country_code)
@@ -63,7 +75,17 @@ export function validateExperienceInput(input: ExperienceInput): string | null {
   if (input.image_url && !isValidUrl(input.image_url))
     return "Image URL must be a valid URL.";
 
+  if (input.why_it_matters.length > EXPERIENCE_WHY_IT_MATTERS_MAX)
+    return `Why it matters must be ${EXPERIENCE_WHY_IT_MATTERS_MAX} characters or fewer.`;
+
   return null;
+}
+
+function readLines(value: FormDataEntryValue | null): string[] {
+  return String(value ?? "")
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean);
 }
 
 export function readExperienceInput(formData: FormData): ExperienceInput {
@@ -82,5 +104,10 @@ export function readExperienceInput(formData: FormData): ExperienceInput {
     image_alt: String(formData.get("image_alt") ?? "").trim(),
     featured: formData.get("featured") === "on",
     is_public: formData.get("is_public") === "on",
+    why_it_matters: String(formData.get("why_it_matters") ?? "").trim(),
+    what_to_know: readLines(formData.get("what_to_know")),
+    best_time: String(formData.get("best_time") ?? "").trim(),
+    duration_text: String(formData.get("duration_text") ?? "").trim(),
+    location_note: String(formData.get("location_note") ?? "").trim(),
   };
 }

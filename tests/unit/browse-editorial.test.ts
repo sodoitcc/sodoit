@@ -30,6 +30,11 @@ function experience(overrides: Partial<Experience>): Experience {
     image_alt: null,
     saved_count: 0,
     completed_count: 0,
+    why_it_matters: null,
+    what_to_know: null,
+    best_time: null,
+    duration_text: null,
+    location_note: null,
     ...overrides,
   };
 }

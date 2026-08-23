@@ -3,8 +3,7 @@ import type { EXPERIENCE_DIFFICULTIES } from "./difficulty.mjs";
 export type ExperienceLocationType = "global" | "country" | "city";
 
 export type ExperienceDifficulty =
-  | (typeof EXPERIENCE_DIFFICULTIES)[number]
-  | null;
+  (typeof EXPERIENCE_DIFFICULTIES)[number] | null;
 
 export interface Experience {
   id: string;
@@ -22,4 +21,9 @@ export interface Experience {
   image_alt: string | null;
   saved_count: number;
   completed_count: number;
+  why_it_matters: string | null;
+  what_to_know: string[] | null;
+  best_time: string | null;
+  duration_text: string | null;
+  location_note: string | null;
 }

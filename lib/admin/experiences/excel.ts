@@ -27,6 +27,11 @@ export interface ExperienceExcelRow {
   city: string;
   image_url: string;
   image_alt: string;
+  why_it_matters: string;
+  what_to_know: string;
+  best_time: string;
+  duration_text: string;
+  location_note: string;
   featured: boolean;
   is_public: boolean;
 }
@@ -49,6 +54,11 @@ export const EXPERIENCE_EXCEL_COLUMNS: readonly ExperienceExcelColumn[] = [
   { key: "city", header: "city", width: 20 },
   { key: "image_url", header: "image_url", width: 44 },
   { key: "image_alt", header: "image_alt", width: 32 },
+  { key: "why_it_matters", header: "why_it_matters", width: 50 },
+  { key: "what_to_know", header: "what_to_know", width: 50 },
+  { key: "best_time", header: "best_time", width: 20 },
+  { key: "duration_text", header: "duration_text", width: 18 },
+  { key: "location_note", header: "location_note", width: 32 },
   { key: "featured", header: "featured", width: 12 },
   { key: "is_public", header: "is_public", width: 12 },
 ];
@@ -66,6 +76,11 @@ export type ExperienceExportSource = Pick<
   | "city"
   | "image_url"
   | "image_alt"
+  | "why_it_matters"
+  | "what_to_know"
+  | "best_time"
+  | "duration_text"
+  | "location_note"
   | "featured"
   | "is_public"
 >;
@@ -110,6 +125,11 @@ export function toExperienceExcelRow(
     city: experience.city ?? "",
     image_url: experience.image_url ?? "",
     image_alt: experience.image_alt ?? "",
+    why_it_matters: experience.why_it_matters ?? "",
+    what_to_know: (experience.what_to_know ?? []).join("\n"),
+    best_time: experience.best_time ?? "",
+    duration_text: experience.duration_text ?? "",
+    location_note: experience.location_note ?? "",
     featured: Boolean(experience.featured),
     is_public: Boolean(experience.is_public),
   };

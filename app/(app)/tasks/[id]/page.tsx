@@ -1,11 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, MoveRight, Sparkles } from "lucide-react";
+
 import { createClient } from "@/lib/supabase/server";
-import { ExperienceImage, ExperienceMeta } from "@/components/ui";
-import { getTaskMeta, getDifficulty } from "@/app/(app)/browse/types";
+import { getDifficulty, getTaskMeta } from "@/app/(app)/browse/types";
 import type { ListStatus } from "@/app/(app)/browse/types";
-import { ActionPanel } from "./ActionPanel";
+import type { ExperienceLocationType } from "@/lib/experiences/types";
+
+import type { ExperienceCardData } from "@/app/(app)/browse/types";
+
+import { ExperienceDetailHero } from "./ExperienceDetailHero";
+import { ExperienceDetailFacts } from "./ExperienceDetailFacts";
+import { RelatedExperienceCard } from "./RelatedExperienceCard";
 
 interface TaskRow {
   id: string;
@@ -15,21 +21,21 @@ interface TaskRow {
   difficulty: string | null;
   image_url: string | null;
   image_alt: string | null;
+  location_type: ExperienceLocationType;
+  city: string | null;
+  country_code: string | null;
+  saved_count: number;
+  why_it_matters: string | null;
+  what_to_know: string[] | null;
+  best_time: string | null;
+  duration_text: string | null;
+  location_note: string | null;
 }
 
-interface SimilarExperience {
-  id: string;
-  title: string;
-  category: string | null;
-  difficulty: string | null;
-}
+type SimilarExperience = ExperienceCardData;
 
-const PRACTICAL_TIPS: readonly string[] = [
-  "Block a fixed time on your calendar instead of waiting for motivation.",
-  "Tell a friend you're doing this — accountability makes it stick.",
-  "Break it into one small first step you can do today.",
-  "Take a photo when you finish. It's optional, but future-you will thank you.",
-];
+const SIMILAR_COLUMNS =
+  "id, title, image_url, image_alt, difficulty, category, saved_count, location_type, city, country_code";
 
 export default async function TaskDetailPage({
   params,
@@ -42,7 +48,24 @@ export default async function TaskDetailPage({
   const { data: task } = await supabase
     .from("experiences")
     .select(
-      "id, title, category, description, difficulty, image_url, image_alt",
+      [
+        "id",
+        "title",
+        "category",
+        "description",
+        "difficulty",
+        "image_url",
+        "image_alt",
+        "location_type",
+        "city",
+        "country_code",
+        "saved_count",
+        "why_it_matters",
+        "what_to_know",
+        "best_time",
+        "duration_text",
+        "location_note",
+      ].join(", "),
     )
     .eq("id", id)
     .single<TaskRow>();
@@ -72,6 +95,7 @@ export default async function TaskDetailPage({
         .eq("user_id", user.id)
         .eq("status", "completed"),
     ]);
+
     status = mine?.status ?? null;
     totalCompleted = count ?? 0;
   }
@@ -79,127 +103,172 @@ export default async function TaskDetailPage({
   const { data: similar } = task.category
     ? await supabase
         .from("experiences")
-        .select("id, title, category, difficulty")
+        .select(SIMILAR_COLUMNS)
         .eq("is_public", true)
         .eq("category", task.category)
         .neq("id", task.id)
-        .limit(3)
+        .limit(4)
     : { data: [] as SimilarExperience[] };
+
+  const similarExperiences: SimilarExperience[] = similar ?? [];
+
+  let similarStatuses: Record<string, ListStatus> = {};
+
+  if (user && similarExperiences.length > 0) {
+    const { data: statusRows } = await supabase
+      .from("user_lists")
+      .select("experience_id, status")
+      .eq("user_id", user.id)
+      .in(
+        "experience_id",
+        similarExperiences.map((item) => item.id),
+      );
+
+    similarStatuses = Object.fromEntries(
+      (statusRows ?? []).map((row) => [
+        row.experience_id,
+        row.status as ListStatus,
+      ]),
+    );
+  }
 
   const { thumbnail } = getTaskMeta(task.id);
   const difficulty = getDifficulty(task.id, task.difficulty);
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-4 py-4 sm:px-6 lg:px-8">
+    <main className="mx-auto w-full max-w-[1440px] px-4 pb-14 pt-4 sm:px-6 lg:px-8">
       <Link
         href="/"
-        className="inline-flex items-center gap-1 rounded-control text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+        className={[
+          "inline-flex items-center gap-1 rounded-control text-sm font-semibold text-muted",
+          "transition-colors hover:text-ink",
+          "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+        ].join(" ")}
       >
         <ChevronLeft aria-hidden="true" className="h-4 w-4" />
         Back to Browse
       </Link>
 
-      <div className="mt-4 grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <header className="order-1 min-w-0 lg:col-start-1 lg:row-start-1">
-          <ExperienceImage
-            title={task.title}
-            imageUrl={task.image_url}
-            imageAlt={task.image_alt}
-            fallbackColor={thumbnail}
-            className="aspect-[16/9] w-full rounded-media"
-            sizes="(min-width: 1024px) 800px, 100vw"
-            priority
-          />
+      <div className="mt-4">
+        <ExperienceDetailHero
+          experience={task}
+          fallbackColor={thumbnail}
+          difficulty={difficulty.label}
+          initialStatus={status}
+          signedIn={Boolean(user)}
+          totalCompleted={totalCompleted}
+        />
+      </div>
 
-          <ExperienceMeta
-            className="mt-4"
-            category={task.category}
-            difficulty={difficulty.label}
-          />
+      <div className="mt-12 max-w-[1120px]">
+        <section className="max-w-[780px]">
+          <h2 className="text-xl font-extrabold tracking-[-0.025em] text-ink sm:text-2xl">
+            About this experience
+          </h2>
 
-          <h1 className="mt-2 text-2xl font-extrabold tracking-[-0.025em] text-ink sm:text-3xl">
-            {task.title}
-          </h1>
-        </header>
+          {task.description ? (
+            <p className="mt-4 text-base leading-8 text-secondary sm:text-[18px]">
+              {task.description}
+            </p>
+          ) : (
+            <p className="mt-4 text-base leading-8 text-muted">
+              No description yet — just a good idea worth doing.
+            </p>
+          )}
+        </section>
 
-        <div className="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:sticky lg:top-20">
-          <ActionPanel
-            taskId={task.id}
-            taskTitle={task.title}
-            initialStatus={status}
-            signedIn={!!user}
-            totalCompleted={totalCompleted}
+        {task.why_it_matters && (
+          <section className="mt-8 max-w-[920px] rounded-[24px] bg-[#FFF9F2] px-5 py-6 sm:px-7 sm:py-7">
+            <div className="grid gap-4 sm:grid-cols-[44px_minmax(0,1fr)] sm:gap-5">
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white shadow-sm">
+                <Sparkles aria-hidden="true" className="h-5 w-5 text-accent" />
+              </div>
+
+              <div className="max-w-[760px]">
+                <h2 className="text-lg font-extrabold tracking-[-0.02em] text-ink sm:text-xl">
+                  Why it&rsquo;s worth doing
+                </h2>
+
+                <p className="mt-2.5 text-base leading-7 text-secondary sm:text-[17px] sm:leading-8">
+                  {task.why_it_matters}
+                </p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        <div className="mt-8 max-w-[1080px]">
+          <ExperienceDetailFacts
+            bestTime={task.best_time}
+            durationText={task.duration_text}
+            locationNote={task.location_note}
           />
         </div>
 
-        <div className="order-3 min-w-0 lg:col-start-1 lg:row-start-2">
-          <section>
-            <h2 className="text-base font-bold tracking-[-0.01em] text-ink">
-              About this experience
+        {task.what_to_know && task.what_to_know.length > 0 && (
+          <section className="mt-10 max-w-[900px]">
+            <h2 className="text-xl font-extrabold tracking-[-0.025em] text-ink sm:text-2xl">
+              What to know
             </h2>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-secondary">
-              {task.description ||
-                "No description yet — just a good idea worth doing."}
-            </p>
-          </section>
 
-          <section className="mt-8">
-            <h2 className="text-base font-bold tracking-[-0.01em] text-ink">
-              Practical tips
-            </h2>
-            <ul className="mt-3 flex max-w-2xl flex-col gap-2.5">
-              {PRACTICAL_TIPS.map((tip) => (
+            <ol className="mt-4">
+              {task.what_to_know.map((item, index) => (
                 <li
-                  key={tip}
-                  className="flex items-start gap-2.5 text-sm leading-6 text-secondary"
+                  key={`${index}-${item}`}
+                  className="grid grid-cols-[36px_minmax(0,1fr)] gap-3 border-b border-border py-4 first:pt-1 last:border-b-0"
                 >
-                  <CheckCircle2
-                    aria-hidden="true"
-                    className="mt-0.5 h-4 w-4 shrink-0 text-accent"
-                  />
-                  {tip}
+                  <span className="pt-0.5 text-xs font-extrabold tabular-nums text-accent">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+
+                  <p className="text-[15px] leading-7 text-secondary sm:text-base">
+                    {item}
+                  </p>
                 </li>
               ))}
-            </ul>
+            </ol>
           </section>
-
-          {similar && similar.length > 0 && (
-            <section className="mt-8">
-              <h2 className="text-base font-bold tracking-[-0.01em] text-ink">
-                Related experiences
-              </h2>
-
-              <ul className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-                {similar.map((item) => {
-                  const itemDifficulty = getDifficulty(
-                    item.id,
-                    item.difficulty,
-                  );
-
-                  return (
-                    <li key={item.id}>
-                      <Link
-                        href={`/tasks/${item.id}`}
-                        className="flex h-full flex-col gap-2 rounded-card border border-border bg-surface p-3.5 transition-colors hover:border-border-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
-                      >
-                        <p className="line-clamp-2 text-sm font-semibold leading-5 text-ink">
-                          {item.title}
-                        </p>
-
-                        <ExperienceMeta
-                          className="mt-auto"
-                          category={item.category}
-                          difficulty={itemDifficulty.label}
-                        />
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
-        </div>
+        )}
       </div>
-    </div>
+
+      {similarExperiences.length > 0 && (
+        <section className="mt-12">
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
+                You might also like
+              </p>
+
+              <h2 className="mt-1 text-2xl font-extrabold tracking-[-0.025em] text-ink">
+                Keep exploring
+              </h2>
+            </div>
+
+            <Link
+              href={`/?category=${encodeURIComponent(task.category ?? "")}`}
+              className={[
+                "inline-flex items-center gap-1.5 text-sm font-bold text-accent",
+                "rounded-control outline-none",
+                "hover:text-accent-dark",
+                "focus-visible:ring-2 focus-visible:ring-accent/30",
+              ].join(" ")}
+            >
+              View all
+              <MoveRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
+          </div>
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {similarExperiences.map((item) => (
+              <RelatedExperienceCard
+                key={item.id}
+                experience={item}
+                initialStatus={similarStatuses[item.id] ?? null}
+                signedIn={Boolean(user)}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+    </main>
   );
 }

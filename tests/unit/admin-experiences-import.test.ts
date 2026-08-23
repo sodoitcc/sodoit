@@ -27,6 +27,11 @@ function row(overrides: Partial<ExperienceExcelRow> = {}): ExperienceExcelRow {
     city: "",
     image_url: "",
     image_alt: "",
+    why_it_matters: "",
+    what_to_know: "",
+    best_time: "",
+    duration_text: "",
+    location_note: "",
     featured: false,
     is_public: true,
     ...overrides,
@@ -63,6 +68,11 @@ function existingItem(
     city: null,
     image_url: null,
     image_alt: null,
+    why_it_matters: null,
+    what_to_know: null,
+    best_time: null,
+    duration_text: null,
+    location_note: null,
     featured: false,
     is_public: true,
     ...overrides,
@@ -128,6 +138,11 @@ describe("parseExperiencesWorkbook — contract", () => {
       "",
       "",
       "",
+      "",
+      "",
+      "",
+      "",
+      "",
       "TRUE",
       "false",
     ]);
@@ -139,6 +154,11 @@ describe("parseExperiencesWorkbook — contract", () => {
       "Nature",
       "",
       "global",
+      "",
+      "",
+      "",
+      "",
+      "",
       "",
       "",
       "",
@@ -169,7 +189,7 @@ describe("parseExperiencesWorkbook — contract", () => {
     const workbook = new ExcelJS.Workbook();
     await workbook.xlsx.load(buffer);
     const sheet = workbook.getWorksheet(EXPERIENCES_SHEET_NAME)!;
-    sheet.getRow(2).getCell(12).value = "yes";
+    sheet.getRow(2).getCell(17).value = "yes";
 
     const rebuilt = await bufferFromWorkbook(workbook);
     const result = await parseExperiencesWorkbook(rebuilt);
