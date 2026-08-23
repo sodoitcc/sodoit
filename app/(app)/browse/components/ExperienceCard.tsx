@@ -5,7 +5,7 @@ import { FolderPlus } from "lucide-react";
 
 import { ExperienceImage, experienceLocation } from "@/components/ui";
 
-import type { Experience } from "../types";
+import type { ExperienceCardData } from "../types";
 import { getDifficulty, getTaskMeta } from "../types";
 import { useCompletionToggle } from "../hooks/useCompletionToggle";
 import { SaveButton } from "./SaveButton";
@@ -15,7 +15,7 @@ import { ExperienceSocialProof } from "./ExperienceSocialProof";
 import { COMPLETED_MEDIA } from "./completedStyles";
 
 interface ExperienceCardProps {
-  experience: Experience;
+  experience: ExperienceCardData;
   done: boolean;
   onToggle: () => Promise<void>;
   onRemove?: () => void;
@@ -26,16 +26,12 @@ interface ExperienceCardProps {
   className?: string;
   ratio?: "wide" | "standard";
   showCategory?: boolean;
+  variant?: "default" | "related";
 }
 
 const RATIO_CLASS = {
   wide: "aspect-[16/9]",
   standard: "aspect-[4/3]",
-} as const;
-
-const TITLE_CLASS = {
-  wide: "text-base font-bold sm:text-lg",
-  standard: "text-sm font-semibold",
 } as const;
 
 export function ExperienceCard({
@@ -50,19 +46,36 @@ export function ExperienceCard({
   className = "",
   ratio = "standard",
   showCategory = true,
+  variant = "default",
 }: ExperienceCardProps) {
   const { thumbnail } = getTaskMeta(experience.id);
   const difficulty = getDifficulty(experience.id, experience.difficulty);
   const { isToggling, handleToggle } = useCompletionToggle(done, onToggle);
 
+  const related = variant === "related";
+
+  const imageRatio = related ? "aspect-[16/10]" : RATIO_CLASS[ratio];
+
+  const titleClass = related
+    ? "text-[15px] font-bold leading-5 sm:text-base"
+    : ratio === "wide"
+      ? "text-base font-bold sm:text-lg"
+      : "text-sm font-semibold";
+
   return (
     <li
       className={[
         "group relative flex h-full min-w-0 flex-col",
+        related ? "rounded-[20px] bg-surface" : "",
         className,
       ].join(" ")}
     >
-      <div className="relative overflow-hidden rounded-card">
+      <div
+        className={[
+          "relative overflow-hidden",
+          related ? "rounded-[18px]" : "rounded-card",
+        ].join(" ")}
+      >
         <Link
           href={`/tasks/${experience.id}`}
           aria-label={experience.title}
@@ -75,20 +88,22 @@ export function ExperienceCard({
           title={experience.title}
           fallbackColor={thumbnail}
           sizes={
-            ratio === "wide"
-              ? "(min-width: 1024px) 45vw, 90vw"
-              : "(min-width: 1024px) 280px, (min-width: 640px) 45vw, 90vw"
+            related
+              ? "(min-width: 1280px) 260px, (min-width: 768px) 30vw, 85vw"
+              : ratio === "wide"
+                ? "(min-width: 1024px) 45vw, 90vw"
+                : "(min-width: 1024px) 280px, (min-width: 640px) 45vw, 90vw"
           }
           quality={90}
           className={[
-            RATIO_CLASS[ratio],
-            "w-full motion-safe:transition-transform motion-safe:duration-200",
-            "motion-safe:group-hover:scale-[1.02]",
+            imageRatio,
+            "w-full motion-safe:transition-transform motion-safe:duration-300",
+            "motion-safe:group-hover:scale-[1.025]",
             done ? COMPLETED_MEDIA : "",
           ].join(" ")}
         />
 
-        {!guest && onRemove && (
+        {!guest && onRemove && !related && (
           <div className="absolute left-2 top-2 z-20">
             <SaveButton
               label={
@@ -118,35 +133,46 @@ export function ExperienceCard({
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col pt-3">
+      <div
+        className={[
+          "flex min-w-0 flex-1 flex-col",
+          related ? "px-1 pb-1 pt-3" : "pt-3",
+        ].join(" ")}
+      >
         <Link
           href={`/tasks/${experience.id}`}
           className="relative z-10 w-fit max-w-full outline-none"
         >
           <h3
             className={[
-              "line-clamp-2 leading-5 tracking-[-0.01em] text-ink transition-colors duration-200",
+              "line-clamp-2 tracking-[-0.015em] text-ink transition-colors duration-200",
               "group-hover:text-accent-dark",
-              TITLE_CLASS[ratio],
+              titleClass,
             ].join(" ")}
           >
             {experience.title}
           </h3>
         </Link>
 
-        <div className="mt-1">
+        <div className={related ? "mt-1.5" : "mt-1"}>
           <ExperienceMetaLine
             location={experienceLocation(experience)}
             difficulty={difficulty.label}
             category={experience.category}
             showCategory={showCategory}
+            size={related ? "xs" : "xs"}
           />
         </div>
 
-        <div className="mt-1.5 flex min-w-0 items-center justify-between gap-2">
+        <div
+          className={[
+            "flex min-w-0 items-center justify-between gap-2",
+            related ? "mt-2" : "mt-1.5",
+          ].join(" ")}
+        >
           <ExperienceSocialProof savedCount={experience.saved_count} />
 
-          {onManageCollections && (
+          {onManageCollections && !related && (
             <button
               type="button"
               onClick={onManageCollections}

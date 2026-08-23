@@ -1,15 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Sparkles } from "lucide-react";
+import { ChevronLeft, MoveRight, Sparkles } from "lucide-react";
 
-import { ExperienceMeta } from "@/components/ui";
 import { createClient } from "@/lib/supabase/server";
 import { getDifficulty, getTaskMeta } from "@/app/(app)/browse/types";
 import type { ListStatus } from "@/app/(app)/browse/types";
 import type { ExperienceLocationType } from "@/lib/experiences/types";
 
+import type { ExperienceCardData } from "@/app/(app)/browse/types";
+
 import { ExperienceDetailHero } from "./ExperienceDetailHero";
 import { ExperienceDetailFacts } from "./ExperienceDetailFacts";
+import { RelatedExperienceCard } from "./RelatedExperienceCard";
 
 interface TaskRow {
   id: string;
@@ -30,12 +32,10 @@ interface TaskRow {
   location_note: string | null;
 }
 
-interface SimilarExperience {
-  id: string;
-  title: string;
-  category: string | null;
-  difficulty: string | null;
-}
+type SimilarExperience = ExperienceCardData;
+
+const SIMILAR_COLUMNS =
+  "id, title, image_url, image_alt, difficulty, category, saved_count, location_type, city, country_code";
 
 export default async function TaskDetailPage({
   params,
@@ -103,12 +103,34 @@ export default async function TaskDetailPage({
   const { data: similar } = task.category
     ? await supabase
         .from("experiences")
-        .select("id, title, category, difficulty")
+        .select(SIMILAR_COLUMNS)
         .eq("is_public", true)
         .eq("category", task.category)
         .neq("id", task.id)
-        .limit(3)
+        .limit(4)
     : { data: [] as SimilarExperience[] };
+
+  const similarExperiences: SimilarExperience[] = similar ?? [];
+
+  let similarStatuses: Record<string, ListStatus> = {};
+
+  if (user && similarExperiences.length > 0) {
+    const { data: statusRows } = await supabase
+      .from("user_lists")
+      .select("experience_id, status")
+      .eq("user_id", user.id)
+      .in(
+        "experience_id",
+        similarExperiences.map((item) => item.id),
+      );
+
+    similarStatuses = Object.fromEntries(
+      (statusRows ?? []).map((row) => [
+        row.experience_id,
+        row.status as ListStatus,
+      ]),
+    );
+  }
 
   const { thumbnail } = getTaskMeta(task.id);
   const difficulty = getDifficulty(task.id, task.difficulty);
@@ -209,39 +231,41 @@ export default async function TaskDetailPage({
         )}
       </div>
 
-      {similar && similar.length > 0 && (
+      {similarExperiences.length > 0 && (
         <section className="mt-12">
-          <h2 className="text-lg font-extrabold tracking-[-0.02em] text-ink">
-            Related experiences
-          </h2>
+          <div className="flex items-end justify-between gap-4">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.14em] text-accent">
+                You might also like
+              </p>
 
-          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            {similar.map((item) => {
-              const itemDifficulty = getDifficulty(item.id, item.difficulty);
+              <h2 className="mt-1 text-2xl font-extrabold tracking-[-0.025em] text-ink">
+                Keep exploring
+              </h2>
+            </div>
 
-              return (
-                <li key={item.id}>
-                  <Link
-                    href={`/tasks/${item.id}`}
-                    className={[
-                      "flex h-full flex-col gap-2 rounded-card border border-border bg-surface p-3.5",
-                      "transition-colors hover:border-border-strong",
-                      "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                    ].join(" ")}
-                  >
-                    <p className="line-clamp-2 text-sm font-semibold leading-5 text-ink">
-                      {item.title}
-                    </p>
-
-                    <ExperienceMeta
-                      className="mt-auto"
-                      category={item.category}
-                      difficulty={itemDifficulty.label}
-                    />
-                  </Link>
-                </li>
-              );
-            })}
+            <Link
+              href={`/?category=${encodeURIComponent(task.category ?? "")}`}
+              className={[
+                "inline-flex items-center gap-1.5 text-sm font-bold text-accent",
+                "rounded-control outline-none",
+                "hover:text-accent-dark",
+                "focus-visible:ring-2 focus-visible:ring-accent/30",
+              ].join(" ")}
+            >
+              View all
+              <MoveRight aria-hidden="true" className="h-4 w-4" />
+            </Link>
+          </div>
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {similarExperiences.map((item) => (
+              <RelatedExperienceCard
+                key={item.id}
+                experience={item}
+                initialStatus={similarStatuses[item.id] ?? null}
+                signedIn={Boolean(user)}
+              />
+            ))}
           </ul>
         </section>
       )}
