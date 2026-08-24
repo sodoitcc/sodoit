@@ -1,84 +1,69 @@
 import Link from "next/link";
-import { ArrowRight, MapPin } from "lucide-react";
+
 import type { Guide } from "@/lib/guides/types";
 import { GuideCover } from "@/components/guides/GuideCover";
+
+interface DiscoveryFeaturedCardProps {
+  guide: Guide;
+  stopCount?: number;
+}
 
 export function DiscoveryFeaturedCard({
   guide,
   stopCount,
-}: {
-  guide: Guide;
-  stopCount?: number;
-}) {
+}: DiscoveryFeaturedCardProps) {
   const meta = [guide.duration_label, stopCount ? `${stopCount} stops` : null]
     .filter(Boolean)
     .join(" · ");
 
   return (
-    <Link
-      href={`/guides/${guide.slug}`}
-      className={[
-        "group block overflow-hidden rounded-panel bg-surface",
-        "outline-none",
-        "focus-visible:ring-2 focus-visible:ring-accent",
-        "sm:grid sm:grid-cols-[1.1fr_0.9fr]",
-      ].join(" ")}
-    >
-      <GuideCover
-        imageUrl={guide.cover_image_url}
-        imageAlt={guide.cover_image_alt}
-        title={guide.title}
-        priority
-        sizes="(min-width: 640px) 55vw, 100vw"
-        className="aspect-[16/10] w-full sm:aspect-auto sm:min-h-[340px] sm:h-full"
-      />
+    <section className="h-full overflow-hidden rounded-card border border-border bg-surface md:grid md:grid-cols-[1.08fr_0.92fr]">
+      <div className="relative h-[220px] sm:h-[280px] md:h-full">
+        <Link
+          href={`/guides/${guide.slug}`}
+          aria-label={`View ${guide.title}`}
+          className="absolute inset-0 z-10 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/30"
+        />
 
-      <div className="flex min-w-0 flex-col justify-between bg-surface-subtle p-6 sm:p-8 lg:p-9">
-        <div>
-          <div className="flex flex-wrap items-center gap-2 text-xs font-semibold text-muted">
-            <span className="inline-flex items-center gap-1.5 text-accent-dark">
-              <MapPin
-                aria-hidden="true"
-                className="h-3.5 w-3.5"
-                strokeWidth={2}
-              />
-              {guide.city}
-            </span>
+        <GuideCover
+          imageUrl={guide.cover_image_url}
+          imageAlt={guide.cover_image_alt}
+          title={guide.title}
+          priority
+          sizes="(min-width: 768px) 55vw, 100vw"
+          className="h-full w-full"
+        />
+      </div>
 
-            {meta && (
-              <>
-                <span aria-hidden="true" className="text-border">
-                  •
-                </span>
-                <span>{meta}</span>
-              </>
-            )}
-          </div>
-
-          <h3 className="mt-2 text-2xl font-extrabold leading-tight tracking-[-0.025em] text-ink transition-colors group-hover:text-accent-dark sm:text-3xl lg:text-[2rem]">
+      <div className="flex min-w-0 flex-col justify-center px-5 py-6 sm:px-7 md:px-8">
+        <Link
+          href={`/guides/${guide.slug}`}
+          className="group w-fit outline-none"
+        >
+          <h2 className="max-w-[520px] text-2xl font-extrabold leading-[1.05] tracking-[-0.025em] text-ink transition-colors group-hover:text-accent-dark sm:text-3xl">
             {guide.title}
-          </h3>
+          </h2>
+        </Link>
 
-          {guide.description && (
-            <p className="mt-4 line-clamp-3 max-w-md text-sm leading-6 text-secondary sm:text-base">
-              {guide.description}
-            </p>
-          )}
-        </div>
+        {guide.description && (
+          <p className="mt-3 line-clamp-2 max-w-[520px] text-sm leading-6 text-secondary">
+            {guide.description}
+          </p>
+        )}
 
-        <div className="mt-7 flex items-center justify-end">
-          <span
-            className={[
-              "inline-flex items-center gap-2 rounded-control bg-accent px-4 py-2.5",
-              "text-sm font-semibold text-white transition-colors",
-              "group-hover:bg-accent-hover",
-            ].join(" ")}
+        {meta && (
+          <p className="mt-4 text-xs font-semibold text-muted">{meta}</p>
+        )}
+
+        <div className="mt-6">
+          <Link
+            href={`/guides/${guide.slug}`}
+            className="inline-flex h-10 items-center justify-center rounded-control bg-accent px-5 text-sm font-semibold text-white outline-none transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-accent/30"
           >
             Open plan
-            <ArrowRight className="h-4 w-4" />
-          </span>
+          </Link>
         </div>
       </div>
-    </Link>
+    </section>
   );
 }

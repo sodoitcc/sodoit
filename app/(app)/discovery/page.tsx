@@ -223,8 +223,7 @@ export default async function DiscoveryPage({
               ))
             ) : (
               <DiscoveryGrid
-                eyebrow="Explore"
-                title={selectedCity ? `Plans in ${selectedCity}` : "All plans"}
+                title={heroCity ? `Explore ${heroCity}` : "Explore"}
                 guides={rest}
                 stopCounts={itemCounts}
               />
