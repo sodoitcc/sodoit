@@ -1,10 +1,6 @@
 import type { Metadata } from "next";
 import { DiscoveryHero } from "@/components/discovery/DiscoveryHero";
-import { DiscoverySearch } from "@/components/discovery/DiscoverySearch";
-import {
-  DiscoveryCategories,
-  type DiscoveryCategorySlug,
-} from "@/components/discovery/DiscoveryCategories";
+import type { DiscoveryCategorySlug } from "@/components/discovery/DiscoveryCategories";
 import { DiscoveryFeaturedCard } from "@/components/discovery/DiscoveryFeaturedCard";
 import { DiscoveryGrid } from "@/components/discovery/DiscoveryGrid";
 import { DiscoveryExperiencesSection } from "@/components/discovery/DiscoveryExperiencesSection";
@@ -157,28 +153,11 @@ export default async function DiscoveryPage({
         cities={cities}
         selectedCity={selectedCity}
         hero={heroMetadata}
+        q={q}
+        activeCategory={activeCategory}
       />
 
-      <main className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8">
-        {hasGuides && (
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <DiscoverySearch
-              q={q}
-              city={selectedCity}
-              category={activeCategory}
-            />
-          </div>
-        )}
-
-        {hasGuides && (
-          <div className="mt-1">
-            <DiscoveryCategories
-              city={selectedCity}
-              activeCategory={activeCategory}
-            />
-          </div>
-        )}
-
+      <main className="mx-auto w-full max-w-[1440px] px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
         {!hasGuides ? (
           <section className="py-16 sm:py-24">
             <div className="max-w-lg">
@@ -198,7 +177,7 @@ export default async function DiscoveryPage({
             </div>
           </section>
         ) : (
-          <div className="mt-8 space-y-12">
+          <div className="mt-5 space-y-10 sm:mt-8 sm:space-y-12">
             {heroFeatured && (
               <section aria-labelledby="featured-discovery">
                 <h2

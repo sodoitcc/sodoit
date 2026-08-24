@@ -160,7 +160,7 @@ export function BrowseBoard({
   );
 
   return (
-    <div className="mx-auto w-full max-w-[1440px] px-4 pb-4 sm:px-6 lg:px-8">
+    <>
       <BrowseHero>
         <BrowseToolbar
           search={searchText}
@@ -187,56 +187,58 @@ export function BrowseBoard({
         />
       </BrowseHero>
 
-      <div className="mt-6">
-        {showEditorial ? (
-          <>
-            <BrowseEditorialContent
-              featured={featured}
-              curatedSections={curatedSections}
-              completed={completed}
-              signedIn={signedIn}
-              onToggle={toggle}
-              onGuestSave={requireLogin}
-            />
+      <div className="mx-auto w-full max-w-[1440px] px-4 pb-4 sm:px-6 lg:px-8">
+        <div className="mt-4 sm:mt-6">
+          {showEditorial ? (
+            <>
+              <BrowseEditorialContent
+                featured={featured}
+                curatedSections={curatedSections}
+                completed={completed}
+                signedIn={signedIn}
+                onToggle={toggle}
+                onGuestSave={requireLogin}
+              />
 
-            <section className="mt-10">
-              <h2 className="mb-4 text-base font-bold tracking-[-0.01em] text-ink">
-                Explore experiences
-              </h2>
+              <section className="mt-10">
+                <h2 className="mb-4 text-base font-bold tracking-[-0.01em] text-ink">
+                  Explore experiences
+                </h2>
+
+                {results}
+              </section>
+            </>
+          ) : isDefaultView ? (
+            results
+          ) : (
+            <>
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <p
+                  className="text-sm text-secondary"
+                  role="status"
+                  aria-live="polite"
+                >
+                  {resultCount === null
+                    ? null
+                    : `${resultCount} ${
+                        resultCount === 1 ? "result" : "results"
+                      }`}
+                </p>
+
+                <button
+                  type="button"
+                  onClick={clear}
+                  className="text-xs font-semibold text-accent-dark hover:text-accent"
+                >
+                  Clear filters
+                </button>
+              </div>
 
               {results}
-            </section>
-          </>
-        ) : isDefaultView ? (
-          results
-        ) : (
-          <>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <p
-                className="text-sm text-secondary"
-                role="status"
-                aria-live="polite"
-              >
-                {resultCount === null
-                  ? null
-                  : `${resultCount} ${
-                      resultCount === 1 ? "result" : "results"
-                    }`}
-              </p>
-
-              <button
-                type="button"
-                onClick={clear}
-                className="text-xs font-semibold text-accent-dark hover:text-accent"
-              >
-                Clear filters
-              </button>
-            </div>
-
-            {results}
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

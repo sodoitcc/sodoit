@@ -2,8 +2,9 @@ import type { ButtonHTMLAttributes } from "react";
 
 export const CONTROL_BASE = [
   "inline-flex h-8 shrink-0 items-center justify-center gap-1.5",
-  "rounded-control border text-xs font-semibold transition-colors",
+  "rounded-control border text-[13px] font-semibold transition-colors",
   "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+  "sm:h-9",
 ].join(" ");
 
 export const CONTROL_IDLE =
@@ -27,7 +28,7 @@ export function BrowseChip({
       aria-pressed={selected}
       className={[
         CONTROL_BASE,
-        "px-3.5",
+        "px-4",
         selected ? CONTROL_ACTIVE : CONTROL_IDLE,
         className,
       ].join(" ")}
