@@ -1,20 +1,26 @@
 import Link from "next/link";
 
 import type { Guide } from "@/lib/guides/types";
+import type { GuideResolvedImage } from "@/lib/guides/queries";
 import { GuideCover } from "@/components/guides/GuideCover";
 
 interface DiscoveryFeaturedCardProps {
   guide: Guide;
   stopCount?: number;
+  image?: GuideResolvedImage | null;
 }
 
 export function DiscoveryFeaturedCard({
   guide,
   stopCount,
+  image,
 }: DiscoveryFeaturedCardProps) {
   const meta = [guide.duration_label, stopCount ? `${stopCount} stops` : null]
     .filter(Boolean)
     .join(" · ");
+
+  const imageUrl = image?.url ?? guide.cover_image_url;
+  const imageAlt = image?.alt ?? guide.cover_image_alt;
 
   return (
     <section className="h-full overflow-hidden rounded-card border border-border bg-surface md:grid md:grid-cols-[1.08fr_0.92fr]">
@@ -26,8 +32,8 @@ export function DiscoveryFeaturedCard({
         />
 
         <GuideCover
-          imageUrl={guide.cover_image_url}
-          imageAlt={guide.cover_image_alt}
+          imageUrl={imageUrl}
+          imageAlt={imageAlt}
           title={guide.title}
           priority
           sizes="(min-width: 768px) 55vw, 100vw"

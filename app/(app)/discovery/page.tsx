@@ -1,15 +1,18 @@
 import type { Metadata } from "next";
-import { DiscoveryHero } from "@/components/discovery/DiscoveryHero";
+
 import type { DiscoveryCategorySlug } from "@/components/discovery/DiscoveryCategories";
+import { DiscoveryExperiencesSection } from "@/components/discovery/DiscoveryExperiencesSection";
 import { DiscoveryFeaturedCard } from "@/components/discovery/DiscoveryFeaturedCard";
 import { DiscoveryGrid } from "@/components/discovery/DiscoveryGrid";
-import { DiscoveryExperiencesSection } from "@/components/discovery/DiscoveryExperiencesSection";
+import { DiscoveryHero } from "@/components/discovery/DiscoveryHero";
+
+import { getDiscoveryExperiences } from "@/lib/discovery/experiences";
 import {
   getGuideCities,
   getGuideItemCounts,
+  getGuideResolvedImages,
   getPublicGuides,
 } from "@/lib/guides/queries";
-import { getDiscoveryExperiences } from "@/lib/discovery/experiences";
 import type { Guide } from "@/lib/guides/types";
 
 export const metadata: Metadata = {
@@ -35,9 +38,11 @@ const CATEGORY_SEARCH_TERMS: Partial<Record<DiscoveryCategorySlug, string>> = {
 
 function cityCounts(guides: Guide[]) {
   const counts = new Map<string, number>();
+
   for (const guide of guides) {
     counts.set(guide.city, (counts.get(guide.city) ?? 0) + 1);
   }
+
   return [...counts.entries()]
     .map(([city, count]) => ({ city, count }))
     .sort((a, b) => a.city.localeCompare(b.city));
@@ -45,6 +50,7 @@ function cityCounts(guides: Guide[]) {
 
 function matchesQuery(guide: Guide, query: string) {
   const needle = query.toLowerCase();
+
   return (
     guide.title.toLowerCase().includes(needle) ||
     (guide.description?.toLowerCase().includes(needle) ?? false)
@@ -53,18 +59,22 @@ function matchesQuery(guide: Guide, query: string) {
 
 async function loadGuides(): Promise<Guide[]> {
   const guides = await getPublicGuides();
+
   if (guides.length > 0 || process.env.NODE_ENV !== "development") {
     return guides;
   }
 
   const { getDevPreviewGuides } = await import("@/lib/guides/dev-preview");
+
   return getDevPreviewGuides();
 }
 
 async function loadItemCounts(
   guideIds: string[],
 ): Promise<Record<string, number>> {
-  if (guideIds.length === 0) return {};
+  if (guideIds.length === 0) {
+    return {};
+  }
 
   if (
     process.env.NODE_ENV === "development" &&
@@ -72,6 +82,7 @@ async function loadItemCounts(
   ) {
     const { getDevPreviewItemCounts } =
       await import("@/lib/guides/dev-preview");
+
     return getDevPreviewItemCounts();
   }
 
@@ -89,13 +100,21 @@ export default async function DiscoveryPage({
       getDiscoveryExperiences(),
     ]);
 
-  const itemCounts = await loadItemCounts(guides.map((guide) => guide.id));
+  const guideIds = guides.map((guide) => guide.id);
+
+  const [itemCounts, resolvedImages] = await Promise.all([
+    loadItemCounts(guideIds),
+    getGuideResolvedImages(guides),
+  ]);
 
   const cities = cityCounts(guides);
+
   const selectedCity =
-    city && cities.some((c) => c.city === city) ? city : null;
+    city && cities.some((entry) => entry.city === city) ? city : null;
+
   const heroCity =
     selectedCity ?? (cities.length === 1 ? cities[0].city : null);
+
   const heroMetadata = heroCity
     ? (guideCities.find((metadata) => metadata.city === heroCity) ?? null)
     : null;
@@ -115,15 +134,21 @@ export default async function DiscoveryPage({
 
   const query =
     q?.trim() ?? CATEGORY_SEARCH_TERMS[activeCategory ?? "for-you"] ?? "";
+
   const hasActiveFilter = query.length > 0 || activeCategory === "itineraries";
 
   const filtered = cityScope.filter((guide) => {
-    if (query && !matchesQuery(guide, query)) return false;
+    if (query && !matchesQuery(guide, query)) {
+      return false;
+    }
+
     if (
       activeCategory === "itineraries" &&
       (guide.type ?? "itinerary") !== "itinerary"
-    )
+    ) {
       return false;
+    }
+
     return true;
   });
 
@@ -138,11 +163,12 @@ export default async function DiscoveryPage({
     : cityScope.filter((guide) => guide.id !== heroFeatured?.id);
 
   const groupByCity = !hasActiveFilter && !selectedCity && cities.length > 1;
+
   const citySections = groupByCity
     ? cities
-        .map(({ city: c }) => ({
-          city: c,
-          guides: rest.filter((guide) => guide.city === c),
+        .map(({ city: sectionCity }) => ({
+          city: sectionCity,
+          guides: rest.filter((guide) => guide.city === sectionCity),
         }))
         .filter((section) => section.guides.length > 0)
     : [];
@@ -186,9 +212,11 @@ export default async function DiscoveryPage({
                 >
                   {selectedCity ? `Featured in ${selectedCity}` : "Featured"}
                 </h2>
+
                 <DiscoveryFeaturedCard
                   guide={heroFeatured}
                   stopCount={itemCounts[heroFeatured.id]}
+                  image={resolvedImages[heroFeatured.id] ?? null}
                 />
               </section>
             )}
@@ -200,12 +228,14 @@ export default async function DiscoveryPage({
                   title={q ? `Results for “${q}”` : "Filtered plans"}
                   guides={filtered}
                   stopCounts={itemCounts}
+                  resolvedImages={resolvedImages}
                 />
               ) : (
                 <div className="rounded-panel border border-dashed border-border px-6 py-10 text-center">
                   <p className="text-sm font-semibold text-ink">
                     No plans found
                   </p>
+
                   <p className="mt-1 text-sm text-secondary">
                     Try another search or category.
                   </p>
@@ -219,6 +249,7 @@ export default async function DiscoveryPage({
                   title={section.city}
                   guides={section.guides}
                   stopCounts={itemCounts}
+                  resolvedImages={resolvedImages}
                 />
               ))
             ) : (
@@ -226,6 +257,7 @@ export default async function DiscoveryPage({
                 title={heroCity ? `Explore ${heroCity}` : "Explore"}
                 guides={rest}
                 stopCounts={itemCounts}
+                resolvedImages={resolvedImages}
               />
             )}
 

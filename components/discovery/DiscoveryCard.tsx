@@ -1,20 +1,26 @@
 import Link from "next/link";
 
 import type { Guide } from "@/lib/guides/types";
+import type { GuideResolvedImage } from "@/lib/guides/queries";
 import { GuideCover } from "@/components/guides/GuideCover";
 
 export function DiscoveryCard({
   guide,
   stopCount,
   priority = false,
+  image,
 }: {
   guide: Guide;
   stopCount?: number;
   priority?: boolean;
+  image?: GuideResolvedImage | null;
 }) {
   const meta = [stopCount ? `${stopCount} stops` : null, guide.duration_label]
     .filter(Boolean)
     .join(" · ");
+
+  const imageUrl = image?.url ?? guide.cover_image_url;
+  const imageAlt = image?.alt ?? guide.cover_image_alt;
 
   return (
     <Link
@@ -23,8 +29,8 @@ export function DiscoveryCard({
     >
       <article className="flex h-full flex-col">
         <GuideCover
-          imageUrl={guide.cover_image_url}
-          imageAlt={guide.cover_image_alt}
+          imageUrl={imageUrl}
+          imageAlt={imageAlt}
           title={guide.title}
           priority={priority}
           sizes="(min-width: 1024px) 380px, (min-width: 640px) 50vw, 100vw"

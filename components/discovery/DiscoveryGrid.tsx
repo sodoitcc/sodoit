@@ -2,6 +2,7 @@ import Link from "next/link";
 import { MoveRight } from "lucide-react";
 
 import type { Guide } from "@/lib/guides/types";
+import type { GuideResolvedImage } from "@/lib/guides/queries";
 import { DiscoveryCard } from "./DiscoveryCard";
 
 interface DiscoveryGridProps {
@@ -10,6 +11,7 @@ interface DiscoveryGridProps {
   eyebrow?: string;
   stopCounts?: Record<string, number>;
   viewAllHref?: string;
+  resolvedImages?: Record<string, GuideResolvedImage | null>;
 }
 
 export function DiscoveryGrid({
@@ -18,6 +20,7 @@ export function DiscoveryGrid({
   eyebrow,
   stopCounts,
   viewAllHref,
+  resolvedImages,
 }: DiscoveryGridProps) {
   if (guides.length === 0) return null;
 
@@ -54,6 +57,7 @@ export function DiscoveryGrid({
             guide={guide}
             stopCount={stopCounts?.[guide.id]}
             priority={index < 3}
+            image={resolvedImages?.[guide.id]}
           />
         ))}
       </div>
