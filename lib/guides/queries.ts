@@ -81,7 +81,7 @@ export async function getGuideBySlug(
 export interface GuideResolvedImage {
   url: string;
   alt: string | null;
-  source: "guide" | "guide_item";
+  source: "guide" | "guide_item" | "place";
 }
 
 export async function getGuideResolvedImages(
@@ -105,9 +105,6 @@ export async function getGuideResolvedImages(
     }
   }
 
-  // Dev-preview guides use synthetic ids (e.g. "preview-slug") that aren't
-  // valid uuids — querying guide_items with those would 400. They resolve
-  // to null (falls back to the placeholder cover) instead of crashing.
   const queryableIds = unresolvedIds.filter((id) => UUID_RE.test(id));
 
   if (queryableIds.length === 0) {
@@ -138,9 +135,67 @@ export async function getGuideResolvedImages(
     };
   }
 
+  const stillUnresolvedIds = queryableIds.filter((id) => !result[id]);
+
+  if (stillUnresolvedIds.length > 0) {
+    await resolveFromPlaces(supabase, stillUnresolvedIds, result);
+  }
+
   for (const id of unresolvedIds) {
     result[id] ??= null;
   }
 
   return result;
+}
+
+async function resolveFromPlaces(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  guideIds: string[],
+  result: Record<string, GuideResolvedImage | null>,
+): Promise<void> {
+  const { data: items, error: itemsError } = await supabase
+    .from("guide_items")
+    .select("guide_id, position, place_id, place_name")
+    .in("guide_id", guideIds)
+    .not("place_id", "is", null)
+    .order("position");
+
+  if (itemsError) throw itemsError;
+
+  const placeIdByGuide = new Map<string, string>();
+  const itemByGuide = new Map<string, { place_name: string | null }>();
+
+  for (const item of items ?? []) {
+    if (placeIdByGuide.has(item.guide_id) || !item.place_id) continue;
+    placeIdByGuide.set(item.guide_id, item.place_id);
+    itemByGuide.set(item.guide_id, { place_name: item.place_name });
+  }
+
+  const placeIds = [...new Set(placeIdByGuide.values())];
+  if (placeIds.length === 0) return;
+
+  const { data: places, error: placesError } = await supabase
+    .from("places")
+    .select("id, name, primary_photo_url, primary_photo_alt")
+    .in("id", placeIds)
+    .eq("is_public", true)
+    .not("primary_photo_url", "is", null);
+
+  if (placesError) throw placesError;
+
+  const placeById = new Map((places ?? []).map((place) => [place.id, place]));
+
+  for (const [guideId, placeId] of placeIdByGuide) {
+    const place = placeById.get(placeId);
+    if (!place?.primary_photo_url) continue;
+
+    result[guideId] = {
+      url: place.primary_photo_url,
+      alt:
+        place.primary_photo_alt ??
+        itemByGuide.get(guideId)?.place_name ??
+        place.name,
+      source: "place",
+    };
+  }
 }
