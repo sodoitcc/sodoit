@@ -1,9 +1,6 @@
 import type { GuideItem } from "@/lib/guides/types";
 import { GuideItineraryItem } from "./GuideItineraryItem";
 
-// Heading + anchor live in the page (it owns the eyebrow/title/count
-// pattern shared across itinerary and collection framing) — this just
-// renders the timeline.
 export function GuideItinerary({ items }: { items: GuideItem[] }) {
   if (items.length === 0) return null;
 
@@ -13,6 +10,7 @@ export function GuideItinerary({ items }: { items: GuideItem[] }) {
         <GuideItineraryItem
           key={item.id}
           item={item}
+          index={index}
           isLast={index === items.length - 1}
         />
       ))}

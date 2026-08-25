@@ -4,8 +4,14 @@ import {
   formatKB,
   percentSaved,
 } from "./lib/optimize-image.mjs";
+import {
+  PexelsRateLimitError,
+  delay,
+  downloadImage,
+  pexelsPhotoSrcUrl,
+  searchPexelsPhoto,
+} from "./lib/pexels.mjs";
 
-const PEXELS_API_URL = "https://api.pexels.com/v1/search";
 const BUCKET = "experience-images";
 const SEARCH_DELAY_MS = 350;
 const PAGE_SIZE = 1000;
@@ -27,13 +33,6 @@ const supabase = createClient(supabaseUrl, serviceRoleKey, {
   },
 });
 
-class PexelsRateLimitError extends Error {
-  constructor(retryAfter) {
-    super("Pexels rate limit reached");
-    this.retryAfter = retryAfter;
-  }
-}
-
 function parseLimitArg() {
   const arg = process.argv.find((value) => value.startsWith("--limit="));
 
@@ -44,10 +43,6 @@ function parseLimitArg() {
   const limit = Number(arg.split("=")[1]);
 
   return Number.isFinite(limit) && limit > 0 ? limit : null;
-}
-
-function delay(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function loadExperiences() {
@@ -83,47 +78,13 @@ async function searchPhoto(experience) {
     ? experience.image_query.trim()
     : [experience.title, experience.category].filter(Boolean).join(" ");
 
-  const url = new URL(PEXELS_API_URL);
-
-  url.searchParams.set("query", query);
-  url.searchParams.set("orientation", "landscape");
-  url.searchParams.set("per_page", "5");
-
-  const response = await fetch(url, {
-    headers: {
-      Authorization: pexelsApiKey,
-    },
-  });
-
-  if (response.status === 429) {
-    throw new PexelsRateLimitError(response.headers.get("retry-after"));
-  }
-
-  if (!response.ok) {
-    throw new Error(
-      `Pexels request failed (${response.status}) for "${query}"`,
-    );
-  }
-
-  const result = await response.json();
-
-  return result.photos?.[0] ?? null;
-}
-
-async function downloadImage(url) {
-  const response = await fetch(url);
-
-  if (!response.ok) {
-    throw new Error(`Image download failed (${response.status})`);
-  }
-
-  return Buffer.from(await response.arrayBuffer());
+  return searchPexelsPhoto(query);
 }
 
 async function uploadImage(experienceId, photo) {
   const path = `experiences/${experienceId}-${photo.id}.webp`;
 
-  const imageSrc = photo.src.large2x ?? photo.src.large ?? photo.src.landscape;
+  const imageSrc = pexelsPhotoSrcUrl(photo);
   const original = await downloadImage(imageSrc);
   const optimized = await optimizeImage(original);
 

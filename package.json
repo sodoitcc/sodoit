@@ -1,6 +1,6 @@
 {
   "name": "sodoit",
-  "version": "0.2.10",
+  "version": "0.2.11",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -12,6 +12,8 @@
     "test:security": "node --env-file=.env.local node_modules/vitest/vitest.mjs run tests/security",
     "test:e2e": "node --env-file=.env.local node_modules/@playwright/test/cli.js test",
     "seed:images": "node --env-file=.env.local scripts/seed-experience-images.mjs",
+    "seed:guide-images": "node --env-file=.env.local scripts/enrich-guide-images.mjs",
+    "seed:guide-item-images": "node --env-file=.env.local scripts/enrich-guide-item-images.mjs",
     "optimize:images": "node --env-file=.env.local scripts/optimize-experience-images.mjs",
     "content:validate": "node --env-file=.env.local scripts/content/validate-experiences.mjs",
     "content:import": "node --env-file=.env.local scripts/content/import-experiences.mjs",

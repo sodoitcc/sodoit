@@ -57,7 +57,6 @@ export function DiscoverySearch({
       onChange={setSearch}
       placeholder="Search places, itineraries, and collections..."
       label="Search places, itineraries, and collections"
-      size="large"
     />
   );
 }
