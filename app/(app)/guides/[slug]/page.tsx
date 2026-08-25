@@ -7,7 +7,7 @@ import { ChevronLeft, Clock3, ListOrdered, MapPin } from "lucide-react";
 import { GuideCover } from "@/components/guides/GuideCover";
 import { GuideItinerary } from "@/components/guides/GuideItinerary";
 import { ShareGuideButton } from "@/components/guides/ShareGuideButton";
-import { getGuideBySlug } from "@/lib/guides/queries";
+import { getGuideBySlug, getGuideResolvedImages } from "@/lib/guides/queries";
 
 const loadGuide = cache(async (slug: string) => {
   const guide = await getGuideBySlug(slug);
@@ -60,8 +60,13 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
   const stopWord = isCollection ? "places" : "stops";
   const stopWordCapitalized = isCollection ? "Places" : "Stops";
 
+  const resolvedImages = await getGuideResolvedImages([guide]);
+  const resolvedImage = resolvedImages[guide.id];
+  const imageUrl = resolvedImage?.url ?? guide.cover_image_url;
+  const imageAlt = resolvedImage?.alt ?? guide.cover_image_alt;
+
   return (
-    <article className="mx-auto w-full max-w-[1200px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+    <article className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <Link
         href="/discovery"
         className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
@@ -70,16 +75,9 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
         Back to Discovery
       </Link>
 
-      <div
-        className={[
-          "mt-8 grid grid-cols-1 gap-8",
-          "[grid-template-areas:'header'_'summary'_'itinerary']",
-          "lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-10",
-          "lg:[grid-template-areas:'header_summary'_'itinerary_summary']",
-        ].join(" ")}
-      >
-        <div className="min-w-0 [grid-area:header]">
-          <header className="max-w-3xl">
+      <div className="mx-auto mt-8 max-w-[1440px]">
+        <header className="flex flex-wrap items-start justify-between gap-6">
+          <div className="min-w-0 max-w-2xl">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
               <span className="inline-flex items-center gap-1 text-accent-dark">
                 <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
@@ -103,33 +101,69 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
             <h1 className="mt-3 text-3xl font-extrabold tracking-[-0.025em] text-ink sm:text-4xl lg:text-5xl">
               {guide.title}
             </h1>
+          </div>
 
-            {guide.description && (
-              <p className="mt-4 max-w-2xl text-base leading-7 text-secondary sm:text-lg">
-                {guide.description}
+          <div className="flex shrink-0 items-center gap-2">
+            <ShareGuideButton title={guide.title} />
+          </div>
+        </header>
+
+        <GuideCover
+          imageUrl={imageUrl}
+          imageAlt={imageAlt}
+          title={guide.title}
+          priority
+          sizes="(min-width: 900px) 900px, 100vw"
+          className="mt-7 aspect-[16/9] w-full rounded-media object-cover"
+        />
+
+        <div className="mt-6 flex items-center gap-8 border-y border-border py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-surface-subtle text-secondary">
+              <ListOrdered aria-hidden="true" className="h-4 w-4" />
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
+                {stopWordCapitalized}
               </p>
-            )}
-          </header>
+              <p className="text-sm font-bold text-ink">{guide.items.length}</p>
+            </div>
+          </div>
 
-          <GuideCover
-            imageUrl={guide.cover_image_url}
-            imageAlt={guide.cover_image_alt}
-            title={guide.title}
-            priority
-            sizes="(min-width: 1200px) 810px, (min-width: 1024px) calc(100vw - 390px), 100vw"
-            className="mt-7 aspect-[16/9] w-full rounded-media object-cover"
-          />
+          {guide.duration_label && (
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-surface-subtle text-secondary">
+                <Clock3 aria-hidden="true" className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
+                  Duration
+                </p>
+                <p className="text-sm font-bold text-ink">
+                  {guide.duration_label}
+                </p>
+              </div>
+            </div>
+          )}
         </div>
 
+        {guide.description && (
+          <section className="mt-10 rounded-media bg-accent-wash px-6 py-7 sm:px-8">
+            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-dark">
+              The plan
+            </p>
+            <p className="mt-3 max-w-2xl text-base leading-7 text-ink sm:text-lg">
+              {guide.description}
+            </p>
+          </section>
+        )}
+
         {guide.items.length > 0 && (
-          <section
-            id="itinerary"
-            className="min-w-0 [grid-area:itinerary] scroll-mt-24"
-          >
+          <section id="itinerary" className="mt-12 scroll-mt-24">
             <div className="mb-5 flex items-end justify-between gap-4 border-b border-border pb-4">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                  Explore
+                  Your route
                 </p>
 
                 <h2 className="mt-1 text-2xl font-bold tracking-tight text-ink">
@@ -145,68 +179,6 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
             <GuideItinerary items={guide.items} />
           </section>
         )}
-
-        <aside className="[grid-area:summary] lg:sticky lg:top-24 lg:self-start">
-          <div className="rounded-panel border border-border bg-surface p-5">
-            <h2 className="text-base font-bold text-ink">Guide summary</h2>
-
-            <dl className="mt-5 space-y-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-surface-subtle text-secondary">
-                  <MapPin aria-hidden="true" className="h-4 w-4" />
-                </div>
-
-                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                  <dt className="text-sm text-secondary">City</dt>
-                  <dd className="text-sm font-semibold text-ink">
-                    {guide.city}
-                  </dd>
-                </div>
-              </div>
-
-              {guide.duration_label && (
-                <div className="flex items-center gap-3">
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-surface-subtle text-secondary">
-                    <Clock3 aria-hidden="true" className="h-4 w-4" />
-                  </div>
-
-                  <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                    <dt className="text-sm text-secondary">Duration</dt>
-                    <dd className="text-sm font-semibold text-ink">
-                      {guide.duration_label}
-                    </dd>
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-surface-subtle text-secondary">
-                  <ListOrdered aria-hidden="true" className="h-4 w-4" />
-                </div>
-
-                <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
-                  <dt className="text-sm text-secondary">
-                    {stopWordCapitalized}
-                  </dt>
-                  <dd className="text-sm font-semibold text-ink">
-                    {guide.items.length}
-                  </dd>
-                </div>
-              </div>
-            </dl>
-
-            {guide.items.length > 0 && (
-              <a
-                href="#itinerary"
-                className="mt-6 flex h-10 w-full items-center justify-center rounded-control bg-accent px-4 text-sm font-semibold text-white transition-colors hover:bg-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
-              >
-                {isCollection ? "View places ↓" : "View itinerary ↓"}
-              </a>
-            )}
-
-            <ShareGuideButton title={guide.title} className="mt-2 w-full" />
-          </div>
-        </aside>
       </div>
     </article>
   );
