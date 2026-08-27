@@ -1,25 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Globe2, Lock } from "lucide-react";
+import { ChevronLeft, Globe2, Lock, MoreHorizontal } from "lucide-react";
 
-import {
-  Button,
-  EmptyState,
-  PageHero,
-  ShareButton,
-  ViewToggle,
-} from "@/components/ui";
+import { Button, EmptyState, ShareButton, ViewToggle } from "@/components/ui";
 import { SearchField } from "@/components/ui/SearchField";
 import { ExperienceResults } from "@/app/(app)/browse/components/ExperienceResults";
 import { setListStatus } from "@/app/(app)/browse/actions";
 import type { BrowseView, Experience } from "@/app/(app)/browse/types";
 import {
+  deleteCollection,
   removeExperienceFromCollection,
   renameCollection,
   setCollectionVisibility,
 } from "@/app/(app)/list/collections/actions";
+import { CollectionCollage } from "@/app/(app)/list/collections/CollectionCollage";
 import type { Collection } from "@/app/(app)/list/collections/types";
 import { AddExperiencesDialog } from "./AddExperiencesDialog";
 
@@ -52,22 +49,47 @@ export function CollectionDetailView({
   const [renaming, setRenaming] = useState(false);
   const [name, setName] = useState(collection.name);
   const [adding, setAdding] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const isPublic = collection.visibility === "public";
+
+  useEffect(() => {
+    if (!menuOpen) return;
+
+    function onPointerDown(event: PointerEvent) {
+      if (!menuRef.current?.contains(event.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+
+    window.addEventListener("pointerdown", onPointerDown);
+    return () => window.removeEventListener("pointerdown", onPointerDown);
+  }, [menuOpen]);
 
   async function submitRename() {
     const trimmed = name.trim();
     setRenaming(false);
-    if (!trimmed || trimmed === collection.name) return;
+    if (!trimmed || trimmed === collection.name) {
+      setName(collection.name);
+      return;
+    }
 
     setCollection((previous) => ({ ...previous, name: trimmed }));
     await renameCollection(collection.id, trimmed);
   }
 
   async function toggleVisibility() {
+    setMenuOpen(false);
     const next = isPublic ? "private" : "public";
     setCollection((previous) => ({ ...previous, visibility: next }));
     await setCollectionVisibility(collection.id, next);
+  }
+
+  async function handleDelete() {
+    setMenuOpen(false);
+    await deleteCollection(collection.id);
+    router.push("/list");
   }
 
   async function removeItem(experienceId: string) {
@@ -123,17 +145,24 @@ export function CollectionDetailView({
   async function noop(): Promise<void> {}
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-4 py-4 sm:px-6 lg:px-8">
-      <button
-        type="button"
-        onClick={() => router.push(isOwner ? "/list" : `/u/${username}/list`)}
-        className="text-xs font-semibold text-secondary transition-colors hover:text-ink"
+    <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <Link
+        href={isOwner ? "/list" : `/u/${username}/list`}
+        className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
       >
-        &larr; {isOwner ? "My list" : `${username}'s list`}
-      </button>
+        <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+        {isOwner ? "My list" : `${username}'s list`}
+      </Link>
 
-      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div>
+      <div className="mt-6 grid gap-8 lg:grid-cols-[0.55fr_0.45fr] lg:items-start">
+        <div className="relative aspect-[4/3] w-full overflow-hidden rounded-media sm:aspect-[16/11]">
+          <CollectionCollage
+            images={collection.coverImages ?? []}
+            sizes="(min-width: 1024px) 50vw, 100vw"
+          />
+        </div>
+
+        <div className="min-w-0">
           {renaming ? (
             <input
               autoFocus
@@ -142,69 +171,118 @@ export function CollectionDetailView({
               onBlur={submitRename}
               onKeyDown={(event) => {
                 if (event.key === "Enter") submitRename();
-                if (event.key === "Escape") setRenaming(false);
+                if (event.key === "Escape") {
+                  setName(collection.name);
+                  setRenaming(false);
+                }
               }}
               maxLength={60}
-              className="h-10 rounded-control border border-border bg-surface px-3 text-2xl font-extrabold text-ink focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/10 sm:text-3xl"
+              className="h-11 w-full rounded-control border border-border bg-surface px-3 text-2xl font-extrabold text-ink focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/10 sm:text-3xl"
             />
           ) : (
-            <PageHero
-              title={collection.name}
-              subtitle={`${collection.itemCount} experience${collection.itemCount === 1 ? "" : "s"} · by ${username}`}
-            />
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 pt-1">
-          {isOwner && (
-            <Button type="button" size="sm" onClick={() => setAdding(true)}>
-              Add experiences
-            </Button>
+            <h1 className="text-2xl font-extrabold tracking-[-0.02em] text-ink sm:text-3xl lg:text-4xl">
+              {collection.name}
+            </h1>
           )}
 
-          {isOwner && (
-            <>
-              <button
-                type="button"
-                onClick={() => setRenaming(true)}
-                className="inline-flex h-8 shrink-0 items-center rounded-control border border-border bg-surface px-3 text-xs font-semibold text-secondary transition-colors hover:border-border-strong hover:text-ink"
-              >
-                Rename
-              </button>
+          {collection.description && (
+            <p className="mt-3 max-w-xl text-[15px] leading-6 text-secondary">
+              {collection.description}
+            </p>
+          )}
 
-              <button
-                type="button"
-                onClick={toggleVisibility}
-                className={[
-                  "inline-flex h-8 shrink-0 items-center gap-1.5 rounded-control border px-3",
-                  "text-xs font-semibold transition-colors",
-                  isPublic
-                    ? "border-accent/40 bg-accent-wash text-accent-dark"
-                    : "border-border bg-surface text-secondary hover:border-border-strong hover:text-ink",
-                ].join(" ")}
-              >
-                {isPublic ? (
-                  <Globe2 aria-hidden="true" className="h-3.5 w-3.5" />
-                ) : (
-                  <Lock aria-hidden="true" className="h-3.5 w-3.5" />
+          <p className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+            <span>
+              {collection.itemCount}{" "}
+              {collection.itemCount === 1 ? "item" : "items"}
+            </span>
+            <span aria-hidden="true">&middot;</span>
+            <span className="inline-flex items-center gap-1">
+              {isPublic ? (
+                <Globe2 aria-hidden="true" className="h-3 w-3" />
+              ) : (
+                <Lock aria-hidden="true" className="h-3 w-3" />
+              )}
+              {isPublic ? "Public" : "Private"}
+            </span>
+            <span aria-hidden="true">&middot;</span>
+            <span>by {username}</span>
+          </p>
+
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            {isOwner && (
+              <Button type="button" size="sm" onClick={() => setAdding(true)}>
+                Add experiences
+              </Button>
+            )}
+
+            {isPublic && (
+              <ShareButton
+                url={`/u/${username}/collections/${collection.slug}`}
+                title={collection.name}
+                size="sm"
+              />
+            )}
+
+            {isOwner && (
+              <div ref={menuRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setMenuOpen((value) => !value)}
+                  aria-label="Collection options"
+                  aria-haspopup="menu"
+                  aria-expanded={menuOpen}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-control border border-border bg-surface text-secondary transition-colors hover:border-border-strong hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+                >
+                  <MoreHorizontal aria-hidden="true" className="h-4 w-4" />
+                </button>
+
+                {menuOpen && (
+                  <div
+                    role="menu"
+                    className="absolute left-0 top-full z-20 mt-1 w-44 rounded-panel border border-border bg-surface p-1 shadow-popover"
+                  >
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setRenaming(true);
+                      }}
+                      className="flex w-full items-center rounded-control px-3 py-2 text-left text-sm font-medium text-secondary transition-colors hover:bg-surface-subtle hover:text-ink"
+                    >
+                      Rename
+                    </button>
+
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={toggleVisibility}
+                      className="flex w-full items-center rounded-control px-3 py-2 text-left text-sm font-medium text-secondary transition-colors hover:bg-surface-subtle hover:text-ink"
+                    >
+                      Make {isPublic ? "private" : "public"}
+                    </button>
+
+                    <div className="my-1 border-t border-border" />
+
+                    <button
+                      type="button"
+                      role="menuitem"
+                      onClick={handleDelete}
+                      className="flex w-full items-center rounded-control px-3 py-2 text-left text-sm font-medium text-red-600 transition-colors hover:bg-red-50"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 )}
-                {isPublic ? "Public" : "Private"}
-              </button>
-            </>
-          )}
+              </div>
+            )}
+          </div>
         </div>
-
-        {isPublic && (
-          <ShareButton
-            url={`/u/${username}/collections/${collection.slug}`}
-            title={collection.name}
-            size="sm"
-          />
-        )}
       </div>
 
       {experiences.length === 0 ? (
-        <div className="mt-8">
+        <div className="mt-10">
           <EmptyState
             title="No experiences yet"
             description={
@@ -222,16 +300,22 @@ export function CollectionDetailView({
           />
         </div>
       ) : (
-        <>
-          <div className="mt-6 flex flex-col gap-2.5 border-b border-border pb-2.5 sm:flex-row sm:items-center sm:justify-between">
+        <section className="mt-10">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-base font-bold tracking-[-0.01em] text-ink">
+              In this collection
+            </h2>
+
+            <ViewToggle view={view} onChange={setView} />
+          </div>
+
+          <div className="mt-3 border-b border-border pb-3">
             <SearchField
               value={search}
               onChange={setSearch}
               placeholder="Search this collection..."
               className="w-full sm:max-w-sm"
             />
-
-            <ViewToggle view={view} onChange={setView} />
           </div>
 
           <div className="mt-4">
@@ -259,7 +343,7 @@ export function CollectionDetailView({
               />
             )}
           </div>
-        </>
+        </section>
       )}
 
       {isOwner && adding && (

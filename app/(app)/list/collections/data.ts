@@ -11,6 +11,44 @@ interface CollectionRow {
   collection_items: { count: number }[];
 }
 
+interface CoverImageRow {
+  collection_id: string;
+  position: number;
+  experiences:
+    { image_url: string | null } | { image_url: string | null }[] | null;
+}
+
+async function loadCollectionCoverImages(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  collectionIds: string[],
+): Promise<Map<string, string[]>> {
+  if (collectionIds.length === 0) return new Map();
+
+  const { data } = await supabase
+    .from("collection_items")
+    .select("collection_id, position, experiences(image_url)")
+    .in("collection_id", collectionIds)
+    .order("position", { ascending: true });
+
+  const map = new Map<string, string[]>();
+
+  for (const row of (data ?? []) as CoverImageRow[]) {
+    const experience = Array.isArray(row.experiences)
+      ? (row.experiences[0] ?? null)
+      : row.experiences;
+    const imageUrl = experience?.image_url;
+    if (!imageUrl) continue;
+
+    const current = map.get(row.collection_id) ?? [];
+    if (current.length >= 4) continue;
+
+    current.push(imageUrl);
+    map.set(row.collection_id, current);
+  }
+
+  return map;
+}
+
 export async function loadCollections(userId: string): Promise<Collection[]> {
   const supabase = await createClient();
 
@@ -20,13 +58,20 @@ export async function loadCollections(userId: string): Promise<Collection[]> {
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 
-  return ((data ?? []) as CollectionRow[]).map((row) => ({
+  const rows = (data ?? []) as CollectionRow[];
+  const coverImages = await loadCollectionCoverImages(
+    supabase,
+    rows.map((row) => row.id),
+  );
+
+  return rows.map((row) => ({
     id: row.id,
     slug: row.slug,
     name: row.name,
     description: row.description,
     visibility: row.visibility,
     itemCount: row.collection_items[0]?.count ?? 0,
+    coverImages: coverImages.get(row.id) ?? [],
   }));
 }
 
@@ -96,11 +141,16 @@ export async function loadCollectionBySlug(
     .from("collection_items")
     .select(`experiences(${EXPERIENCE_COLUMNS})`)
     .eq("collection_id", collectionRow.id)
-    .order("added_at", { ascending: false });
+    .order("position", { ascending: true });
 
   const experiences = ((itemRows ?? []) as CollectionItemRow[])
     .map((row) => toExperience(row.experiences))
     .filter((experience): experience is Experience => experience !== null);
+
+  const coverImages = experiences
+    .map((experience) => experience.image_url)
+    .filter((imageUrl): imageUrl is string => Boolean(imageUrl))
+    .slice(0, 4);
 
   return {
     collection: {
@@ -110,6 +160,7 @@ export async function loadCollectionBySlug(
       description: collectionRow.description,
       visibility: collectionRow.visibility,
       itemCount: collectionRow.collection_items[0]?.count ?? 0,
+      coverImages,
     },
     experiences,
   };

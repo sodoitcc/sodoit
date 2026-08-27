@@ -7,6 +7,7 @@ export interface Collection {
   description: string | null;
   visibility: Visibility;
   itemCount: number;
+  coverImages?: string[];
 }
 
 export const COLLECTION_NAME_MAX_LENGTH = 60;
