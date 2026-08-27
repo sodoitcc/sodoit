@@ -57,7 +57,7 @@ export default async function CollectionDetailPage({ params }: PageProps) {
     if (isOwner) notFound();
 
     return (
-      <div className="mx-auto w-full max-w-[1200px] px-4 py-16 sm:px-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1440px] px-4 py-16 sm:px-6 lg:px-8">
         <EmptyState title="This collection isn't public." />
       </div>
     );

@@ -1,15 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { Bookmark, Globe2, Lock, MoreHorizontal } from "lucide-react";
+import { Globe2, Lock, MoreHorizontal } from "lucide-react";
 
 import {
   deleteCollection,
   renameCollection,
   setCollectionVisibility,
 } from "./actions";
+import { CollectionCollage } from "./CollectionCollage";
 
 import type { Collection } from "./types";
 
@@ -22,68 +22,6 @@ interface CollectionCardProps {
     id: string,
     visibility: Collection["visibility"],
   ) => void;
-}
-
-function Tile({ src, className = "" }: { src: string; className?: string }) {
-  return (
-    <div className={`relative bg-surface-subtle ${className}`}>
-      <Image
-        src={src}
-        alt=""
-        fill
-        sizes="(min-width: 640px) 240px, 224px"
-        className="object-cover"
-      />
-    </div>
-  );
-}
-
-function EmptyCollectionCover() {
-  return (
-    <div className="flex h-full w-full items-center justify-center bg-accent-wash">
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-surface text-accent-dark shadow-sm">
-        <Bookmark aria-hidden="true" className="h-5 w-5" />
-      </div>
-    </div>
-  );
-}
-
-function CollectionCollage({ images }: { images: string[] }) {
-  if (images.length === 0) {
-    return <EmptyCollectionCover />;
-  }
-
-  if (images.length === 1) {
-    return <Tile src={images[0]} className="h-full w-full" />;
-  }
-
-  if (images.length === 2) {
-    return (
-      <div className="grid h-full w-full grid-cols-2 gap-0.5">
-        {images.map((src, index) => (
-          <Tile key={`${src}-${index}`} src={src} className="h-full w-full" />
-        ))}
-      </div>
-    );
-  }
-
-  if (images.length === 3) {
-    return (
-      <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5">
-        <Tile src={images[0]} className="row-span-2 h-full w-full" />
-        <Tile src={images[1]} className="h-full w-full" />
-        <Tile src={images[2]} className="h-full w-full" />
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-0.5">
-      {images.slice(0, 4).map((src, index) => (
-        <Tile key={`${src}-${index}`} src={src} className="h-full w-full" />
-      ))}
-    </div>
-  );
 }
 
 export function CollectionCard({

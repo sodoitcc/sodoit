@@ -141,11 +141,16 @@ export async function loadCollectionBySlug(
     .from("collection_items")
     .select(`experiences(${EXPERIENCE_COLUMNS})`)
     .eq("collection_id", collectionRow.id)
-    .order("added_at", { ascending: false });
+    .order("position", { ascending: true });
 
   const experiences = ((itemRows ?? []) as CollectionItemRow[])
     .map((row) => toExperience(row.experiences))
     .filter((experience): experience is Experience => experience !== null);
+
+  const coverImages = experiences
+    .map((experience) => experience.image_url)
+    .filter((imageUrl): imageUrl is string => Boolean(imageUrl))
+    .slice(0, 4);
 
   return {
     collection: {
@@ -155,6 +160,7 @@ export async function loadCollectionBySlug(
       description: collectionRow.description,
       visibility: collectionRow.visibility,
       itemCount: collectionRow.collection_items[0]?.count ?? 0,
+      coverImages,
     },
     experiences,
   };
