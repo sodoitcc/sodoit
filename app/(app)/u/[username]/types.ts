@@ -18,6 +18,7 @@ export interface ProfileViewModel {
   avatarUrl: string | null;
   joinedAt: string;
   completedCount: number;
+  savedCount: number;
   categoryCount: number;
   achievementCount: number;
   recentCompleted: CompletedExperience[];

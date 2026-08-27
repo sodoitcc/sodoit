@@ -20,6 +20,7 @@ interface ExperienceRow {
 }
 
 interface CompletedRow {
+  status: "saved" | "completed";
   experiences: ExperienceRow | ExperienceRow[] | null;
 }
 
@@ -48,12 +49,11 @@ export async function loadProfile(
 
   const profile = profileData as ProfileRow;
 
-  const [completedResult, achievementsResult, definitions] = await Promise.all([
+  const [listResult, achievementsResult, definitions] = await Promise.all([
     supabase
       .from("user_lists")
-      .select("experiences(id, title, category, image_url, image_alt)")
-      .eq("user_id", profile.id)
-      .eq("status", "completed"),
+      .select("status, experiences(id, title, category, image_url, image_alt)")
+      .eq("user_id", profile.id),
 
     supabase
       .from("user_achievements")
@@ -63,14 +63,17 @@ export async function loadProfile(
     loadAchievementDefinitions(),
   ]);
 
-  if (completedResult.error || achievementsResult.error) {
+  if (listResult.error || achievementsResult.error) {
     throw new Error("Could not load profile.");
   }
 
-  const completedRows = (completedResult.data ?? []) as CompletedRow[];
+  const listRows = (listResult.data ?? []) as CompletedRow[];
   const achievementRows = (achievementsResult.data ?? []) as AchievementRow[];
 
-  const completedExperiences = completedRows
+  const savedCount = listRows.filter((row) => row.status === "saved").length;
+
+  const completedExperiences = listRows
+    .filter((row) => row.status === "completed")
     .map((row) => toSingle(row.experiences))
     .filter((experience): experience is ExperienceRow => experience !== null);
 
@@ -104,6 +107,7 @@ export async function loadProfile(
     avatarUrl: profile.avatar_url,
     joinedAt: profile.created_at,
     completedCount: completedExperiences.length,
+    savedCount,
     categoryCount: categoriesCompleted.size,
     achievementCount: earnedAchievements.length,
     recentCompleted: completedExperiences.slice(0, 5).map((experience) => ({
