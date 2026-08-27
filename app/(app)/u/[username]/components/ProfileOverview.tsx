@@ -15,10 +15,12 @@ export function ProfileOverview({
   isOwner: boolean;
 }) {
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-9">
       <section>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-ink">Recently completed</h2>
+          <h2 className="text-base font-bold tracking-[-0.01em] text-ink">
+            Recently completed
+          </h2>
           {profile.recentCompleted.length > 0 && (
             <Link
               href={`/u/${profile.username}?view=list`}
@@ -36,7 +38,9 @@ export function ProfileOverview({
 
       <section>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-ink">Achievements</h2>
+          <h2 className="text-base font-bold tracking-[-0.01em] text-ink">
+            Achievements
+          </h2>
           {profile.achievementCount > 0 && (
             <Link
               href={`/u/${profile.username}?view=achievements`}
@@ -58,13 +62,17 @@ export function ProfileOverview({
 
       <section>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-sm font-bold text-ink">Collections</h2>
-          {isOwner && (
+          <h2 className="text-base font-bold tracking-[-0.01em] text-ink">
+            Collections
+          </h2>
+          {collections.length > 0 && (
             <Link
-              href="/list"
+              href={
+                isOwner ? "/list" : `/u/${profile.username}?view=collections`
+              }
               className="text-xs font-semibold text-accent-dark hover:text-accent"
             >
-              Manage
+              {isOwner ? "Manage" : "View all"}
             </Link>
           )}
         </div>
@@ -72,7 +80,7 @@ export function ProfileOverview({
         <div className="mt-3">
           <ProfileCollections
             username={profile.username}
-            collections={collections}
+            collections={collections.slice(0, 6)}
             isOwner={isOwner}
           />
         </div>

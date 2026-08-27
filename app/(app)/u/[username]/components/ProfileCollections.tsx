@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Globe2, Lock } from "lucide-react";
 
 import { EmptyState } from "@/components/ui";
+import { CollectionCollage } from "@/app/(app)/list/collections/CollectionCollage";
 import type { Collection } from "@/app/(app)/list/collections/types";
 
 export function ProfileCollections({
@@ -22,20 +23,27 @@ export function ProfileCollections({
   }
 
   return (
-    <ul className="grid gap-2 sm:grid-cols-2">
+    <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {collections.map((collection) => (
         <li key={collection.id}>
           <Link
             href={`/u/${username}/collections/${collection.slug}`}
-            className="flex items-center justify-between gap-3 rounded-control border border-border bg-surface px-3.5 py-3 transition-colors hover:border-border-strong hover:bg-surface-subtle"
+            className="group flex items-center gap-3 rounded-card border border-border bg-surface p-2 transition-colors hover:border-border-strong"
           >
-            <span className="min-w-0">
-              <span className="block truncate text-sm font-semibold text-ink">
+            <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-control">
+              <CollectionCollage
+                images={collection.coverImages ?? []}
+                sizes="64px"
+              />
+            </div>
+
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-semibold text-ink transition-colors group-hover:text-accent-dark">
                 {collection.name}
               </span>
-              <span className="mt-1 block text-xs text-muted">
-                {collection.itemCount} experience
-                {collection.itemCount === 1 ? "" : "s"}
+              <span className="mt-0.5 block text-xs text-muted">
+                {collection.itemCount}{" "}
+                {collection.itemCount === 1 ? "item" : "items"}
               </span>
             </span>
 

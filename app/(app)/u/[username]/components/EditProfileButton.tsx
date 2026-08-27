@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Button } from "@/components/ui";
 import { ProfileEditModal } from "./ProfileEditModal";
 
 interface EditProfileButtonProps {
@@ -20,13 +21,9 @@ export function EditProfileButton({
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="rounded-md border border-border bg-transparent px-3 py-1.5 text-sm font-semibold text-ink transition-colors hover:bg-border/30"
-      >
+      <Button type="button" size="sm" onClick={() => setOpen(true)}>
         Edit profile
-      </button>
+      </Button>
 
       <ProfileEditModal
         open={open}

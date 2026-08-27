@@ -9,15 +9,18 @@ import {
   loadPublicList,
 } from "@/app/(app)/list/collections/data";
 import { ProfileHeader } from "./components/ProfileHeader";
+import { ProfileStats } from "./components/ProfileStats";
 import { ProfileNav } from "./components/ProfileNav";
 import { ProfileOverview } from "./components/ProfileOverview";
+import { ProfileCollections } from "./components/ProfileCollections";
 import { ProfileList } from "./components/ProfileList";
 import { ProfileAchievements } from "./components/ProfileAchievements";
 
-type View = "overview" | "list" | "achievements";
+type View = "overview" | "list" | "collections" | "achievements";
 
 function resolveView(raw: string | undefined): View {
   if (raw === "list") return "list";
+  if (raw === "collections") return "collections";
   if (raw === "achievements") return raw;
   return "overview";
 }
@@ -42,7 +45,7 @@ export default async function UserProfilePage({
     profile = await loadProfile(username);
   } catch {
     return (
-      <div className="mx-auto max-w-[1280px] px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">
         <ErrorState
           title="Could not load profile"
           description="Please try again shortly."
@@ -69,7 +72,7 @@ export default async function UserProfilePage({
   ]);
 
   return (
-    <div className="mx-auto max-w-[1200px] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       <ProfileHeader
         userId={profile.id}
         username={profile.username}
@@ -78,7 +81,17 @@ export default async function UserProfilePage({
         joinedAt={profile.joinedAt}
         isOwner={isOwner}
       />
-      <div className="mt-5">
+
+      <div className="mt-6">
+        <ProfileStats
+          completed={profile.completedCount}
+          saved={profile.savedCount}
+          collections={collections.length}
+          achievements={profile.achievementCount}
+        />
+      </div>
+
+      <div className="mt-6">
         <ProfileNav username={profile.username} active={activeView} />
       </div>
 
@@ -102,6 +115,13 @@ export default async function UserProfilePage({
           ) : (
             <ErrorState title="This list isn't public." />
           ))}
+        {activeView === "collections" && (
+          <ProfileCollections
+            username={profile.username}
+            collections={collections}
+            isOwner={isOwner}
+          />
+        )}
         {activeView === "achievements" && (
           <ProfileAchievements
             earnedMilestoneIds={profile.earnedMilestoneIds}
