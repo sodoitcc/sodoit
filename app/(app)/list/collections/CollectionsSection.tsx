@@ -68,7 +68,7 @@ export function CollectionsSection({
         Collections
       </h2>
 
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
+      <div className="-mx-4 flex gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden">
         {collections.map((collection) => (
           <CollectionCard
             key={collection.id}
@@ -81,7 +81,7 @@ export function CollectionsSection({
         ))}
 
         {creating ? (
-          <div className="flex h-[72px] w-40 shrink-0 items-center rounded-card border border-border bg-surface p-3">
+          <div className="flex h-[148px] w-44 shrink-0 flex-col items-center justify-center gap-1.5 rounded-card border border-dashed border-border p-3">
             <input
               autoFocus
               value={name}
@@ -100,7 +100,7 @@ export function CollectionsSection({
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="flex h-[72px] w-40 shrink-0 items-center justify-center gap-1.5 rounded-card border border-dashed border-border text-sm font-semibold text-secondary transition-colors hover:border-border-strong hover:text-ink"
+            className="flex h-[148px] w-44 shrink-0 flex-col items-center justify-center gap-1.5 rounded-card border border-dashed border-border text-sm font-semibold text-secondary transition-colors hover:border-border-strong hover:text-ink"
           >
             <Plus aria-hidden="true" className="h-4 w-4" />
             New collection
