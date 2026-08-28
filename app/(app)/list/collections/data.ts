@@ -1,7 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Experience } from "@/app/(app)/browse/types";
 import type { Collection, Visibility } from "./types";
-import { loadCollectionProvenance } from "./provenance";
+import {
+  loadCollectionCopyCount,
+  loadCollectionProvenance,
+} from "./provenance";
 
 interface CollectionRow {
   id: string;
@@ -156,6 +159,11 @@ export async function loadCollectionBySlug(
     collectionRow.forked_from_collection_id,
   );
 
+  const copyCount =
+    collectionRow.visibility === "public"
+      ? await loadCollectionCopyCount(supabase, collectionRow.id)
+      : 0;
+
   const { data: itemRows } = await supabase
     .from("collection_items")
     .select(`experiences(${EXPERIENCE_COLUMNS})`)
@@ -181,6 +189,7 @@ export async function loadCollectionBySlug(
       itemCount: collectionRow.collection_items[0]?.count ?? 0,
       coverImages,
       provenance,
+      copyCount,
     },
     experiences,
   };

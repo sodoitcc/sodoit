@@ -14,6 +14,18 @@ function toSingle<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
+export async function loadCollectionCopyCount(
+  supabase: SupabaseClient,
+  collectionId: string,
+): Promise<number> {
+  const { count } = await supabase
+    .from("collections")
+    .select("id", { count: "exact", head: true })
+    .eq("forked_from_collection_id", collectionId);
+
+  return count ?? 0;
+}
+
 export async function loadCollectionProvenance(
   supabase: SupabaseClient,
   forkedFromCollectionId: string | null,

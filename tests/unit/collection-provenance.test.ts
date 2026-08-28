@@ -1,5 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { loadCollectionProvenance } from "../../app/(app)/list/collections/provenance";
+import {
+  loadCollectionCopyCount,
+  loadCollectionProvenance,
+} from "../../app/(app)/list/collections/provenance";
 
 function fakeClient(row: unknown) {
   const from = vi.fn(() => ({
@@ -82,5 +85,45 @@ describe("loadCollectionProvenance", () => {
       sourceName: "Array Embed",
       sourceUsername: "kenji",
     });
+  });
+});
+
+function fakeCountClient(count: number | null) {
+  const eq = vi.fn(() => Promise.resolve({ count, error: null }));
+  const select = vi.fn(() => ({ eq }));
+  const from = vi.fn(() => ({ select }));
+
+  const client = { from } as unknown as Parameters<
+    typeof loadCollectionCopyCount
+  >[0];
+
+  return { client, from, select, eq };
+}
+
+describe("loadCollectionCopyCount", () => {
+  it("counts collections referencing this one via forked_from_collection_id", async () => {
+    const { client, select, eq } = fakeCountClient(3);
+
+    const result = await loadCollectionCopyCount(client, "col-1");
+
+    expect(result).toBe(3);
+    expect(select).toHaveBeenCalledWith("id", { count: "exact", head: true });
+    expect(eq).toHaveBeenCalledWith("forked_from_collection_id", "col-1");
+  });
+
+  it("returns zero when there are no copies (not null)", async () => {
+    const { client } = fakeCountClient(null);
+
+    const result = await loadCollectionCopyCount(client, "col-2");
+
+    expect(result).toBe(0);
+  });
+
+  it("reflects repeated copies by the same user (RLS/DB just counts rows, no dedupe by user)", async () => {
+    const { client } = fakeCountClient(2);
+
+    const result = await loadCollectionCopyCount(client, "col-3");
+
+    expect(result).toBe(2);
   });
 });

@@ -19,6 +19,7 @@ import {
 import { CollectionCollage } from "@/app/(app)/list/collections/CollectionCollage";
 import { CollectionProvenanceLine } from "@/app/(app)/list/collections/CollectionProvenanceLine";
 import { canSaveCopyCollection } from "@/app/(app)/list/collections/fork-visibility";
+import { resolveCopyCountLabel } from "@/app/(app)/list/collections/provenance-display";
 import type { Collection } from "@/app/(app)/list/collections/types";
 import { AddExperiencesDialog } from "./AddExperiencesDialog";
 import { SaveCollectionCopyButton } from "./SaveCollectionCopyButton";
@@ -58,6 +59,7 @@ export function CollectionDetailView({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isPublic = collection.visibility === "public";
+  const copyCountLabel = resolveCopyCountLabel(collection.copyCount);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -214,6 +216,12 @@ export function CollectionDetailView({
             </span>
             <span aria-hidden="true">&middot;</span>
             <span>by {username}</span>
+            {copyCountLabel && (
+              <>
+                <span aria-hidden="true">&middot;</span>
+                <span>{copyCountLabel}</span>
+              </>
+            )}
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">

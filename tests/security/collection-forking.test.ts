@@ -273,6 +273,183 @@ describe("collection forking", () => {
     await fixture.admin.from("collections").delete().eq("id", sourceId);
   });
 
+  it("allows forking a fork (fork-of-fork chains correctly)", async () => {
+    const fixture = getFixture();
+
+    const original = await fixture.userB
+      .from("collections")
+      .insert({
+        user_id: fixture.bId,
+        slug: `fork-chain-root-${fixture.runId}`,
+        name: "Root collection",
+        visibility: "public",
+      })
+      .select("id")
+      .single();
+    expect(original.error).toBeNull();
+    const rootId = original.data!.id as string;
+
+    const firstFork = await fixture.userA.rpc("fork_collection", {
+      p_source_collection_id: rootId,
+      p_slug: `fork-chain-mid-${fixture.runId}`,
+      p_name: null,
+    });
+    expect(firstFork.error).toBeNull();
+    const midId = (firstFork.data as { id: string; slug: string }[])[0].id;
+
+    await fixture.userA
+      .from("collections")
+      .update({ visibility: "public" })
+      .eq("id", midId);
+
+    const secondFork = await fixture.userB.rpc("fork_collection", {
+      p_source_collection_id: midId,
+      p_slug: `fork-chain-leaf-${fixture.runId}`,
+      p_name: null,
+    });
+    expect(secondFork.error).toBeNull();
+    const leafId = (secondFork.data as { id: string; slug: string }[])[0].id;
+
+    const leafRow = await adminRow(fixture, "collections", "id", leafId);
+    expect(leafRow?.forked_from_collection_id).toBe(midId);
+    expect(leafRow?.user_id).toBe(fixture.bId);
+
+    const midRow = await adminRow(fixture, "collections", "id", midId);
+    expect(midRow?.forked_from_collection_id).toBe(rootId);
+
+    await fixture.admin.from("collections").delete().eq("id", leafId);
+    await fixture.admin.from("collections").delete().eq("id", midId);
+    await fixture.admin.from("collections").delete().eq("id", rootId);
+  });
+
+  it("keeps a fork's provenance id intact when the source later turns private, but hides it from non-owners via RLS", async () => {
+    const fixture = getFixture();
+
+    const source = await fixture.userB
+      .from("collections")
+      .insert({
+        user_id: fixture.bId,
+        slug: `fork-turns-private-src-${fixture.runId}`,
+        name: "Will go private",
+        visibility: "public",
+      })
+      .select("id")
+      .single();
+    expect(source.error).toBeNull();
+    const sourceId = source.data!.id as string;
+
+    const forked = await fixture.userA.rpc("fork_collection", {
+      p_source_collection_id: sourceId,
+      p_slug: `fork-turns-private-dest-${fixture.runId}`,
+      p_name: null,
+    });
+    expect(forked.error).toBeNull();
+    const row = (forked.data as { id: string; slug: string }[])[0];
+
+    await fixture.userB
+      .from("collections")
+      .update({ visibility: "private" })
+      .eq("id", sourceId);
+
+    const forkRow = await adminRow(fixture, "collections", "id", row.id);
+    expect(forkRow?.forked_from_collection_id).toBe(sourceId);
+
+    const leaked = await fixture.userA
+      .from("collections")
+      .select("id, name, slug")
+      .eq("id", sourceId)
+      .maybeSingle();
+    expect(leaked.data).toBeNull();
+
+    await fixture.admin.from("collections").delete().eq("id", row.id);
+    await fixture.admin.from("collections").delete().eq("id", sourceId);
+  });
+
+  it("counts a copy correctly and does not double count after the source is deleted", async () => {
+    const fixture = getFixture();
+
+    const source = await fixture.userB
+      .from("collections")
+      .insert({
+        user_id: fixture.bId,
+        slug: `fork-count-src-${fixture.runId}`,
+        name: "Counted source",
+        visibility: "public",
+      })
+      .select("id")
+      .single();
+    expect(source.error).toBeNull();
+    const sourceId = source.data!.id as string;
+
+    const forked = await fixture.userA.rpc("fork_collection", {
+      p_source_collection_id: sourceId,
+      p_slug: `fork-count-dest-${fixture.runId}`,
+      p_name: null,
+    });
+    expect(forked.error).toBeNull();
+    const row = (forked.data as { id: string; slug: string }[])[0];
+
+    const countBefore = await fixture.admin
+      .from("collections")
+      .select("id", { count: "exact", head: true })
+      .eq("forked_from_collection_id", sourceId);
+    expect(countBefore.count).toBe(1);
+
+    await fixture.userB.from("collections").delete().eq("id", sourceId);
+
+    const countAfter = await fixture.admin
+      .from("collections")
+      .select("id", { count: "exact", head: true })
+      .eq("forked_from_collection_id", sourceId);
+    expect(countAfter.count).toBe(0);
+
+    await fixture.admin.from("collections").delete().eq("id", row.id);
+  });
+
+  it("counts repeated copies by the same user as separate entries", async () => {
+    const fixture = getFixture();
+
+    const source = await fixture.userB
+      .from("collections")
+      .insert({
+        user_id: fixture.bId,
+        slug: `fork-repeat-src-${fixture.runId}`,
+        name: "Repeatedly copied",
+        visibility: "public",
+      })
+      .select("id")
+      .single();
+    expect(source.error).toBeNull();
+    const sourceId = source.data!.id as string;
+
+    const firstCopy = await fixture.userA.rpc("fork_collection", {
+      p_source_collection_id: sourceId,
+      p_slug: `fork-repeat-dest-1-${fixture.runId}`,
+      p_name: null,
+    });
+    expect(firstCopy.error).toBeNull();
+
+    const secondCopy = await fixture.userA.rpc("fork_collection", {
+      p_source_collection_id: sourceId,
+      p_slug: `fork-repeat-dest-2-${fixture.runId}`,
+      p_name: null,
+    });
+    expect(secondCopy.error).toBeNull();
+
+    const count = await fixture.admin
+      .from("collections")
+      .select("id", { count: "exact", head: true })
+      .eq("forked_from_collection_id", sourceId);
+    expect(count.count).toBe(2);
+
+    const firstId = (firstCopy.data as { id: string; slug: string }[])[0].id;
+    const secondId = (secondCopy.data as { id: string; slug: string }[])[0].id;
+
+    await fixture.admin.from("collections").delete().eq("id", firstId);
+    await fixture.admin.from("collections").delete().eq("id", secondId);
+    await fixture.admin.from("collections").delete().eq("id", sourceId);
+  });
+
   it("rejects an invalid source collection id", async () => {
     const fixture = getFixture();
 

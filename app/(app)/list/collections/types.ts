@@ -19,6 +19,7 @@ export interface Collection {
   itemCount: number;
   coverImages?: string[];
   provenance?: CollectionProvenance | null;
+  copyCount?: number;
 }
 
 export const COLLECTION_NAME_MAX_LENGTH = 60;

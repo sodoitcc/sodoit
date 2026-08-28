@@ -19,3 +19,10 @@ export function resolveProvenanceDisplay(
     href: `/u/${provenance.sourceUsername}/collections/${provenance.sourceSlug}`,
   };
 }
+
+export function resolveCopyCountLabel(
+  copyCount: number | null | undefined,
+): string | null {
+  if (!copyCount || copyCount <= 0) return null;
+  return `${copyCount} ${copyCount === 1 ? "copy" : "copies"}`;
+}
