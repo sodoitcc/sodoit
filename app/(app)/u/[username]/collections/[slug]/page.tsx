@@ -1,8 +1,11 @@
+import { cache } from "react";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { EmptyState } from "@/components/ui";
 import { loadCollectionBySlug } from "@/app/(app)/list/collections/data";
+import { buildCollectionMetadata } from "@/app/(app)/list/collections/metadata";
 import { loadMyList } from "@/app/(app)/list/data";
 import { CollectionDetailView } from "./CollectionDetailView";
 
@@ -10,7 +13,7 @@ interface PageProps {
   params: Promise<{ username: string; slug: string }>;
 }
 
-async function loadOwnerId(username: string) {
+const loadOwnerId = cache(async (username: string) => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
@@ -18,6 +21,18 @@ async function loadOwnerId(username: string) {
     .eq("username", username)
     .maybeSingle<{ id: string }>();
   return data?.id ?? null;
+});
+
+const loadCollectionResult = cache(
+  async (ownerId: string | null, slug: string) =>
+    ownerId ? loadCollectionBySlug(ownerId, slug) : null,
+);
+
+async function getOrigin(): Promise<string> {
+  const headerList = await headers();
+  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
+  const protocol = headerList.get("x-forwarded-proto") ?? "https";
+  return host ? `${protocol}://${host}` : "";
 }
 
 export async function generateMetadata({
@@ -25,18 +40,15 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const { username, slug } = await params;
   const ownerId = await loadOwnerId(username);
-  const result = ownerId ? await loadCollectionBySlug(ownerId, slug) : null;
+  const result = await loadCollectionResult(ownerId, slug);
+  const origin = await getOrigin();
 
-  if (!result || result.collection.visibility !== "public") {
-    return { robots: { index: false, follow: false } };
-  }
-
-  return {
-    title: `${result.collection.name} — ${username}`,
-    description:
-      result.collection.description ?? `A collection by ${username} on Sodoit.`,
-    robots: { index: true, follow: true },
-  };
+  return buildCollectionMetadata({
+    username,
+    slug,
+    origin,
+    collection: result?.collection ?? null,
+  });
 }
 
 export default async function CollectionDetailPage({ params }: PageProps) {
@@ -50,7 +62,7 @@ export default async function CollectionDetailPage({ params }: PageProps) {
   const ownerId = await loadOwnerId(username);
   if (!ownerId) notFound();
 
-  const result = await loadCollectionBySlug(ownerId, slug);
+  const result = await loadCollectionResult(ownerId, slug);
   if (!result) {
     const isOwner = user?.id === ownerId;
 

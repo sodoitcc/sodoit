@@ -46,15 +46,20 @@ export function ShareButton({
   }
 
   return (
-    <Button
-      type="button"
-      variant={variant}
-      size={size}
-      onClick={share}
-      className={className}
-    >
-      <Share2 aria-hidden="true" className="h-4 w-4" />
-      {shared ? "Link copied" : label}
-    </Button>
+    <>
+      <Button
+        type="button"
+        variant={variant}
+        size={size}
+        onClick={share}
+        className={className}
+      >
+        <Share2 aria-hidden="true" className="h-4 w-4" />
+        {shared ? "Link copied" : label}
+      </Button>
+      <span role="status" aria-live="polite" className="sr-only">
+        {shared ? "Link copied to clipboard" : ""}
+      </span>
+    </>
   );
 }

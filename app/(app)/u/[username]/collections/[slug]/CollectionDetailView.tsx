@@ -18,7 +18,10 @@ import {
 } from "@/app/(app)/list/collections/actions";
 import { CollectionCollage } from "@/app/(app)/list/collections/CollectionCollage";
 import { CollectionProvenanceLine } from "@/app/(app)/list/collections/CollectionProvenanceLine";
-import { canSaveCopyCollection } from "@/app/(app)/list/collections/fork-visibility";
+import {
+  canSaveCopyCollection,
+  canShareCollection,
+} from "@/app/(app)/list/collections/fork-visibility";
 import { resolveCopyCountLabel } from "@/app/(app)/list/collections/provenance-display";
 import type { Collection } from "@/app/(app)/list/collections/types";
 import { AddExperiencesDialog } from "./AddExperiencesDialog";
@@ -231,7 +234,7 @@ export function CollectionDetailView({
               </Button>
             )}
 
-            {isPublic && (
+            {canShareCollection(collection.visibility) && (
               <ShareButton
                 url={`/u/${username}/collections/${collection.slug}`}
                 title={collection.name}

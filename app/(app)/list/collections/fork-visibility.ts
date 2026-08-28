@@ -6,3 +6,7 @@ export function canSaveCopyCollection(
 ): boolean {
   return !isOwner && visibility === "public";
 }
+
+export function canShareCollection(visibility: Visibility): boolean {
+  return visibility === "public";
+}
