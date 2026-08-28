@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
-import { Card, EmptyState, ExperienceImage } from "@/components/ui";
+import { EmptyState, ExperienceImage } from "@/components/ui";
 import { getCategoryAccent } from "@/app/(app)/achievements/data";
 import { getTaskMeta } from "@/app/(app)/browse/types";
 
@@ -26,13 +26,11 @@ export function RecentCompleted({ experiences }: RecentCompletedProps) {
   const recentExperiences = experiences?.slice(0, PREVIEW_COUNT);
 
   return (
-    <Card className="p-0">
-      <ul className="divide-y divide-border">
-        {recentExperiences.map((experience) => (
-          <ExperienceRow key={experience.id} experience={experience} />
-        ))}
-      </ul>
-    </Card>
+    <ul className="divide-y divide-border">
+      {recentExperiences.map((experience) => (
+        <ExperienceRow key={experience.id} experience={experience} />
+      ))}
+    </ul>
   );
 }
 
@@ -43,15 +41,15 @@ function ExperienceRow({ experience }: { experience: CompletedExperience }) {
     <li>
       <Link
         href={`/tasks/${experience.id}`}
-        className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-background"
+        className="group flex items-center gap-3 py-3 transition-colors hover:bg-surface-subtle"
       >
         <ExperienceImage
           title={experience.title}
           imageUrl={experience.image_url}
           imageAlt={experience.image_alt}
           fallbackColor={thumbnail}
-          className="h-10 w-10 rounded-lg"
-          sizes="40px"
+          className="h-12 w-12 rounded-control"
+          sizes="48px"
         />
 
         <div className="min-w-0 flex-1">

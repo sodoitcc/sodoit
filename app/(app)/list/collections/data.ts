@@ -87,13 +87,20 @@ export async function loadPublicCollections(
     .eq("visibility", "public")
     .order("created_at", { ascending: false });
 
-  return ((data ?? []) as CollectionRow[]).map((row) => ({
+  const rows = (data ?? []) as CollectionRow[];
+  const coverImages = await loadCollectionCoverImages(
+    supabase,
+    rows.map((row) => row.id),
+  );
+
+  return rows.map((row) => ({
     id: row.id,
     slug: row.slug,
     name: row.name,
     description: row.description,
     visibility: row.visibility,
     itemCount: row.collection_items[0]?.count ?? 0,
+    coverImages: coverImages.get(row.id) ?? [],
   }));
 }
 
