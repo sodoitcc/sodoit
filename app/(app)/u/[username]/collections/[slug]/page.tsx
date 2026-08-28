@@ -83,6 +83,7 @@ export default async function CollectionDetailPage({ params }: PageProps) {
     <CollectionDetailView
       username={username}
       isOwner={isOwner}
+      signedIn={Boolean(user)}
       collection={result.collection}
       experiences={result.experiences}
       completedIds={completedIds}

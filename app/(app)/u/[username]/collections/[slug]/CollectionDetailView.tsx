@@ -17,12 +17,15 @@ import {
   setCollectionVisibility,
 } from "@/app/(app)/list/collections/actions";
 import { CollectionCollage } from "@/app/(app)/list/collections/CollectionCollage";
+import { canSaveCopyCollection } from "@/app/(app)/list/collections/fork-visibility";
 import type { Collection } from "@/app/(app)/list/collections/types";
 import { AddExperiencesDialog } from "./AddExperiencesDialog";
+import { SaveCollectionCopyButton } from "./SaveCollectionCopyButton";
 
 interface CollectionDetailViewProps {
   username: string;
   isOwner: boolean;
+  signedIn: boolean;
   collection: Collection;
   experiences: Experience[];
   completedIds: string[];
@@ -32,6 +35,7 @@ interface CollectionDetailViewProps {
 export function CollectionDetailView({
   username,
   isOwner,
+  signedIn,
   collection: initialCollection,
   experiences: initialExperiences,
   completedIds: initialCompletedIds,
@@ -221,6 +225,15 @@ export function CollectionDetailView({
                 url={`/u/${username}/collections/${collection.slug}`}
                 title={collection.name}
                 size="sm"
+              />
+            )}
+
+            {canSaveCopyCollection(isOwner, collection.visibility) && (
+              <SaveCollectionCopyButton
+                signedIn={signedIn}
+                sourceCollectionId={collection.id}
+                sourceName={collection.name}
+                currentPath={`/u/${username}/collections/${collection.slug}`}
               />
             )}
 
