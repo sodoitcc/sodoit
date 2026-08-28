@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { Experience } from "@/app/(app)/browse/types";
 import type { Collection, Visibility } from "./types";
+import { loadCollectionProvenance } from "./provenance";
 
 interface CollectionRow {
   id: string;
@@ -9,6 +10,10 @@ interface CollectionRow {
   description: string | null;
   visibility: Visibility;
   collection_items: { count: number }[];
+}
+
+interface CollectionRowWithSource extends CollectionRow {
+  forked_from_collection_id: string | null;
 }
 
 interface CoverImageRow {
@@ -137,12 +142,19 @@ export async function loadCollectionBySlug(
 
   const { data: collectionRow } = await supabase
     .from("collections")
-    .select(`id, slug, name, description, visibility, collection_items(count)`)
+    .select(
+      `id, slug, name, description, visibility, forked_from_collection_id, collection_items(count)`,
+    )
     .eq("user_id", ownerId)
     .eq("slug", slug)
-    .maybeSingle<CollectionRow>();
+    .maybeSingle<CollectionRowWithSource>();
 
   if (!collectionRow) return null;
+
+  const provenance = await loadCollectionProvenance(
+    supabase,
+    collectionRow.forked_from_collection_id,
+  );
 
   const { data: itemRows } = await supabase
     .from("collection_items")
@@ -168,6 +180,7 @@ export async function loadCollectionBySlug(
       visibility: collectionRow.visibility,
       itemCount: collectionRow.collection_items[0]?.count ?? 0,
       coverImages,
+      provenance,
     },
     experiences,
   };

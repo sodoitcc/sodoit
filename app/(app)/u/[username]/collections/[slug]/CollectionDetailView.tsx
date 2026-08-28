@@ -17,6 +17,7 @@ import {
   setCollectionVisibility,
 } from "@/app/(app)/list/collections/actions";
 import { CollectionCollage } from "@/app/(app)/list/collections/CollectionCollage";
+import { CollectionProvenanceLine } from "@/app/(app)/list/collections/CollectionProvenanceLine";
 import { canSaveCopyCollection } from "@/app/(app)/list/collections/fork-visibility";
 import type { Collection } from "@/app/(app)/list/collections/types";
 import { AddExperiencesDialog } from "./AddExperiencesDialog";
@@ -188,6 +189,8 @@ export function CollectionDetailView({
               {collection.name}
             </h1>
           )}
+
+          <CollectionProvenanceLine provenance={collection.provenance} />
 
           {collection.description && (
             <p className="mt-3 max-w-xl text-[15px] leading-6 text-secondary">
