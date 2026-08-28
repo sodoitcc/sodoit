@@ -145,6 +145,44 @@ describe("collection detail access contract", () => {
     await fixture.admin.from("collections").delete().eq("id", collectionId);
   });
 
+  it("a private collection (non-owner) and a genuinely nonexistent slug resolve identically — both null, no error", async () => {
+    const fixture = getFixture();
+
+    const created = await fixture.userA
+      .from("collections")
+      .insert({
+        user_id: fixture.aId,
+        slug: `access-equivalence-${fixture.runId}`,
+        name: "A's private collection",
+      })
+      .select("id")
+      .single();
+    expect(created.error).toBeNull();
+    const collectionId = created.data!.id as string;
+
+    const privateRead = await fixture.userB
+      .from("collections")
+      .select("id, slug, name, description, visibility")
+      .eq("user_id", fixture.aId)
+      .eq("slug", `access-equivalence-${fixture.runId}`)
+      .maybeSingle();
+
+    const nonexistentRead = await fixture.userB
+      .from("collections")
+      .select("id, slug, name, description, visibility")
+      .eq("user_id", fixture.aId)
+      .eq("slug", `access-equivalence-does-not-exist-${fixture.runId}`)
+      .maybeSingle();
+
+    expect(privateRead.data).toBeNull();
+    expect(privateRead.error).toBeNull();
+    expect(nonexistentRead.data).toBeNull();
+    expect(nonexistentRead.error).toBeNull();
+    expect(privateRead).toEqual(nonexistentRead);
+
+    await fixture.admin.from("collections").delete().eq("id", collectionId);
+  });
+
   it("a newly forked private copy is readable by its owner (B) but not by the source owner (A) or a guest", async () => {
     const fixture = getFixture();
 
