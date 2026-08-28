@@ -5,6 +5,7 @@ export default function FeedLoading() {
     <PageShell
       title="Community updates"
       subtitle="See what people are adding, completing, and planning."
+      maxWidth="1440px"
     >
       <LoadingState label="Loading community updates…" />
     </PageShell>

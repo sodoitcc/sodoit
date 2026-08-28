@@ -1,44 +1,33 @@
-import { Avatar, Card } from "@/components/ui";
-import { relativeTime } from "@/lib/relative-time";
+import { createElement } from "react";
+import { getAchievementIcon } from "@/app/(app)/achievements/data";
 import type { AchievementActivityItem } from "@/app/(app)/feed/data";
+import { ActivityActorLine } from "./ActivityActorLine";
+import { ActivityCardShell } from "./ActivityCardShell";
 
 export function AchievementActivityCard({
   item,
 }: {
   item: AchievementActivityItem;
 }) {
+  const Icon = getAchievementIcon(item.achievement.icon ?? "");
+
   return (
-    <Card className="p-4">
-      <div className="flex items-center gap-3">
-        <Avatar
-          name={item.actor.username}
-          src={item.actor.avatarUrl}
-          size="sm"
+    <ActivityCardShell className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:gap-5 sm:p-5">
+      <div className="flex shrink-0 items-center justify-center rounded-full bg-accent-light text-accent-dark sm:order-2 sm:h-16 sm:w-16 h-14 w-14">
+        {createElement(Icon, { className: "h-7 w-7" })}
+      </div>
+
+      <div className="min-w-0 flex-1 sm:order-1">
+        <ActivityActorLine
+          actor={item.actor}
+          timestamp={item.timestamp}
+          action="unlocked an achievement"
         />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-ink">
-              {item.actor.username}
-            </span>
-            <span aria-hidden="true" className="text-xs text-muted">
-              ·
-            </span>
-            <time
-              dateTime={item.timestamp}
-              className="shrink-0 text-xs text-muted"
-            >
-              {relativeTime(item.timestamp)}
-            </time>
-          </div>
-          <p className="mt-1 truncate text-sm text-secondary">
-            unlocked{" "}
-            <span className="font-semibold text-ink">
-              &ldquo;{item.achievement.title}&rdquo;
-            </span>
-          </p>
-        </div>
+        <p className="mt-2 text-lg font-bold leading-snug text-ink">
+          {item.achievement.title}
+        </p>
       </div>
-    </Card>
+    </ActivityCardShell>
   );
 }

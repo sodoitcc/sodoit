@@ -1,54 +1,59 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { Avatar, Card } from "@/components/ui";
-import { relativeTime } from "@/lib/relative-time";
+import { CollectionCollage } from "@/app/(app)/list/collections/CollectionCollage";
 import type { CollectionActivityItem } from "@/app/(app)/feed/data";
+import { feedCollectionHref } from "@/app/(app)/feed/collection-href";
+import { ActivityActorLine } from "./ActivityActorLine";
+import { ActivityCardShell } from "./ActivityCardShell";
 
 export function CollectionActivityCard({
   item,
 }: {
   item: CollectionActivityItem;
 }) {
+  const href = feedCollectionHref(item.collection);
+
   return (
-    <Card className="p-4">
-      <Link
-        href={`/u/${item.collection.ownerUsername}/collections/${item.collection.slug}`}
-        className="flex items-center gap-3"
-      >
-        <Avatar
-          name={item.actor.username}
-          src={item.actor.avatarUrl}
-          size="sm"
+    <ActivityCardShell className="lg:flex lg:items-stretch">
+      <div className="flex flex-col justify-between gap-4 p-4 sm:p-5 lg:w-[42%] lg:shrink-0">
+        <ActivityActorLine
+          actor={item.actor}
+          timestamp={item.timestamp}
+          action="created a collection"
         />
 
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-sm font-semibold text-ink">
-              {item.actor.username}
-            </span>
-            <span aria-hidden="true" className="text-xs text-muted">
-              ·
-            </span>
-            <time
-              dateTime={item.timestamp}
-              className="shrink-0 text-xs text-muted"
-            >
-              {relativeTime(item.timestamp)}
-            </time>
-          </div>
-          <p className="mt-1 truncate text-sm text-secondary">
-            created a collection:{" "}
-            <span className="font-semibold text-ink">
-              {item.collection.name}
-            </span>
-          </p>
-        </div>
+        <div>
+          <Link
+            href={href}
+            className="block text-lg font-bold leading-snug text-ink hover:text-accent-dark"
+          >
+            {item.collection.name}
+          </Link>
 
-        <span className="inline-flex shrink-0 items-center gap-1 text-xs font-semibold text-accent-dark">
-          View collection
-          <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
-        </span>
+          <p className="mt-1 text-xs font-semibold uppercase tracking-[0.08em] text-muted">
+            {item.collection.itemCount}{" "}
+            {item.collection.itemCount === 1 ? "item" : "items"}
+          </p>
+
+          <Link
+            href={href}
+            className="mt-4 inline-flex items-center gap-1 text-xs font-semibold text-accent-dark hover:text-accent"
+          >
+            View collection
+            <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+      </div>
+
+      <Link
+        href={href}
+        className="relative block aspect-[16/10] w-full sm:aspect-[16/8] lg:aspect-auto lg:w-[58%]"
+      >
+        <CollectionCollage
+          images={item.collection.coverImages}
+          sizes="(min-width: 1024px) 58vw, 100vw"
+        />
       </Link>
-    </Card>
+    </ActivityCardShell>
   );
 }

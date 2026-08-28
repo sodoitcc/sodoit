@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { experienceLocation } from "@/components/ui";
 
 export type ActivityFilter =
   "all" | "completed" | "added_to_list" | "collections";
@@ -30,6 +31,7 @@ export interface ExperienceActivityItem {
     title: string;
     category: string | null;
     difficulty: string | null;
+    location: string | null;
     imageUrl: string | null;
     imageAlt: string | null;
   };
@@ -40,7 +42,14 @@ export interface CollectionActivityItem {
   kind: "collection_created";
   timestamp: string;
   actor: ActivityActor;
-  collection: { id: string; name: string; slug: string; ownerUsername: string };
+  collection: {
+    id: string;
+    name: string;
+    slug: string;
+    ownerUsername: string;
+    itemCount: number;
+    coverImages: string[];
+  };
 }
 
 export interface AchievementActivityItem {
@@ -98,7 +107,9 @@ async function loadListActivity(
   const [experiencesResult, profilesResult] = await Promise.all([
     supabase
       .from("experiences")
-      .select("id, title, category, difficulty, image_url, image_alt")
+      .select(
+        "id, title, category, difficulty, location_type, city, country_code, image_url, image_alt",
+      )
       .in("id", experienceIds),
     supabase
       .from("profiles")
@@ -138,6 +149,7 @@ async function loadListActivity(
         title: experience.title,
         category: experience.category,
         difficulty: experience.difficulty,
+        location: experienceLocation(experience),
         imageUrl: experience.image_url,
         imageAlt: experience.image_alt,
       },
@@ -147,13 +159,50 @@ async function loadListActivity(
   return items;
 }
 
+interface CollectionCoverRow {
+  collection_id: string;
+  position: number;
+  experiences:
+    { image_url: string | null } | { image_url: string | null }[] | null;
+}
+
+async function loadCollectionCoverImages(
+  supabase: SupabaseClient,
+  collectionIds: string[],
+): Promise<Map<string, string[]>> {
+  if (collectionIds.length === 0) return new Map();
+
+  const { data } = await supabase
+    .from("collection_items")
+    .select("collection_id, position, experiences(image_url)")
+    .in("collection_id", collectionIds)
+    .order("position", { ascending: true });
+
+  const map = new Map<string, string[]>();
+  for (const row of (data ?? []) as CollectionCoverRow[]) {
+    const experience = Array.isArray(row.experiences)
+      ? (row.experiences[0] ?? null)
+      : row.experiences;
+    const imageUrl = experience?.image_url;
+    if (!imageUrl) continue;
+
+    const current = map.get(row.collection_id) ?? [];
+    if (current.length >= 4) continue;
+
+    current.push(imageUrl);
+    map.set(row.collection_id, current);
+  }
+
+  return map;
+}
+
 async function loadCollectionActivity(
   supabase: SupabaseClient,
   limit: number,
 ): Promise<CollectionActivityItem[]> {
   const { data, error } = await supabase
     .from("collections")
-    .select("id, user_id, name, slug, created_at")
+    .select("id, user_id, name, slug, created_at, collection_items(count)")
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -161,10 +210,15 @@ async function loadCollectionActivity(
   if (!data || data.length === 0) return [];
 
   const userIds = [...new Set(data.map((row) => row.user_id as string))];
-  const profilesResult = await supabase
-    .from("profiles")
-    .select("id, username, avatar_url")
-    .in("id", userIds);
+  const collectionIds = data.map((row) => row.id as string);
+
+  const [profilesResult, coverImagesById] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, username, avatar_url")
+      .in("id", userIds),
+    loadCollectionCoverImages(supabase, collectionIds),
+  ]);
   if (profilesResult.error) throw profilesResult.error;
 
   const profileById = new Map(
@@ -172,7 +226,9 @@ async function loadCollectionActivity(
   );
 
   const items: CollectionActivityItem[] = [];
-  for (const row of data) {
+  for (const row of data as ((typeof data)[number] & {
+    collection_items: { count: number }[];
+  })[]) {
     const profile = profileById.get(row.user_id);
     if (!profile || !profile.username) continue;
 
@@ -190,6 +246,8 @@ async function loadCollectionActivity(
         name: row.name,
         slug: row.slug,
         ownerUsername: profile.username,
+        itemCount: (row.collection_items ?? [])[0]?.count ?? 0,
+        coverImages: coverImagesById.get(row.id) ?? [],
       },
     });
   }

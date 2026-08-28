@@ -1,8 +1,13 @@
 import { EmptyState } from "@/components/ui";
-import type { ActivityFeedResult, ActivityFilter } from "@/app/(app)/feed/data";
+import type {
+  ActivityFeedResult,
+  ActivityFilter,
+  CollectionActivityItem,
+} from "@/app/(app)/feed/data";
 import { ActivityFilters } from "./ActivityFilters";
 import { ActivityListItem } from "./ActivityListItem";
 import { ActivityPagination } from "./ActivityPagination";
+import { FeedCollectionCard } from "./FeedCollectionCard";
 
 interface ActivityFeedProps {
   filter: ActivityFilter;
@@ -28,8 +33,16 @@ export function ActivityFeed({
             description="When people share their lists, complete experiences, or create public collections, you'll see it here."
           />
         </div>
+      ) : filter === "collections" ? (
+        <ul className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          {(result.items as CollectionActivityItem[]).map((item) => (
+            <li key={item.id}>
+              <FeedCollectionCard item={item} />
+            </li>
+          ))}
+        </ul>
       ) : (
-        <ul className="mt-6 flex flex-col gap-3">
+        <ul className="mt-6 flex flex-col gap-5">
           {result.items.map((item) => (
             <li key={item.id}>
               <ActivityListItem

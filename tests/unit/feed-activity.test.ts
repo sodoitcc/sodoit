@@ -138,6 +138,7 @@ function baseTables() {
         slug: "2027-travel-dreams",
         visibility: "public",
         created_at: "2026-08-10T08:00:00Z",
+        collection_items: [{ count: 3 }],
       },
       {
         id: "col-private",
@@ -146,6 +147,7 @@ function baseTables() {
         slug: "secret-plans",
         visibility: "private",
         created_at: "2026-08-10T08:30:00Z",
+        collection_items: [{ count: 1 }],
       },
     ],
     achievements: [{ id: "first-step", title: "First Step", icon: null }],
@@ -209,6 +211,8 @@ describe("loadActivityFeed — mapping", () => {
     expect(item.kind).toBe("collection_created");
     expect(item.collection.name).toBe("2027 Travel Dreams");
     expect(item.collection.ownerUsername).toBe("martin");
+    expect(item.collection.itemCount).toBe(3);
+    expect(item.collection.coverImages).toEqual([]);
   });
 
   it("includes an achievement unlock activity", async () => {
@@ -276,6 +280,34 @@ describe("loadActivityFeed — ordering and filters", () => {
       true,
     );
     expect(result.items.length).toBeGreaterThan(0);
+  });
+
+  it("filter=collections never includes a private collection (grid source data)", async () => {
+    setupFakeClient(baseTables());
+    const result = await loadActivityFeed("collections", 1);
+    const leaked = result.items.some((i) => i.id === "collection-col-private");
+    expect(leaked).toBe(false);
+  });
+
+  it("a collection with no items provides an empty coverImages array (renders the branded collage fallback)", async () => {
+    const tables = baseTables();
+    tables.collections.push({
+      id: "col-empty",
+      user_id: "user-a",
+      name: "Fresh Start",
+      slug: "fresh-start",
+      visibility: "public",
+      created_at: "2026-08-10T08:15:00Z",
+      collection_items: [{ count: 0 }],
+    });
+    setupFakeClient(tables);
+    const result = await loadActivityFeed("collections", 1);
+    const item = result.items.find(
+      (i) => i.id === "collection-col-empty",
+    ) as CollectionActivityItem;
+    expect(item).toBeDefined();
+    expect(item.collection.itemCount).toBe(0);
+    expect(item.collection.coverImages).toEqual([]);
   });
 
   it("filter=all excludes nothing by kind", async () => {
