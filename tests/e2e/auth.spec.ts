@@ -111,6 +111,16 @@ test.describe("authentication", () => {
     ).toHaveAttribute("href", "/signup?next=%2Ffeed%2Fnew");
   });
 
+  test("guest sees a generic 404 for a nonexistent collection (no existence leak)", async ({
+    page,
+  }) => {
+    await page.goto("/u/nobody-with-this-username/collections/nope");
+
+    await expect(
+      page.getByRole("heading", { name: "Page not found" }),
+    ).toBeVisible();
+  });
+
   test("guest save on a Wide editorial card redirects to login", async ({
     page,
   }) => {

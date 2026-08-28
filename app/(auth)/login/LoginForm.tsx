@@ -2,15 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/client";
 import { getSafeNextPath } from "@/lib/auth-redirect";
 import { INPUT_CLASS, PasswordField } from "../PasswordField";
 
 export function LoginForm({ next }: { next: string }) {
-  const router = useRouter();
-
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -40,8 +37,7 @@ export function LoginForm({ next }: { next: string }) {
         return;
       }
 
-      router.push(safeNext);
-      router.refresh();
+      window.location.assign(safeNext);
     } catch {
       setError("Unable to log in. Please try again.");
     } finally {

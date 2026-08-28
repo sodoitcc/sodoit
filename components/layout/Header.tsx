@@ -119,13 +119,17 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
           {!isAuthRoute && (
             <>
               <div className="ml-auto hidden items-center sm:flex">
-                {signedIn && username ? (
+                {signedIn ? (
                   <Link
-                    href={`/u/${username}`}
+                    href={username ? `/u/${username}` : "/settings/profile"}
                     aria-label="Your profile"
                     className="shrink-0 rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-accent/30"
                   >
-                    <Avatar name={username} src={avatarUrl} size="sm" />
+                    <Avatar
+                      name={username ?? "You"}
+                      src={avatarUrl}
+                      size="sm"
+                    />
                   </Link>
                 ) : (
                   <div className="flex items-center gap-2">
@@ -264,9 +268,9 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
             </nav>
 
             <div className="border-t border-border p-3">
-              {signedIn && username ? (
+              {signedIn ? (
                 <Link
-                  href={`/u/${username}`}
+                  href={username ? `/u/${username}` : "/settings/profile"}
                   onClick={() => setMobileMenuOpen(false)}
                   className={[
                     "flex min-h-14 items-center gap-3 rounded-control px-4",
@@ -275,10 +279,10 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                     "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
                   ].join(" ")}
                 >
-                  <Avatar name={username} src={avatarUrl} size="sm" />
+                  <Avatar name={username ?? "You"} src={avatarUrl} size="sm" />
 
                   <div className="min-w-0">
-                    <div className="truncate">{username}</div>
+                    <div className="truncate">{username ?? "Your account"}</div>
 
                     <div className="text-xs font-medium text-secondary">
                       View profile

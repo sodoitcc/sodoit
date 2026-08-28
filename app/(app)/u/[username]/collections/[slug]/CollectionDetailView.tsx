@@ -17,12 +17,20 @@ import {
   setCollectionVisibility,
 } from "@/app/(app)/list/collections/actions";
 import { CollectionCollage } from "@/app/(app)/list/collections/CollectionCollage";
+import { CollectionProvenanceLine } from "@/app/(app)/list/collections/CollectionProvenanceLine";
+import {
+  canSaveCopyCollection,
+  canShareCollection,
+} from "@/app/(app)/list/collections/fork-visibility";
+import { resolveCopyCountLabel } from "@/app/(app)/list/collections/provenance-display";
 import type { Collection } from "@/app/(app)/list/collections/types";
 import { AddExperiencesDialog } from "./AddExperiencesDialog";
+import { SaveCollectionCopyButton } from "./SaveCollectionCopyButton";
 
 interface CollectionDetailViewProps {
   username: string;
   isOwner: boolean;
+  signedIn: boolean;
   collection: Collection;
   experiences: Experience[];
   completedIds: string[];
@@ -32,6 +40,7 @@ interface CollectionDetailViewProps {
 export function CollectionDetailView({
   username,
   isOwner,
+  signedIn,
   collection: initialCollection,
   experiences: initialExperiences,
   completedIds: initialCompletedIds,
@@ -53,6 +62,7 @@ export function CollectionDetailView({
   const menuRef = useRef<HTMLDivElement>(null);
 
   const isPublic = collection.visibility === "public";
+  const copyCountLabel = resolveCopyCountLabel(collection.copyCount);
 
   useEffect(() => {
     if (!menuOpen) return;
@@ -185,6 +195,8 @@ export function CollectionDetailView({
             </h1>
           )}
 
+          <CollectionProvenanceLine provenance={collection.provenance} />
+
           {collection.description && (
             <p className="mt-3 max-w-xl text-[15px] leading-6 text-secondary">
               {collection.description}
@@ -207,6 +219,12 @@ export function CollectionDetailView({
             </span>
             <span aria-hidden="true">&middot;</span>
             <span>by {username}</span>
+            {copyCountLabel && (
+              <>
+                <span aria-hidden="true">&middot;</span>
+                <span>{copyCountLabel}</span>
+              </>
+            )}
           </p>
 
           <div className="mt-5 flex flex-wrap items-center gap-2">
@@ -216,11 +234,20 @@ export function CollectionDetailView({
               </Button>
             )}
 
-            {isPublic && (
+            {canShareCollection(collection.visibility) && (
               <ShareButton
                 url={`/u/${username}/collections/${collection.slug}`}
                 title={collection.name}
                 size="sm"
+              />
+            )}
+
+            {canSaveCopyCollection(isOwner, collection.visibility) && (
+              <SaveCollectionCopyButton
+                signedIn={signedIn}
+                sourceCollectionId={collection.id}
+                sourceName={collection.name}
+                currentPath={`/u/${username}/collections/${collection.slug}`}
               />
             )}
 
