@@ -1,9 +1,7 @@
-import { cache } from "react";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
-import { EmptyState } from "@/components/ui";
 import { loadCollectionBySlug } from "@/app/(app)/list/collections/data";
 import { buildCollectionMetadata } from "@/app/(app)/list/collections/metadata";
 import { loadMyList } from "@/app/(app)/list/data";
@@ -13,7 +11,7 @@ interface PageProps {
   params: Promise<{ username: string; slug: string }>;
 }
 
-const loadOwnerId = cache(async (username: string) => {
+async function loadOwnerId(username: string) {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
@@ -21,12 +19,11 @@ const loadOwnerId = cache(async (username: string) => {
     .eq("username", username)
     .maybeSingle<{ id: string }>();
   return data?.id ?? null;
-});
+}
 
-const loadCollectionResult = cache(
-  async (ownerId: string | null, slug: string) =>
-    ownerId ? loadCollectionBySlug(ownerId, slug) : null,
-);
+async function loadCollectionResult(ownerId: string | null, slug: string) {
+  return ownerId ? loadCollectionBySlug(ownerId, slug) : null;
+}
 
 async function getOrigin(): Promise<string> {
   const headerList = await headers();
@@ -63,17 +60,7 @@ export default async function CollectionDetailPage({ params }: PageProps) {
   if (!ownerId) notFound();
 
   const result = await loadCollectionResult(ownerId, slug);
-  if (!result) {
-    const isOwner = user?.id === ownerId;
-
-    if (isOwner) notFound();
-
-    return (
-      <div className="mx-auto w-full max-w-[1440px] px-4 py-16 sm:px-6 lg:px-8">
-        <EmptyState title="This collection isn't public." />
-      </div>
-    );
-  }
+  if (!result) notFound();
 
   const isOwner = user?.id === ownerId;
 
