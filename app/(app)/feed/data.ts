@@ -1,6 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { experienceLocation } from "@/components/ui";
+import {
+  aggregateAddedToListActivity,
+  type AddedToListGroupItem,
+} from "./added-to-list-aggregation";
 
 export type ActivityFilter =
   "all" | "completed" | "added_to_list" | "collections";
@@ -61,7 +65,10 @@ export interface AchievementActivityItem {
 }
 
 export type ActivityItem =
-  ExperienceActivityItem | CollectionActivityItem | AchievementActivityItem;
+  | ExperienceActivityItem
+  | CollectionActivityItem
+  | AchievementActivityItem
+  | AddedToListGroupItem;
 
 export interface ActivityFeedResult {
   items: ActivityItem[];
@@ -352,9 +359,12 @@ export async function loadActivityFeed(
     ...achievementItems,
   ].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
+  const displayItems =
+    filter === "all" ? aggregateAddedToListActivity(merged) : merged;
+
   const start = (safePage - 1) * ACTIVITY_PAGE_SIZE;
-  const pageItems = merged.slice(start, start + ACTIVITY_PAGE_SIZE);
-  const hasMore = merged.length > start + ACTIVITY_PAGE_SIZE;
+  const pageItems = displayItems.slice(start, start + ACTIVITY_PAGE_SIZE);
+  const hasMore = displayItems.length > start + ACTIVITY_PAGE_SIZE;
 
   return { items: pageItems, hasMore, page: safePage };
 }

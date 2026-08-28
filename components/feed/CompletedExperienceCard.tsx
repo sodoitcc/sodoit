@@ -3,7 +3,7 @@ import { ExperienceImage, ExperienceMeta } from "@/components/ui";
 import type { ExperienceActivityItem } from "@/app/(app)/feed/data";
 import { ActivityActorLine } from "./ActivityActorLine";
 import { ActivityCardShell } from "./ActivityCardShell";
-import { AddToListButton } from "./AddToListButton";
+import { resolveCompletedExperienceMedia } from "./completed-experience-media";
 
 const FALLBACK_COLORS = ["#FED7AA", "#BAE6FD", "#BBF7D0", "#E9D5FF", "#FECACA"];
 
@@ -12,35 +12,26 @@ function fallbackColorFor(id: string) {
   return FALLBACK_COLORS[hash % FALLBACK_COLORS.length];
 }
 
-const ACTION_TEXT: Record<ExperienceActivityItem["kind"], string> = {
-  completed: "completed an experience",
-  added_to_list: "added to their list",
-};
-
-interface ExperienceActivityCardProps {
-  item: ExperienceActivityItem;
-  viewerStatus: "saved" | "completed" | null;
-  signedIn: boolean;
-}
-
-export function ExperienceActivityCard({
+export function CompletedExperienceCard({
   item,
-  viewerStatus,
-  signedIn,
-}: ExperienceActivityCardProps) {
+}: {
+  item: ExperienceActivityItem;
+}) {
+  const media = resolveCompletedExperienceMedia(item.experience);
+
   return (
     <ActivityCardShell className="lg:flex lg:items-stretch">
       <div className="flex flex-col justify-between gap-4 p-4 sm:p-5 lg:w-[42%] lg:shrink-0">
         <ActivityActorLine
           actor={item.actor}
           timestamp={item.timestamp}
-          action={ACTION_TEXT[item.kind]}
+          action="completed an experience"
         />
 
         <div>
           <Link
             href={`/tasks/${item.experience.id}`}
-            className="block text-lg font-bold leading-snug text-ink hover:text-accent-dark"
+            className="block text-xl font-bold leading-snug text-ink hover:text-accent-dark"
           >
             {item.experience.title}
           </Link>
@@ -52,13 +43,12 @@ export function ExperienceActivityCard({
             location={item.experience.location}
           />
 
-          <div className="mt-4">
-            <AddToListButton
-              experienceId={item.experience.id}
-              initialStatus={viewerStatus}
-              signedIn={signedIn}
-            />
-          </div>
+          <Link
+            href={`/tasks/${item.experience.id}`}
+            className="mt-4 inline-block text-xs font-semibold text-accent-dark hover:text-accent"
+          >
+            View experience
+          </Link>
         </div>
       </div>
 
@@ -67,8 +57,8 @@ export function ExperienceActivityCard({
         className="relative block aspect-[16/10] w-full sm:aspect-[16/8] lg:aspect-auto lg:w-[58%]"
       >
         <ExperienceImage
-          imageUrl={item.experience.imageUrl}
-          imageAlt={item.experience.imageAlt}
+          imageUrl={media.imageUrl}
+          imageAlt={media.imageAlt}
           title={item.experience.title}
           fallbackColor={fallbackColorFor(item.experience.id)}
           className="h-full w-full"

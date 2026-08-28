@@ -12,16 +12,9 @@ import { FeedCollectionCard } from "./FeedCollectionCard";
 interface ActivityFeedProps {
   filter: ActivityFilter;
   result: ActivityFeedResult;
-  viewerStatuses: Map<string, "saved" | "completed">;
-  signedIn: boolean;
 }
 
-export function ActivityFeed({
-  filter,
-  result,
-  viewerStatuses,
-  signedIn,
-}: ActivityFeedProps) {
+export function ActivityFeed({ filter, result }: ActivityFeedProps) {
   return (
     <div>
       <ActivityFilters active={filter} />
@@ -45,15 +38,7 @@ export function ActivityFeed({
         <ul className="mt-6 flex flex-col gap-5">
           {result.items.map((item) => (
             <li key={item.id}>
-              <ActivityListItem
-                item={item}
-                viewerStatus={
-                  item.kind === "completed" || item.kind === "added_to_list"
-                    ? (viewerStatuses.get(item.experience.id) ?? null)
-                    : null
-                }
-                signedIn={signedIn}
-              />
+              <ActivityListItem item={item} />
             </li>
           ))}
         </ul>

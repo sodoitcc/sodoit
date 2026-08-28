@@ -1,25 +1,35 @@
 import type { ActivityItem } from "@/app/(app)/feed/data";
-import { ExperienceActivityCard } from "./ExperienceActivityCard";
+import { CompletedExperienceCard } from "./CompletedExperienceCard";
 import { CollectionActivityCard } from "./CollectionActivityCard";
 import { AchievementActivityCard } from "./AchievementActivityCard";
+import { AddedToListActivityGroup } from "./AddedToListActivityGroup";
 
-interface ActivityListItemProps {
-  item: ActivityItem;
-  viewerStatus: "saved" | "completed" | null;
-  signedIn: boolean;
-}
+export function ActivityListItem({ item }: { item: ActivityItem }) {
+  if (item.kind === "completed") {
+    return <CompletedExperienceCard item={item} />;
+  }
 
-export function ActivityListItem({
-  item,
-  viewerStatus,
-  signedIn,
-}: ActivityListItemProps) {
-  if (item.kind === "completed" || item.kind === "added_to_list") {
+  if (item.kind === "added_to_list_group") {
+    return <AddedToListActivityGroup item={item} />;
+  }
+
+  if (item.kind === "added_to_list") {
     return (
-      <ExperienceActivityCard
-        item={item}
-        viewerStatus={viewerStatus}
-        signedIn={signedIn}
+      <AddedToListActivityGroup
+        item={{
+          id: item.id,
+          kind: "added_to_list_group",
+          timestamp: item.timestamp,
+          actor: item.actor,
+          experiences: [
+            {
+              id: item.experience.id,
+              title: item.experience.title,
+              imageUrl: item.experience.imageUrl,
+              imageAlt: item.experience.imageAlt,
+            },
+          ],
+        }}
       />
     );
   }

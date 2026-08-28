@@ -78,6 +78,7 @@ import {
   type CollectionActivityItem,
   type AchievementActivityItem,
 } from "@/app/(app)/feed/data";
+import type { AddedToListGroupItem } from "@/app/(app)/feed/added-to-list-aggregation";
 
 const PROFILE_A = { id: "user-a", username: "martin", avatar_url: null };
 const PROFILE_B = { id: "user-b", username: "anna", avatar_url: null };
@@ -192,14 +193,16 @@ describe("loadActivityFeed — mapping", () => {
     expect(item.experience.title).toBe("Cross Shibuya Crossing at night");
   });
 
-  it("maps a saved user_lists row to an added_to_list activity with created_at as timestamp", async () => {
+  it("maps a saved user_lists row into a single-item added_to_list group with created_at as timestamp", async () => {
     setupFakeClient(baseTables());
     const result = await loadActivityFeed("all", 1);
     const item = result.items.find(
-      (i) => i.id === "list-row-2",
-    ) as ExperienceActivityItem;
-    expect(item.kind).toBe("added_to_list");
+      (i) => i.id === "added-to-list-group-list-row-2",
+    ) as AddedToListGroupItem;
+    expect(item.kind).toBe("added_to_list_group");
     expect(item.timestamp).toBe("2026-08-10T09:00:00Z");
+    expect(item.experiences).toHaveLength(1);
+    expect(item.experiences[0].id).toBe("exp-2");
   });
 
   it("includes a public collection as collection_created activity", async () => {
@@ -310,12 +313,12 @@ describe("loadActivityFeed — ordering and filters", () => {
     expect(item.collection.coverImages).toEqual([]);
   });
 
-  it("filter=all excludes nothing by kind", async () => {
+  it("filter=all excludes nothing by kind (added_to_list surfaces as a group)", async () => {
     setupFakeClient(baseTables());
     const result = await loadActivityFeed("all", 1);
     const kinds = new Set(result.items.map((i) => i.kind));
     expect(kinds.has("completed")).toBe(true);
-    expect(kinds.has("added_to_list")).toBe(true);
+    expect(kinds.has("added_to_list_group")).toBe(true);
     expect(kinds.has("collection_created")).toBe(true);
   });
 });
