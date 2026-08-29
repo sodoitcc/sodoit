@@ -1,9 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Globe2, Lock, MoreHorizontal } from "lucide-react";
+import { Globe2, Lock, MoreHorizontal } from "lucide-react";
 
 import { Button, EmptyState, ShareButton, ViewToggle } from "@/components/ui";
 import { SearchField } from "@/components/ui/SearchField";
@@ -25,6 +24,7 @@ import {
 import { resolveCopyCountLabel } from "@/app/(app)/list/collections/provenance-display";
 import type { Collection } from "@/app/(app)/list/collections/types";
 import { AddExperiencesDialog } from "./AddExperiencesDialog";
+import { CollectionBackLink } from "./CollectionBackLink";
 import { SaveCollectionCopyButton } from "./SaveCollectionCopyButton";
 
 interface CollectionDetailViewProps {
@@ -156,13 +156,7 @@ export function CollectionDetailView({
 
   return (
     <div className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <Link
-        href={isOwner ? "/list" : `/u/${username}/list`}
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
-      >
-        <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-        {isOwner ? "My list" : `${username}'s list`}
-      </Link>
+      <CollectionBackLink isOwner={isOwner} />
 
       <div className="mt-6 grid gap-8 lg:grid-cols-[0.55fr_0.45fr] lg:items-start">
         <div className="relative aspect-[4/3] w-full overflow-hidden rounded-media sm:aspect-[16/11]">

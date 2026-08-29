@@ -76,8 +76,8 @@ import {
   loadViewerListStatuses,
   type ExperienceActivityItem,
   type CollectionActivityItem,
-  type AchievementActivityItem,
 } from "@/app/(app)/feed/data";
+import type { AddedToListGroupItem } from "@/app/(app)/feed/added-to-list-aggregation";
 
 const PROFILE_A = { id: "user-a", username: "martin", avatar_url: null };
 const PROFILE_B = { id: "user-b", username: "anna", avatar_url: null };
@@ -138,6 +138,7 @@ function baseTables() {
         slug: "2027-travel-dreams",
         visibility: "public",
         created_at: "2026-08-10T08:00:00Z",
+        collection_items: [{ count: 3 }],
       },
       {
         id: "col-private",
@@ -146,14 +147,7 @@ function baseTables() {
         slug: "secret-plans",
         visibility: "private",
         created_at: "2026-08-10T08:30:00Z",
-      },
-    ],
-    achievements: [{ id: "first-step", title: "First Step", icon: null }],
-    user_achievements: [
-      {
-        user_id: "user-a",
-        achievement_id: "first-step",
-        earned_at: "2026-08-10T07:00:00Z",
+        collection_items: [{ count: 1 }],
       },
     ],
   };
@@ -190,14 +184,16 @@ describe("loadActivityFeed — mapping", () => {
     expect(item.experience.title).toBe("Cross Shibuya Crossing at night");
   });
 
-  it("maps a saved user_lists row to an added_to_list activity with created_at as timestamp", async () => {
+  it("maps a saved user_lists row into a single-item added_to_list group with created_at as timestamp", async () => {
     setupFakeClient(baseTables());
     const result = await loadActivityFeed("all", 1);
     const item = result.items.find(
-      (i) => i.id === "list-row-2",
-    ) as ExperienceActivityItem;
-    expect(item.kind).toBe("added_to_list");
+      (i) => i.id === "added-to-list-group-list-row-2",
+    ) as AddedToListGroupItem;
+    expect(item.kind).toBe("added_to_list_group");
     expect(item.timestamp).toBe("2026-08-10T09:00:00Z");
+    expect(item.experiences).toHaveLength(1);
+    expect(item.experiences[0].id).toBe("exp-2");
   });
 
   it("includes a public collection as collection_created activity", async () => {
@@ -209,16 +205,15 @@ describe("loadActivityFeed — mapping", () => {
     expect(item.kind).toBe("collection_created");
     expect(item.collection.name).toBe("2027 Travel Dreams");
     expect(item.collection.ownerUsername).toBe("martin");
+    expect(item.collection.itemCount).toBe(3);
+    expect(item.collection.coverImages).toEqual([]);
   });
 
-  it("includes an achievement unlock activity", async () => {
-    setupFakeClient(baseTables());
-    const result = await loadActivityFeed("all", 1);
-    const item = result.items.find(
-      (i) => i.kind === "achievement_unlocked",
-    ) as AchievementActivityItem;
-    expect(item).toBeDefined();
-    expect(item.achievement.title).toBe("First Step");
+  it("never queries achievements — the Feed surface no longer includes them", async () => {
+    const calls = setupFakeClient(baseTables());
+    await loadActivityFeed("all", 1);
+    expect(calls).not.toContain("user_achievements");
+    expect(calls).not.toContain("achievements");
   });
 });
 
@@ -278,13 +273,44 @@ describe("loadActivityFeed — ordering and filters", () => {
     expect(result.items.length).toBeGreaterThan(0);
   });
 
-  it("filter=all excludes nothing by kind", async () => {
+  it("filter=collections never includes a private collection (grid source data)", async () => {
+    setupFakeClient(baseTables());
+    const result = await loadActivityFeed("collections", 1);
+    const leaked = result.items.some((i) => i.id === "collection-col-private");
+    expect(leaked).toBe(false);
+  });
+
+  it("a collection with no items provides an empty coverImages array (renders the branded collage fallback)", async () => {
+    const tables = baseTables();
+    tables.collections.push({
+      id: "col-empty",
+      user_id: "user-a",
+      name: "Fresh Start",
+      slug: "fresh-start",
+      visibility: "public",
+      created_at: "2026-08-10T08:15:00Z",
+      collection_items: [{ count: 0 }],
+    });
+    setupFakeClient(tables);
+    const result = await loadActivityFeed("collections", 1);
+    const item = result.items.find(
+      (i) => i.id === "collection-col-empty",
+    ) as CollectionActivityItem;
+    expect(item).toBeDefined();
+    expect(item.collection.itemCount).toBe(0);
+    expect(item.collection.coverImages).toEqual([]);
+  });
+
+  it("filter=all includes completed, collections, and added_to_list groups — and nothing else", async () => {
     setupFakeClient(baseTables());
     const result = await loadActivityFeed("all", 1);
     const kinds = new Set(result.items.map((i) => i.kind));
     expect(kinds.has("completed")).toBe(true);
-    expect(kinds.has("added_to_list")).toBe(true);
+    expect(kinds.has("added_to_list_group")).toBe(true);
     expect(kinds.has("collection_created")).toBe(true);
+    expect(kinds).toEqual(
+      new Set(["completed", "added_to_list_group", "collection_created"]),
+    );
   });
 });
 

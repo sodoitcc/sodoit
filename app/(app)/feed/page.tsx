@@ -1,19 +1,11 @@
-import { createClient } from "@/lib/supabase/server";
-import { PageShell, ErrorState } from "@/components/ui";
+import { ErrorState } from "@/components/ui";
 import { ActivityFeed } from "@/components/feed/ActivityFeed";
+import { FeedHero } from "./FeedHero";
 import {
   ACTIVITY_FILTERS,
   loadActivityFeed,
-  loadViewerListStatuses,
   type ActivityFilter,
-  type ExperienceActivityItem,
 } from "./data";
-
-function isExperienceActivity(item: {
-  kind: string;
-}): item is ExperienceActivityItem {
-  return item.kind === "completed" || item.kind === "added_to_list";
-}
 
 interface FeedPageProps {
   searchParams: Promise<{ filter?: string; page?: string }>;
@@ -28,48 +20,31 @@ export default async function FeedPage({ searchParams }: FeedPageProps) {
     : "all";
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
-  const shellProps = {
-    title: "Community updates",
-    subtitle: "See what people are adding, completing, and planning.",
-  } as const;
-
   let result;
   try {
     result = await loadActivityFeed(filter, page);
   } catch {
     return (
-      <PageShell {...shellProps}>
-        <ErrorState
-          title="Couldn't load community updates"
-          description="Please try again shortly."
-        />
-      </PageShell>
+      <div className="overflow-x-hidden">
+        <FeedHero filter={filter} />
+
+        <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
+          <ErrorState
+            title="Couldn't load community updates"
+            description="Please try again shortly."
+          />
+        </div>
+      </div>
     );
   }
 
-  const experienceIds = result.items
-    .filter(isExperienceActivity)
-    .map((item) => item.experience.id);
-
-  const supabase = await createClient();
-  const [
-    {
-      data: { user },
-    },
-    viewerStatuses,
-  ] = await Promise.all([
-    supabase.auth.getUser(),
-    loadViewerListStatuses(experienceIds),
-  ]);
-
   return (
-    <PageShell {...shellProps}>
-      <ActivityFeed
-        filter={filter}
-        result={result}
-        viewerStatuses={viewerStatuses}
-        signedIn={Boolean(user)}
-      />
-    </PageShell>
+    <div className="overflow-x-hidden">
+      <FeedHero filter={filter} />
+
+      <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
+        <ActivityFeed filter={filter} result={result} />
+      </div>
+    </div>
   );
 }

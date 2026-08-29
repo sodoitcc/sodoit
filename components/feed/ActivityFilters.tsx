@@ -1,19 +1,21 @@
 import Link from "next/link";
 import type { ActivityFilter } from "@/app/(app)/feed/data";
 
-const FILTER_LABELS: Record<ActivityFilter, string> = {
+const FILTER_LABELS: Record<VisibleActivityFilter, string> = {
   all: "All",
   completed: "Completed",
-  added_to_list: "Added to list",
   collections: "Collections",
 };
 
-const FILTER_ORDER: readonly ActivityFilter[] = [
+type VisibleActivityFilter = Exclude<ActivityFilter, "added_to_list">;
+
+export const VISIBLE_ACTIVITY_FILTERS: readonly VisibleActivityFilter[] = [
   "all",
   "completed",
-  "added_to_list",
   "collections",
 ];
+
+const FILTER_ORDER = VISIBLE_ACTIVITY_FILTERS;
 
 export function ActivityFilters({ active }: { active: ActivityFilter }) {
   return (

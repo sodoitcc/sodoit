@@ -1,5 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { experienceLocation } from "@/components/ui";
+import {
+  aggregateAddedToListActivity,
+  type AddedToListGroupItem,
+} from "./added-to-list-aggregation";
 
 export type ActivityFilter =
   "all" | "completed" | "added_to_list" | "collections";
@@ -30,6 +35,7 @@ export interface ExperienceActivityItem {
     title: string;
     category: string | null;
     difficulty: string | null;
+    location: string | null;
     imageUrl: string | null;
     imageAlt: string | null;
   };
@@ -40,19 +46,18 @@ export interface CollectionActivityItem {
   kind: "collection_created";
   timestamp: string;
   actor: ActivityActor;
-  collection: { id: string; name: string; slug: string; ownerUsername: string };
-}
-
-export interface AchievementActivityItem {
-  id: string;
-  kind: "achievement_unlocked";
-  timestamp: string;
-  actor: ActivityActor;
-  achievement: { id: string; title: string; icon: string | null };
+  collection: {
+    id: string;
+    name: string;
+    slug: string;
+    ownerUsername: string;
+    itemCount: number;
+    coverImages: string[];
+  };
 }
 
 export type ActivityItem =
-  ExperienceActivityItem | CollectionActivityItem | AchievementActivityItem;
+  ExperienceActivityItem | CollectionActivityItem | AddedToListGroupItem;
 
 export interface ActivityFeedResult {
   items: ActivityItem[];
@@ -98,7 +103,9 @@ async function loadListActivity(
   const [experiencesResult, profilesResult] = await Promise.all([
     supabase
       .from("experiences")
-      .select("id, title, category, difficulty, image_url, image_alt")
+      .select(
+        "id, title, category, difficulty, location_type, city, country_code, image_url, image_alt",
+      )
       .in("id", experienceIds),
     supabase
       .from("profiles")
@@ -138,6 +145,7 @@ async function loadListActivity(
         title: experience.title,
         category: experience.category,
         difficulty: experience.difficulty,
+        location: experienceLocation(experience),
         imageUrl: experience.image_url,
         imageAlt: experience.image_alt,
       },
@@ -147,13 +155,50 @@ async function loadListActivity(
   return items;
 }
 
+interface CollectionCoverRow {
+  collection_id: string;
+  position: number;
+  experiences:
+    { image_url: string | null } | { image_url: string | null }[] | null;
+}
+
+async function loadCollectionCoverImages(
+  supabase: SupabaseClient,
+  collectionIds: string[],
+): Promise<Map<string, string[]>> {
+  if (collectionIds.length === 0) return new Map();
+
+  const { data } = await supabase
+    .from("collection_items")
+    .select("collection_id, position, experiences(image_url)")
+    .in("collection_id", collectionIds)
+    .order("position", { ascending: true });
+
+  const map = new Map<string, string[]>();
+  for (const row of (data ?? []) as CollectionCoverRow[]) {
+    const experience = Array.isArray(row.experiences)
+      ? (row.experiences[0] ?? null)
+      : row.experiences;
+    const imageUrl = experience?.image_url;
+    if (!imageUrl) continue;
+
+    const current = map.get(row.collection_id) ?? [];
+    if (current.length >= 4) continue;
+
+    current.push(imageUrl);
+    map.set(row.collection_id, current);
+  }
+
+  return map;
+}
+
 async function loadCollectionActivity(
   supabase: SupabaseClient,
   limit: number,
 ): Promise<CollectionActivityItem[]> {
   const { data, error } = await supabase
     .from("collections")
-    .select("id, user_id, name, slug, created_at")
+    .select("id, user_id, name, slug, created_at, collection_items(count)")
     .eq("visibility", "public")
     .order("created_at", { ascending: false })
     .limit(limit);
@@ -161,10 +206,15 @@ async function loadCollectionActivity(
   if (!data || data.length === 0) return [];
 
   const userIds = [...new Set(data.map((row) => row.user_id as string))];
-  const profilesResult = await supabase
-    .from("profiles")
-    .select("id, username, avatar_url")
-    .in("id", userIds);
+  const collectionIds = data.map((row) => row.id as string);
+
+  const [profilesResult, coverImagesById] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("id, username, avatar_url")
+      .in("id", userIds),
+    loadCollectionCoverImages(supabase, collectionIds),
+  ]);
   if (profilesResult.error) throw profilesResult.error;
 
   const profileById = new Map(
@@ -172,7 +222,9 @@ async function loadCollectionActivity(
   );
 
   const items: CollectionActivityItem[] = [];
-  for (const row of data) {
+  for (const row of data as ((typeof data)[number] & {
+    collection_items: { count: number }[];
+  })[]) {
     const profile = profileById.get(row.user_id);
     if (!profile || !profile.username) continue;
 
@@ -190,69 +242,8 @@ async function loadCollectionActivity(
         name: row.name,
         slug: row.slug,
         ownerUsername: profile.username,
-      },
-    });
-  }
-
-  return items;
-}
-
-async function loadAchievementActivity(
-  supabase: SupabaseClient,
-  limit: number,
-): Promise<AchievementActivityItem[]> {
-  const { data, error } = await supabase
-    .from("user_achievements")
-    .select("user_id, achievement_id, earned_at")
-    .order("earned_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  if (!data || data.length === 0) return [];
-
-  const userIds = [...new Set(data.map((row) => row.user_id as string))];
-  const achievementIds = [
-    ...new Set(data.map((row) => row.achievement_id as string)),
-  ];
-
-  const [profilesResult, achievementsResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds),
-    supabase
-      .from("achievements")
-      .select("id, title, icon")
-      .in("id", achievementIds),
-  ]);
-  if (profilesResult.error) throw profilesResult.error;
-  if (achievementsResult.error) throw achievementsResult.error;
-
-  const profileById = new Map(
-    (profilesResult.data ?? []).map((row) => [row.id, row]),
-  );
-  const achievementById = new Map(
-    (achievementsResult.data ?? []).map((row) => [row.id, row]),
-  );
-
-  const items: AchievementActivityItem[] = [];
-  for (const row of data) {
-    const profile = profileById.get(row.user_id);
-    const achievement = achievementById.get(row.achievement_id);
-    if (!profile || !profile.username || !achievement) continue;
-
-    items.push({
-      id: `achievement-${row.user_id}-${row.achievement_id}`,
-      kind: "achievement_unlocked",
-      timestamp: row.earned_at,
-      actor: {
-        id: profile.id,
-        username: profile.username,
-        avatarUrl: profile.avatar_url,
-      },
-      achievement: {
-        id: achievement.id,
-        title: achievement.title,
-        icon: achievement.icon,
+        itemCount: (row.collection_items ?? [])[0]?.count ?? 0,
+        coverImages: coverImagesById.get(row.id) ?? [],
       },
     });
   }
@@ -274,29 +265,26 @@ export async function loadActivityFeed(
   const wantsListActivity =
     filter === "all" || filter === "completed" || filter === "added_to_list";
   const wantsCollections = filter === "all" || filter === "collections";
-  const wantsAchievements = filter === "all";
 
-  const [listItems, collectionItems, achievementItems] = await Promise.all([
+  const [listItems, collectionItems] = await Promise.all([
     wantsListActivity
       ? loadListActivity(supabase, perSourceLimit, filter)
       : Promise.resolve([]),
     wantsCollections
       ? loadCollectionActivity(supabase, perSourceLimit)
       : Promise.resolve([]),
-    wantsAchievements
-      ? loadAchievementActivity(supabase, perSourceLimit)
-      : Promise.resolve([]),
   ]);
 
-  const merged: ActivityItem[] = [
-    ...listItems,
-    ...collectionItems,
-    ...achievementItems,
-  ].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const merged: ActivityItem[] = [...listItems, ...collectionItems].sort(
+    (a, b) => b.timestamp.localeCompare(a.timestamp),
+  );
+
+  const displayItems =
+    filter === "all" ? aggregateAddedToListActivity(merged) : merged;
 
   const start = (safePage - 1) * ACTIVITY_PAGE_SIZE;
-  const pageItems = merged.slice(start, start + ACTIVITY_PAGE_SIZE);
-  const hasMore = merged.length > start + ACTIVITY_PAGE_SIZE;
+  const pageItems = displayItems.slice(start, start + ACTIVITY_PAGE_SIZE);
+  const hasMore = displayItems.length > start + ACTIVITY_PAGE_SIZE;
 
   return { items: pageItems, hasMore, page: safePage };
 }
