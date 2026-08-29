@@ -112,6 +112,68 @@ describe("generateProposal", () => {
     );
     expect(proposal.locationScope).toBe("city");
   });
+
+  it("falls back Culture legacy category to Fun & Entertainment", () => {
+    const proposal = generateProposal(
+      input("Watch flamenco in Seville", {
+        category: "Culture",
+        locationType: "city",
+      }),
+    );
+    expect(proposal.categorySlug).toBe("fun-entertainment");
+    expect(proposal.status).toBe("medium");
+  });
+
+  it("falls back Social legacy category to Fun & Entertainment", () => {
+    const proposal = generateProposal(
+      input("Join a pub quiz team", { category: "Social" }),
+    );
+    expect(proposal.categorySlug).toBe("fun-entertainment");
+    expect(proposal.status).toBe("medium");
+  });
+
+  it("does not force a generic legacy-fallback travel title to specific_place", () => {
+    const proposal = generateProposal(
+      input("Visit a country you have never been to", { category: "Travel" }),
+    );
+    expect(proposal.categorySlug).toBe("places");
+    expect(proposal.locationScope).toBe("anywhere");
+    expect(proposal.status).toBe("medium");
+  });
+
+  it("maps a wildlife safari title to Nature & Outdoors, not Adventure", () => {
+    const proposal = generateProposal(input("Go on safari in the Serengeti"));
+    expect(proposal.categorySlug).toBe("nature-outdoors");
+    expect(proposal.status).toBe("high");
+  });
+
+  it("does not treat a generic obstacle course as a Learn & Create class", () => {
+    const proposal = generateProposal(input("Run an obstacle course race"));
+    expect(proposal.categorySlug).toBe("wellness-active");
+    expect(proposal.status).toBe("high");
+  });
+
+  it("recognizes a landmark title with an article between verb and proper noun", () => {
+    const proposal = generateProposal(input("See the Taj Mahal at sunrise"));
+    expect(proposal.categorySlug).toBe("places");
+    expect(proposal.locationScope).toBe("specific_place");
+    expect(proposal.status).toBe("high");
+  });
+
+  it("recognizes plural pyramid and canyon as place nouns", () => {
+    const pyramids = generateProposal(input("See the Pyramids of Giza"));
+    expect(pyramids.locationScope).toBe("specific_place");
+
+    const canyon = generateProposal(input("See the Grand Canyon from the rim"));
+    expect(canyon.locationScope).toBe("specific_place");
+  });
+
+  it("does not treat a generic indefinite article as a landmark signal", () => {
+    const proposal = generateProposal(
+      input("Visit a UNESCO World Heritage Site", { category: "Travel" }),
+    );
+    expect(proposal.locationScope).toBe("anywhere");
+  });
 });
 
 describe("hasProposedChange", () => {

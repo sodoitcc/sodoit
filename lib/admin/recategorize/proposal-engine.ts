@@ -35,7 +35,7 @@ const KEYWORD_RULES: readonly KeywordRule[] = [
   {
     slug: "learn-create",
     pattern:
-      /\b(class|lesson|workshop|course|pottery|painting|learn(ing)?|make|making)\b/i,
+      /\b(class|lesson|workshop|pottery|painting|learn(ing)?|make|making)\b/i,
     experienceType: "skill",
   },
   {
@@ -47,7 +47,7 @@ const KEYWORD_RULES: readonly KeywordRule[] = [
   {
     slug: "adventure",
     pattern:
-      /\b(skydiv\w*|bungee|raft(ing)?|safari|climb\w*|scuba|surf(ing)?|zipline|paraglid\w*|kayak\w*|hik(e|ing))\b/i,
+      /\b(skydiv\w*|bungee|raft(ing)?|climb\w*|scuba|surf(ing)?|zipline|paraglid\w*|kayak\w*|hik(e|ing))\b/i,
     experienceType: "activity",
   },
   {
@@ -65,22 +65,24 @@ const KEYWORD_RULES: readonly KeywordRule[] = [
   {
     slug: "nature-outdoors",
     pattern:
-      /\b(waterfall\w*|aurora|wildlife|mountain\w*|forest|volcano|glacier|stargaz\w*)\b/i,
+      /\b(waterfall\w*|aurora|wildlife|safari|mountain\w*|forest|volcano|glacier|stargaz\w*)\b/i,
     experienceType: "activity",
   },
 ];
 
 const PLACE_NOUN_PATTERN =
-  /\b(temple|tower|bridge|palace|castle|crossing|square|wall|pyramid|ruins|cathedral|museum|monument)\b/i;
+  /\b(temple|tower|bridge|palace|castle|crossing|square|wall|pyramids?|canyon|ruins|cathedral|museum|monument)\b/i;
 const PLACE_VERB_PROPER_NOUN_PATTERN =
-  /\b(?:[Vv]isit|[Cc]ross|[Ee]xplore|[Ss]ee)\s+[A-Z]/;
+  /\b(?:[Vv]isit|[Cc]ross|[Ee]xplore|[Ss]ee)\s+(?:the\s+)?[A-Z]/;
 
 const LEGACY_CATEGORY_FALLBACK: Partial<Record<string, CategorySlug>> = {
   Adventure: "adventure",
+  Culture: "fun-entertainment",
   Fitness: "wellness-active",
   Food: "food-drink",
   Nature: "nature-outdoors",
   Skills: "learn-create",
+  Social: "fun-entertainment",
   Travel: "places",
 };
 
@@ -95,8 +97,15 @@ const LEGACY_CATEGORY_TYPE: Partial<Record<CategorySlug, ExperienceType>> = {
 };
 
 function matchPlacesRule(title: string): KeywordRule | null {
-  if (PLACE_VERB_PROPER_NOUN_PATTERN.test(title) || PLACE_NOUN_PATTERN.test(title)) {
-    return { slug: "places", pattern: PLACE_NOUN_PATTERN, experienceType: "place" };
+  if (
+    PLACE_VERB_PROPER_NOUN_PATTERN.test(title) ||
+    PLACE_NOUN_PATTERN.test(title)
+  ) {
+    return {
+      slug: "places",
+      pattern: PLACE_NOUN_PATTERN,
+      experienceType: "place",
+    };
   }
   return null;
 }
@@ -121,7 +130,6 @@ function inferLocationScope(
   if (slug === "places" && strictPlaceMatch) return "specific_place";
   if (locationType === "city") return "city";
   if (locationType === "country") return "country";
-  if (slug === "places") return "specific_place";
   return "anywhere";
 }
 
