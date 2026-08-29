@@ -5,10 +5,6 @@ import {
   aggregateAddedToListActivity,
   type AddedToListGroupItem,
 } from "./added-to-list-aggregation";
-import {
-  aggregateAchievementActivity,
-  type AchievementActivityGroupItem,
-} from "./achievement-aggregation";
 
 export type ActivityFilter =
   "all" | "completed" | "added_to_list" | "collections";
@@ -60,20 +56,8 @@ export interface CollectionActivityItem {
   };
 }
 
-export interface AchievementActivityItem {
-  id: string;
-  kind: "achievement_unlocked";
-  timestamp: string;
-  actor: ActivityActor;
-  achievement: { id: string; title: string; icon: string | null };
-}
-
 export type ActivityItem =
-  | ExperienceActivityItem
-  | CollectionActivityItem
-  | AchievementActivityItem
-  | AddedToListGroupItem
-  | AchievementActivityGroupItem;
+  ExperienceActivityItem | CollectionActivityItem | AddedToListGroupItem;
 
 export interface ActivityFeedResult {
   items: ActivityItem[];
@@ -267,69 +251,6 @@ async function loadCollectionActivity(
   return items;
 }
 
-async function loadAchievementActivity(
-  supabase: SupabaseClient,
-  limit: number,
-): Promise<AchievementActivityItem[]> {
-  const { data, error } = await supabase
-    .from("user_achievements")
-    .select("user_id, achievement_id, earned_at")
-    .order("earned_at", { ascending: false })
-    .limit(limit);
-  if (error) throw error;
-  if (!data || data.length === 0) return [];
-
-  const userIds = [...new Set(data.map((row) => row.user_id as string))];
-  const achievementIds = [
-    ...new Set(data.map((row) => row.achievement_id as string)),
-  ];
-
-  const [profilesResult, achievementsResult] = await Promise.all([
-    supabase
-      .from("profiles")
-      .select("id, username, avatar_url")
-      .in("id", userIds),
-    supabase
-      .from("achievements")
-      .select("id, title, icon")
-      .in("id", achievementIds),
-  ]);
-  if (profilesResult.error) throw profilesResult.error;
-  if (achievementsResult.error) throw achievementsResult.error;
-
-  const profileById = new Map(
-    (profilesResult.data ?? []).map((row) => [row.id, row]),
-  );
-  const achievementById = new Map(
-    (achievementsResult.data ?? []).map((row) => [row.id, row]),
-  );
-
-  const items: AchievementActivityItem[] = [];
-  for (const row of data) {
-    const profile = profileById.get(row.user_id);
-    const achievement = achievementById.get(row.achievement_id);
-    if (!profile || !profile.username || !achievement) continue;
-
-    items.push({
-      id: `achievement-${row.user_id}-${row.achievement_id}`,
-      kind: "achievement_unlocked",
-      timestamp: row.earned_at,
-      actor: {
-        id: profile.id,
-        username: profile.username,
-        avatarUrl: profile.avatar_url,
-      },
-      achievement: {
-        id: achievement.id,
-        title: achievement.title,
-        icon: achievement.icon,
-      },
-    });
-  }
-
-  return items;
-}
-
 export async function loadActivityFeed(
   filter: ActivityFilter,
   page: number,
@@ -344,30 +265,22 @@ export async function loadActivityFeed(
   const wantsListActivity =
     filter === "all" || filter === "completed" || filter === "added_to_list";
   const wantsCollections = filter === "all" || filter === "collections";
-  const wantsAchievements = filter === "all";
 
-  const [listItems, collectionItems, achievementItems] = await Promise.all([
+  const [listItems, collectionItems] = await Promise.all([
     wantsListActivity
       ? loadListActivity(supabase, perSourceLimit, filter)
       : Promise.resolve([]),
     wantsCollections
       ? loadCollectionActivity(supabase, perSourceLimit)
       : Promise.resolve([]),
-    wantsAchievements
-      ? loadAchievementActivity(supabase, perSourceLimit)
-      : Promise.resolve([]),
   ]);
 
-  const merged: ActivityItem[] = [
-    ...listItems,
-    ...collectionItems,
-    ...achievementItems,
-  ].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
+  const merged: ActivityItem[] = [...listItems, ...collectionItems].sort(
+    (a, b) => b.timestamp.localeCompare(a.timestamp),
+  );
 
   const displayItems =
-    filter === "all"
-      ? aggregateAchievementActivity(aggregateAddedToListActivity(merged))
-      : merged;
+    filter === "all" ? aggregateAddedToListActivity(merged) : merged;
 
   const start = (safePage - 1) * ACTIVITY_PAGE_SIZE;
   const pageItems = displayItems.slice(start, start + ACTIVITY_PAGE_SIZE);

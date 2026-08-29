@@ -14,6 +14,10 @@ interface ActivityFeedProps {
   result: ActivityFeedResult;
 }
 
+function isWideItem(kind: string) {
+  return kind === "added_to_list_group" || kind === "added_to_list";
+}
+
 export function ActivityFeed({ filter, result }: ActivityFeedProps) {
   return (
     <div>
@@ -30,9 +34,12 @@ export function ActivityFeed({ filter, result }: ActivityFeedProps) {
           ))}
         </ul>
       ) : (
-        <ul className="mt-6 flex flex-col gap-4">
+        <ul className="mt-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
           {result.items.map((item) => (
-            <li key={item.id}>
+            <li
+              key={item.id}
+              className={isWideItem(item.kind) ? "lg:col-span-2" : undefined}
+            >
               <ActivityListItem item={item} />
             </li>
           ))}

@@ -1,7 +1,6 @@
 import type { ActivityItem } from "@/app/(app)/feed/data";
 import { CompletedExperienceCard } from "./CompletedExperienceCard";
-import { CollectionActivityCard } from "./CollectionActivityCard";
-import { AchievementActivityGroup } from "./AchievementActivityGroup";
+import { FeedCollectionCard } from "./FeedCollectionCard";
 import { AddedToListActivityGroup } from "./AddedToListActivityGroup";
 
 export function ActivityListItem({ item }: { item: ActivityItem }) {
@@ -35,11 +34,7 @@ export function ActivityListItem({ item }: { item: ActivityItem }) {
   }
 
   if (item.kind === "collection_created") {
-    return <CollectionActivityCard item={item} />;
-  }
-
-  if (item.kind === "achievement_group") {
-    return <AchievementActivityGroup item={item} />;
+    return <FeedCollectionCard item={item} />;
   }
 
   return null;

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { HeroLayout, HeroToolbar } from "@/components/ui";
+import { HeroLayout } from "@/components/ui";
 import { ActivityFilters } from "@/components/feed/ActivityFilters";
 import type { ActivityFilter } from "./data";
 
@@ -28,7 +28,6 @@ export function FeedHero({ filter }: { filter: ActivityFilter }) {
             className="pointer-events-none select-none object-contain object-center lg:object-right"
           />
         }
-        visualClassName="relative hidden h-[210px] sm:block lg:h-[280px]"
       >
         <h1 className="text-[28px] font-extrabold leading-[0.98] tracking-[-0.035em] text-ink sm:text-[42px] lg:text-[56px]">
           What the community is up to
@@ -38,10 +37,8 @@ export function FeedHero({ filter }: { filter: ActivityFilter }) {
           See what people are adding, completing, and planning.
         </p>
 
-        <div className="mt-3 sm:mt-5">
-          <HeroToolbar search={null}>
-            <ActivityFilters active={filter} />
-          </HeroToolbar>
+        <div className="mt-4 sm:mt-6">
+          <ActivityFilters active={filter} />
         </div>
       </HeroLayout>
     </section>

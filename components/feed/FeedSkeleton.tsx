@@ -6,20 +6,18 @@ function SkeletonBlock({ className = "" }: { className?: string }) {
   );
 }
 
-function CompletedCardSkeleton() {
+function VerticalCardSkeleton() {
   return (
-    <div className="overflow-hidden rounded-card border border-border bg-surface lg:flex lg:items-stretch">
-      <div className="flex flex-col gap-4 p-4 sm:p-5 lg:w-[42%] lg:shrink-0">
-        <div className="flex items-center gap-2">
-          <SkeletonBlock className="h-6 w-6 rounded-full" />
-          <SkeletonBlock className="h-3 w-40" />
-        </div>
-        <div className="space-y-2">
-          <SkeletonBlock className="h-5 w-3/4" />
-          <SkeletonBlock className="h-3 w-1/2" />
-        </div>
+    <div className="overflow-hidden rounded-card border border-border bg-surface">
+      <div className="flex items-center gap-2 p-4 pb-3 sm:p-5 sm:pb-3">
+        <SkeletonBlock className="h-6 w-6 rounded-full" />
+        <SkeletonBlock className="h-3 w-32" />
       </div>
-      <SkeletonBlock className="aspect-[16/10] w-full rounded-none sm:aspect-[16/8] lg:aspect-auto lg:w-[58%]" />
+      <SkeletonBlock className="aspect-[16/10] w-full rounded-none" />
+      <div className="space-y-2 p-4 sm:p-5">
+        <SkeletonBlock className="h-5 w-3/4" />
+        <SkeletonBlock className="h-3 w-1/2" />
+      </div>
     </div>
   );
 }
@@ -45,11 +43,14 @@ export function FeedSkeleton() {
         <SkeletonBlock className="h-8 w-24" />
       </div>
 
-      <div className="mt-6 flex flex-col gap-4">
-        <CompletedCardSkeleton />
-        <CompactCardSkeleton />
-        <CompactCardSkeleton />
-        <CompletedCardSkeleton />
+      <div className="mt-6 grid grid-cols-1 items-start gap-5 lg:grid-cols-2">
+        <VerticalCardSkeleton />
+        <VerticalCardSkeleton />
+        <div className="lg:col-span-2">
+          <CompactCardSkeleton />
+        </div>
+        <VerticalCardSkeleton />
+        <VerticalCardSkeleton />
       </div>
     </div>
   );

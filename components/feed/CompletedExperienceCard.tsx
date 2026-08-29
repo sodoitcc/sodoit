@@ -20,41 +20,18 @@ export function CompletedExperienceCard({
   const media = resolveCompletedExperienceMedia(item.experience);
 
   return (
-    <ActivityCardShell className="lg:flex lg:items-stretch">
-      <div className="flex flex-col justify-between gap-4 p-4 sm:p-5 lg:w-[42%] lg:shrink-0">
+    <ActivityCardShell>
+      <div className="p-4 pb-3 sm:p-5 sm:pb-3">
         <ActivityActorLine
           actor={item.actor}
           timestamp={item.timestamp}
           action="completed an experience"
         />
-
-        <div>
-          <Link
-            href={`/tasks/${item.experience.id}`}
-            className="block text-xl font-bold leading-snug text-ink hover:text-accent-dark"
-          >
-            {item.experience.title}
-          </Link>
-
-          <ExperienceMeta
-            className="mt-2"
-            category={item.experience.category}
-            difficulty={item.experience.difficulty ?? "Any level"}
-            location={item.experience.location}
-          />
-
-          <Link
-            href={`/tasks/${item.experience.id}`}
-            className="mt-4 inline-block text-xs font-semibold text-accent-dark hover:text-accent"
-          >
-            View experience
-          </Link>
-        </div>
       </div>
 
       <Link
         href={`/tasks/${item.experience.id}`}
-        className="relative block aspect-[16/10] w-full sm:aspect-[16/8] lg:aspect-auto lg:w-[58%]"
+        className="relative block aspect-[16/10] w-full"
       >
         <ExperienceImage
           imageUrl={media.imageUrl}
@@ -62,9 +39,32 @@ export function CompletedExperienceCard({
           title={item.experience.title}
           fallbackColor={fallbackColorFor(item.experience.id)}
           className="h-full w-full"
-          sizes="(min-width: 1024px) 58vw, 100vw"
+          sizes="(min-width: 1024px) 50vw, 100vw"
         />
       </Link>
+
+      <div className="p-4 sm:p-5">
+        <Link
+          href={`/tasks/${item.experience.id}`}
+          className="block text-xl font-bold leading-snug text-ink hover:text-accent-dark"
+        >
+          {item.experience.title}
+        </Link>
+
+        <ExperienceMeta
+          className="mt-2"
+          category={item.experience.category}
+          difficulty={item.experience.difficulty ?? "Any level"}
+          location={item.experience.location}
+        />
+
+        <Link
+          href={`/tasks/${item.experience.id}`}
+          className="mt-4 inline-block text-xs font-semibold text-accent-dark hover:text-accent"
+        >
+          View experience
+        </Link>
+      </div>
     </ActivityCardShell>
   );
 }

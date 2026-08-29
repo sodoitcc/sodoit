@@ -78,7 +78,6 @@ import {
   type CollectionActivityItem,
 } from "@/app/(app)/feed/data";
 import type { AddedToListGroupItem } from "@/app/(app)/feed/added-to-list-aggregation";
-import type { AchievementActivityGroupItem } from "@/app/(app)/feed/achievement-aggregation";
 
 const PROFILE_A = { id: "user-a", username: "martin", avatar_url: null };
 const PROFILE_B = { id: "user-b", username: "anna", avatar_url: null };
@@ -151,14 +150,6 @@ function baseTables() {
         collection_items: [{ count: 1 }],
       },
     ],
-    achievements: [{ id: "first-step", title: "First Step", icon: null }],
-    user_achievements: [
-      {
-        user_id: "user-a",
-        achievement_id: "first-step",
-        earned_at: "2026-08-10T07:00:00Z",
-      },
-    ],
   };
 }
 
@@ -218,15 +209,11 @@ describe("loadActivityFeed — mapping", () => {
     expect(item.collection.coverImages).toEqual([]);
   });
 
-  it("includes an achievement unlock activity as a single-item group in All", async () => {
-    setupFakeClient(baseTables());
-    const result = await loadActivityFeed("all", 1);
-    const item = result.items.find(
-      (i) => i.kind === "achievement_group",
-    ) as AchievementActivityGroupItem;
-    expect(item).toBeDefined();
-    expect(item.achievements).toHaveLength(1);
-    expect(item.achievements[0].title).toBe("First Step");
+  it("never queries achievements — the Feed surface no longer includes them", async () => {
+    const calls = setupFakeClient(baseTables());
+    await loadActivityFeed("all", 1);
+    expect(calls).not.toContain("user_achievements");
+    expect(calls).not.toContain("achievements");
   });
 });
 
@@ -314,14 +301,16 @@ describe("loadActivityFeed — ordering and filters", () => {
     expect(item.collection.coverImages).toEqual([]);
   });
 
-  it("filter=all excludes nothing by kind (added_to_list and achievements surface as groups)", async () => {
+  it("filter=all includes completed, collections, and added_to_list groups — and nothing else", async () => {
     setupFakeClient(baseTables());
     const result = await loadActivityFeed("all", 1);
     const kinds = new Set(result.items.map((i) => i.kind));
     expect(kinds.has("completed")).toBe(true);
     expect(kinds.has("added_to_list_group")).toBe(true);
     expect(kinds.has("collection_created")).toBe(true);
-    expect(kinds.has("achievement_group")).toBe(true);
+    expect(kinds).toEqual(
+      new Set(["completed", "added_to_list_group", "collection_created"]),
+    );
   });
 });
 

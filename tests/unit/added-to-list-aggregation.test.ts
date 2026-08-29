@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { aggregateAddedToListActivity } from "../../app/(app)/feed/added-to-list-aggregation";
 import type {
   ActivityItem,
-  AchievementActivityItem,
+  CollectionActivityItem,
   ExperienceActivityItem,
 } from "../../app/(app)/feed/data";
 
@@ -32,13 +32,23 @@ function savedItem(
   };
 }
 
-function achievement(id: string, timestamp: string): AchievementActivityItem {
+function collectionEvent(
+  id: string,
+  timestamp: string,
+): CollectionActivityItem {
   return {
     id,
-    kind: "achievement_unlocked",
+    kind: "collection_created",
     timestamp,
     actor: ACTOR_A,
-    achievement: { id: "ach", title: "Trophy", icon: null },
+    collection: {
+      id: "col",
+      name: "A Collection",
+      slug: "a-collection",
+      ownerUsername: ACTOR_A.username,
+      itemCount: 0,
+      coverImages: [],
+    },
   };
 }
 
@@ -108,7 +118,7 @@ describe("aggregateAddedToListActivity", () => {
   it("does not group across an intervening event of another kind", () => {
     const items: ActivityItem[] = [
       savedItem("before", ACTOR_A, "2026-08-10T12:00:00Z"),
-      achievement("ach-1", "2026-08-10T11:55:00Z"),
+      collectionEvent("col-1", "2026-08-10T11:55:00Z"),
       savedItem("after", ACTOR_A, "2026-08-10T11:50:00Z"),
     ];
 
@@ -116,23 +126,23 @@ describe("aggregateAddedToListActivity", () => {
 
     expect(result).toHaveLength(3);
     expect(result[0].kind).toBe("added_to_list_group");
-    expect(result[1].kind).toBe("achievement_unlocked");
+    expect(result[1].kind).toBe("collection_created");
     expect(result[2].kind).toBe("added_to_list_group");
   });
 
   it("passes through non-added_to_list items untouched and preserves order", () => {
     const items: ActivityItem[] = [
-      achievement("ach-1", "2026-08-10T12:00:00Z"),
+      collectionEvent("col-1", "2026-08-10T12:00:00Z"),
       savedItem("s1", ACTOR_A, "2026-08-10T11:00:00Z"),
-      achievement("ach-2", "2026-08-10T10:00:00Z"),
+      collectionEvent("col-2", "2026-08-10T10:00:00Z"),
     ];
 
     const result = aggregateAddedToListActivity(items);
 
     expect(result.map((item) => item.id)).toEqual([
-      "ach-1",
+      "col-1",
       "added-to-list-group-s1",
-      "ach-2",
+      "col-2",
     ]);
   });
 
