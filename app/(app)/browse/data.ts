@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BATCH_SIZE, DIFFICULTIES } from "./types";
 import type { Experience, StatusFilter, BrowseSort } from "./types";
 import type { ExperienceDifficulty } from "@/lib/experiences/types";
+import { selectFeaturedExperienceId } from "./featured-rotation";
 
 const EXPERIENCE_COLUMNS =
   "id, title, slug, description, category, difficulty, location_type, country_code, city, featured, is_public, image_url, image_alt, saved_count, completed_count";
@@ -143,6 +144,41 @@ export async function loadExperiencesCount(
   const { count } = await query;
 
   return count ?? 0;
+}
+
+const FEATURED_ELIGIBLE_DIFFICULTIES: ExperienceDifficulty[] = [
+  "Easy",
+  "Medium",
+];
+
+export async function loadFeaturedExperience(
+  nowMs: number = Date.now(),
+): Promise<Experience | null> {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("experiences")
+    .select("id, image_url")
+    .eq("is_public", true)
+    .in("difficulty", FEATURED_ELIGIBLE_DIFFICULTIES);
+
+  const eligibleIds = (data ?? [])
+    .filter(
+      (row) =>
+        typeof row.image_url === "string" && row.image_url.trim().length > 0,
+    )
+    .map((row) => row.id as string);
+
+  const selectedId = selectFeaturedExperienceId(eligibleIds, nowMs);
+  if (!selectedId) return null;
+
+  const { data: row } = await supabase
+    .from("experiences")
+    .select(EXPERIENCE_COLUMNS)
+    .eq("id", selectedId)
+    .maybeSingle();
+
+  return (row as Experience | null) ?? null;
 }
 
 const CURATED_SECTIONS_DEF: { title: string; categories: string[] }[] = [
