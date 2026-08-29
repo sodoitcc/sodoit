@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   MapPin,
   Sparkles,
+  Tag,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -22,6 +23,11 @@ const NAV = [
     href: "/admin/experiences",
     label: "Experiences",
     icon: Sparkles,
+  },
+  {
+    href: "/admin/categories",
+    label: "Categories",
+    icon: Tag,
   },
   {
     href: "/admin/guides",
