@@ -63,7 +63,7 @@ export function AddedToListActivityGroup({
   const overflow = count - visible.length;
 
   return (
-    <ActivityCardShell className="p-4 sm:p-5">
+    <ActivityCardShell className="p-3 sm:p-4">
       <ActivityActorLine
         actor={item.actor}
         timestamp={item.timestamp}

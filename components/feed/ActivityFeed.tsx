@@ -4,6 +4,7 @@ import type {
   ActivityFilter,
   CollectionActivityItem,
 } from "@/app/(app)/feed/data";
+import { emptyStateForFilter } from "@/app/(app)/feed/empty-state-copy";
 import { ActivityFilters } from "./ActivityFilters";
 import { ActivityListItem } from "./ActivityListItem";
 import { ActivityPagination } from "./ActivityPagination";
@@ -21,10 +22,7 @@ export function ActivityFeed({ filter, result }: ActivityFeedProps) {
 
       {result.items.length === 0 ? (
         <div className="mt-6">
-          <EmptyState
-            title="No community updates yet"
-            description="When people share their lists, complete experiences, or create public collections, you'll see it here."
-          />
+          <EmptyState {...emptyStateForFilter(filter)} />
         </div>
       ) : filter === "collections" ? (
         <ul className="mt-6 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
@@ -35,7 +33,7 @@ export function ActivityFeed({ filter, result }: ActivityFeedProps) {
           ))}
         </ul>
       ) : (
-        <ul className="mt-6 flex flex-col gap-5">
+        <ul className="mt-6 flex flex-col gap-4">
           {result.items.map((item) => (
             <li key={item.id}>
               <ActivityListItem item={item} />

@@ -5,6 +5,10 @@ import {
   aggregateAddedToListActivity,
   type AddedToListGroupItem,
 } from "./added-to-list-aggregation";
+import {
+  aggregateAchievementActivity,
+  type AchievementActivityGroupItem,
+} from "./achievement-aggregation";
 
 export type ActivityFilter =
   "all" | "completed" | "added_to_list" | "collections";
@@ -68,7 +72,8 @@ export type ActivityItem =
   | ExperienceActivityItem
   | CollectionActivityItem
   | AchievementActivityItem
-  | AddedToListGroupItem;
+  | AddedToListGroupItem
+  | AchievementActivityGroupItem;
 
 export interface ActivityFeedResult {
   items: ActivityItem[];
@@ -360,7 +365,9 @@ export async function loadActivityFeed(
   ].sort((a, b) => b.timestamp.localeCompare(a.timestamp));
 
   const displayItems =
-    filter === "all" ? aggregateAddedToListActivity(merged) : merged;
+    filter === "all"
+      ? aggregateAchievementActivity(aggregateAddedToListActivity(merged))
+      : merged;
 
   const start = (safePage - 1) * ACTIVITY_PAGE_SIZE;
   const pageItems = displayItems.slice(start, start + ACTIVITY_PAGE_SIZE);

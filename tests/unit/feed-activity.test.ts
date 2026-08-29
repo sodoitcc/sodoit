@@ -76,9 +76,9 @@ import {
   loadViewerListStatuses,
   type ExperienceActivityItem,
   type CollectionActivityItem,
-  type AchievementActivityItem,
 } from "@/app/(app)/feed/data";
 import type { AddedToListGroupItem } from "@/app/(app)/feed/added-to-list-aggregation";
+import type { AchievementActivityGroupItem } from "@/app/(app)/feed/achievement-aggregation";
 
 const PROFILE_A = { id: "user-a", username: "martin", avatar_url: null };
 const PROFILE_B = { id: "user-b", username: "anna", avatar_url: null };
@@ -218,14 +218,15 @@ describe("loadActivityFeed — mapping", () => {
     expect(item.collection.coverImages).toEqual([]);
   });
 
-  it("includes an achievement unlock activity", async () => {
+  it("includes an achievement unlock activity as a single-item group in All", async () => {
     setupFakeClient(baseTables());
     const result = await loadActivityFeed("all", 1);
     const item = result.items.find(
-      (i) => i.kind === "achievement_unlocked",
-    ) as AchievementActivityItem;
+      (i) => i.kind === "achievement_group",
+    ) as AchievementActivityGroupItem;
     expect(item).toBeDefined();
-    expect(item.achievement.title).toBe("First Step");
+    expect(item.achievements).toHaveLength(1);
+    expect(item.achievements[0].title).toBe("First Step");
   });
 });
 
@@ -313,13 +314,14 @@ describe("loadActivityFeed — ordering and filters", () => {
     expect(item.collection.coverImages).toEqual([]);
   });
 
-  it("filter=all excludes nothing by kind (added_to_list surfaces as a group)", async () => {
+  it("filter=all excludes nothing by kind (added_to_list and achievements surface as groups)", async () => {
     setupFakeClient(baseTables());
     const result = await loadActivityFeed("all", 1);
     const kinds = new Set(result.items.map((i) => i.kind));
     expect(kinds.has("completed")).toBe(true);
     expect(kinds.has("added_to_list_group")).toBe(true);
     expect(kinds.has("collection_created")).toBe(true);
+    expect(kinds.has("achievement_group")).toBe(true);
   });
 });
 

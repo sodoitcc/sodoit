@@ -1,4 +1,5 @@
-import { LoadingState, PageShell } from "@/components/ui";
+import { PageShell } from "@/components/ui";
+import { FeedSkeleton } from "@/components/feed/FeedSkeleton";
 
 export default function FeedLoading() {
   return (
@@ -7,7 +8,7 @@ export default function FeedLoading() {
       subtitle="See what people are adding, completing, and planning."
       maxWidth="1440px"
     >
-      <LoadingState label="Loading community updates…" />
+      <FeedSkeleton />
     </PageShell>
   );
 }
