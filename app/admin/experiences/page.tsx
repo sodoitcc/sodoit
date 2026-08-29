@@ -56,10 +56,18 @@ export default async function AdminExperiencesPage({
         title="Experiences"
         description="Manage and publish the experience catalog."
         actions={
-          <AdminLinkButton href="/admin/experiences/new">
-            <Plus className="h-4 w-4" />
-            New experience
-          </AdminLinkButton>
+          <>
+            <AdminLinkButton
+              href="/admin/experiences/recategorize"
+              variant="outline"
+            >
+              Recategorize
+            </AdminLinkButton>
+            <AdminLinkButton href="/admin/experiences/new">
+              <Plus className="h-4 w-4" />
+              New experience
+            </AdminLinkButton>
+          </>
         }
       />
 
