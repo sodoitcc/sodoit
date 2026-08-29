@@ -5,6 +5,7 @@ import {
   loadExperiencesCount,
   loadCompletedIds,
   loadCuratedSections,
+  loadFeaturedExperience,
 } from "./browse/data";
 import { isDefaultBrowseView } from "./browse/browse-editorial";
 import {
@@ -74,27 +75,34 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     sort,
   });
 
-  const [{ experiences, nextCursor, hasMore }, curatedSections, resultCount] =
-    await Promise.all([
-      loadExperiences(
-        {
-          q,
-          category,
-          difficulty,
-          status: effectiveStatus,
-          sort,
-          cursor: null,
-        },
-        completedIds,
-      ),
-      !user && isDefaultView ? loadCuratedSections() : Promise.resolve([]),
-      isDefaultView
-        ? Promise.resolve(null)
-        : loadExperiencesCount(
-            { q, category, difficulty, status: effectiveStatus },
-            completedIds,
-          ),
-    ]);
+  const showEditorial = isDefaultView && view === "grid";
+
+  const [
+    { experiences, nextCursor, hasMore },
+    curatedSections,
+    resultCount,
+    featured,
+  ] = await Promise.all([
+    loadExperiences(
+      {
+        q,
+        category,
+        difficulty,
+        status: effectiveStatus,
+        sort,
+        cursor: null,
+      },
+      completedIds,
+    ),
+    !user && isDefaultView ? loadCuratedSections() : Promise.resolve([]),
+    isDefaultView
+      ? Promise.resolve(null)
+      : loadExperiencesCount(
+          { q, category, difficulty, status: effectiveStatus },
+          completedIds,
+        ),
+    showEditorial ? loadFeaturedExperience() : Promise.resolve(null),
+  ]);
 
   return (
     <BrowseBoard
@@ -111,6 +119,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       view={view}
       curatedSections={curatedSections}
       resultCount={resultCount}
+      featured={featured}
     />
   );
 }

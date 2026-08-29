@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
 import { removeFromMyList, setListStatus } from "./actions";
-import { isDefaultBrowseView, splitFeatured } from "./browse-editorial";
+import { isDefaultBrowseView } from "./browse-editorial";
 import { CATEGORIES } from "./types";
 import type { BrowseSort, BrowseView, Experience, StatusFilter } from "./types";
 import type { CuratedSection } from "./data";
@@ -32,6 +32,7 @@ interface BrowseBoardProps {
   view: BrowseView;
   curatedSections: CuratedSection[];
   resultCount: number | null;
+  featured: Experience | null;
 }
 
 export function BrowseBoard({
@@ -48,6 +49,7 @@ export function BrowseBoard({
   view,
   curatedSections,
   resultCount,
+  featured,
 }: BrowseBoardProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -134,10 +136,11 @@ export function BrowseBoard({
   });
 
   const showEditorial = isDefaultView && view === "grid";
+  const activeFeatured = showEditorial ? featured : null;
 
-  const { featured, rest } = splitFeatured(experiences, showEditorial);
-
-  const remainingExperiences = showEditorial ? rest : experiences;
+  const remainingExperiences = activeFeatured
+    ? experiences.filter((experience) => experience.id !== activeFeatured.id)
+    : experiences;
 
   const results = (
     <InfiniteExperienceResults
@@ -192,7 +195,7 @@ export function BrowseBoard({
           {showEditorial ? (
             <>
               <BrowseEditorialContent
-                featured={featured}
+                featured={activeFeatured}
                 curatedSections={curatedSections}
                 completed={completed}
                 signedIn={signedIn}
