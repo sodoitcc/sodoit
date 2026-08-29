@@ -1,5 +1,6 @@
-import { PageShell, ErrorState } from "@/components/ui";
+import { ErrorState } from "@/components/ui";
 import { ActivityFeed } from "@/components/feed/ActivityFeed";
+import { FeedHero } from "./FeedHero";
 import {
   ACTIVITY_FILTERS,
   loadActivityFeed,
@@ -12,36 +13,41 @@ interface FeedPageProps {
 
 export default async function FeedPage({ searchParams }: FeedPageProps) {
   const params = await searchParams;
+
   const filter: ActivityFilter = ACTIVITY_FILTERS.includes(
     params.filter as ActivityFilter,
   )
     ? (params.filter as ActivityFilter)
     : "all";
+
   const page = Math.max(1, Number(params.page ?? 1) || 1);
 
-  const shellProps = {
-    title: "Community updates",
-    subtitle: "See what people are adding, completing, and planning.",
-    maxWidth: "1440px",
-  } as const;
-
   let result;
+
   try {
     result = await loadActivityFeed(filter, page);
   } catch {
     return (
-      <PageShell {...shellProps}>
-        <ErrorState
-          title="Couldn't load community updates"
-          description="Please try again shortly."
-        />
-      </PageShell>
+      <>
+        <FeedHero filter={filter} />
+
+        <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
+          <ErrorState
+            title="Couldn't load community updates"
+            description="Please try again shortly."
+          />
+        </div>
+      </>
     );
   }
 
   return (
-    <PageShell {...shellProps}>
-      <ActivityFeed filter={filter} result={result} />
-    </PageShell>
+    <>
+      <FeedHero filter={filter} />
+
+      <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
+        <ActivityFeed filter={filter} result={result} />
+      </div>
+    </>
   );
 }

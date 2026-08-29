@@ -5,7 +5,6 @@ import type {
   CollectionActivityItem,
 } from "@/app/(app)/feed/data";
 import { emptyStateForFilter } from "@/app/(app)/feed/empty-state-copy";
-import { ActivityFilters } from "./ActivityFilters";
 import { ActivityListItem } from "./ActivityListItem";
 import { ActivityPagination } from "./ActivityPagination";
 import { FeedCollectionCard } from "./FeedCollectionCard";
@@ -18,8 +17,6 @@ interface ActivityFeedProps {
 export function ActivityFeed({ filter, result }: ActivityFeedProps) {
   return (
     <div>
-      <ActivityFilters active={filter} />
-
       {result.items.length === 0 ? (
         <div className="mt-6">
           <EmptyState {...emptyStateForFilter(filter)} />
