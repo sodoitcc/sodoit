@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
 import type { ExperienceType, LocationScope } from "@/lib/experiences/taxonomy";
-import { removeFromMyList, setListStatus } from "./actions";
+import { removeFromMyList, setListStatus, toggleCompletion } from "./actions";
 import { isDefaultBrowseView } from "./browse-editorial";
 import { countActiveTaxonomyFilters } from "./browse-filters";
 import type { BrowseCategory } from "./taxonomy-loader";
@@ -103,32 +103,32 @@ export function BrowseBoard({
 
     setCompleted((current) => {
       const next = new Set(current);
+      if (wasDone) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
-      if (wasDone) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-
+    setSaved((current) => {
+      const next = new Set(current);
+      if (wasDone) next.add(id);
+      else next.delete(id);
       return next;
     });
 
     try {
-      if (wasDone) {
-        await removeFromMyList(id);
-      } else {
-        await setListStatus(id, "completed");
-      }
+      await toggleCompletion(id, wasDone);
     } catch (error) {
       setCompleted((current) => {
         const next = new Set(current);
+        if (wasDone) next.add(id);
+        else next.delete(id);
+        return next;
+      });
 
-        if (wasDone) {
-          next.add(id);
-        } else {
-          next.delete(id);
-        }
-
+      setSaved((current) => {
+        const next = new Set(current);
+        if (wasDone) next.delete(id);
+        else next.add(id);
         return next;
       });
 

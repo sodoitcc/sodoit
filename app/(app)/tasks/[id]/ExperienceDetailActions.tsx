@@ -5,7 +5,11 @@ import { usePathname, useRouter } from "next/navigation";
 import { Check, Plus } from "lucide-react";
 
 import { Button, ShareButton } from "@/components/ui";
-import { removeFromMyList, setListStatus } from "@/app/(app)/browse/actions";
+import {
+  removeFromMyList,
+  setListStatus,
+  toggleCompletion,
+} from "@/app/(app)/browse/actions";
 import { useCompletionToggle } from "@/app/(app)/browse/hooks/useCompletionToggle";
 import { resolveExperienceCardActionState } from "@/app/(app)/browse/experience-card-state";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
@@ -63,14 +67,10 @@ export function ExperienceDetailActions({
     useCompletionToggle(completed, async () => {
       setCompleteError(null);
       const previous = status;
-      setStatus(completed ? null : "completed");
+      setStatus(completed ? "saved" : "completed");
 
       try {
-        if (completed) {
-          await removeFromMyList(taskId);
-        } else {
-          await setListStatus(taskId, "completed");
-        }
+        await toggleCompletion(taskId, completed);
       } catch (error) {
         setStatus(previous);
         setCompleteError("Could not update this experience. Try again.");

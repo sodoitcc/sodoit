@@ -4,7 +4,11 @@ import { useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 
 import { ExperienceCard } from "@/app/(app)/browse/components/ExperienceCard";
-import { removeFromMyList, setListStatus } from "@/app/(app)/browse/actions";
+import {
+  removeFromMyList,
+  setListStatus,
+  toggleCompletion,
+} from "@/app/(app)/browse/actions";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
 import type { ExperienceCardData, ListStatus } from "@/app/(app)/browse/types";
 
@@ -31,16 +35,13 @@ export function RelatedExperienceCard({
 
   async function toggleComplete() {
     const wasDone = done;
-    setStatus(wasDone ? null : "completed");
+    const previous = status;
+    setStatus(wasDone ? "saved" : "completed");
 
     try {
-      if (wasDone) {
-        await removeFromMyList(experience.id);
-      } else {
-        await setListStatus(experience.id, "completed");
-      }
+      await toggleCompletion(experience.id, wasDone);
     } catch (error) {
-      setStatus(wasDone ? "completed" : null);
+      setStatus(previous);
       throw error;
     }
   }

@@ -68,9 +68,10 @@ export async function loadMoreExperiences(params: {
 }
 
 function revalidateListPaths(experienceId: string) {
-  revalidatePath("/browse");
+  revalidatePath("/");
   revalidatePath("/list");
   revalidatePath(`/tasks/${experienceId}`);
+  revalidatePath("/u/[username]", "page");
 }
 
 export async function setListStatus(experienceId: string, status: ListStatus) {
@@ -120,6 +121,17 @@ export async function setListStatus(experienceId: string, status: ListStatus) {
   }
 
   revalidateListPaths(experienceId);
+}
+
+export async function toggleCompletion(
+  experienceId: string,
+  currentlyCompleted: boolean,
+) {
+  if (currentlyCompleted) {
+    await setListStatus(experienceId, "saved");
+  } else {
+    await setListStatus(experienceId, "completed");
+  }
 }
 
 export async function removeFromMyList(experienceId: string) {
