@@ -26,18 +26,21 @@ describe("verification architecture", () => {
 
   it("the OTP code is never passed to a logging or error-reporting call", () => {
     const source = read("app/(auth)/verify-email/actions.ts");
+
     expect(source).not.toMatch(/console\.(log|error|warn)\([^)]*token/i);
     expect(source).not.toMatch(/Sentry/);
   });
 
   it("rate-limit RPC is only reachable via the service-role admin client", () => {
     const source = read("lib/auth/rate-limit.ts");
+
     expect(source).toMatch(/createAdminClient/);
     expect(source).not.toMatch(/@\/lib\/supabase\/client/);
   });
 
   it("verifyEmailCode resolves the redirect through the safe-next helper", () => {
     const source = read("app/(auth)/verify-email/actions.ts");
+
     expect(source).toMatch(/getSafeNextPath/);
   });
 
@@ -45,11 +48,12 @@ describe("verification architecture", () => {
     const files = [
       "app/(auth)/verify-email/actions.ts",
       "app/(auth)/signup/actions.ts",
-      "supabase/migrations/202608300005_auth_rate_limit.sql",
+      "lib/auth/rate-limit.ts",
     ];
 
     for (const file of files) {
       const source = read(file);
+
       expect(source).not.toMatch(/verification_codes/);
       expect(source).not.toMatch(/generateOtp|randomInt\(.*100000/i);
     }
