@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { loadMoreExperiences } from "../actions";
 import { Button, EmptyState } from "@/components/ui";
+import type { ExperienceType, LocationScope } from "@/lib/experiences/taxonomy";
 import type { BrowseView, BrowseSort, Experience } from "../types";
 import { ExperienceResults } from "./ExperienceResults";
 
@@ -17,7 +18,9 @@ interface InfiniteExperienceResultsProps {
   onGuestSave: () => void;
   q: string;
   category: string | null;
+  type: ExperienceType | null;
   difficulty: string | null;
+  locationScope: LocationScope | null;
   status: string;
   sort: BrowseSort;
   resetKey: string;
@@ -35,7 +38,9 @@ export function InfiniteExperienceResults({
   onGuestSave,
   q,
   category,
+  type,
   difficulty,
+  locationScope,
   status,
   sort,
   resetKey,
@@ -67,7 +72,9 @@ export function InfiniteExperienceResults({
       const result = await loadMoreExperiences({
         q,
         category,
+        type,
         difficulty,
+        locationScope,
         status,
         sort,
         cursor,
@@ -105,7 +112,7 @@ export function InfiniteExperienceResults({
     return (
       <EmptyState
         title="Nothing matches"
-        description="Try a different search or category."
+        description="Try a different search, category, or filter combination."
       />
     );
   }
@@ -136,7 +143,12 @@ export function InfiniteExperienceResults({
             <p className="text-xs text-muted">
               Couldn&apos;t load more experiences.
             </p>
-            <Button type="button" variant="outline" size="sm" onClick={loadMore}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={loadMore}
+            >
               Retry
             </Button>
           </>

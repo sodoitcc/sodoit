@@ -3,11 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
+import type { ExperienceType, LocationScope } from "@/lib/experiences/taxonomy";
 import { removeFromMyList, setListStatus } from "./actions";
 import { isDefaultBrowseView } from "./browse-editorial";
-import { CATEGORIES } from "./types";
+import { countActiveTaxonomyFilters } from "./browse-filters";
+import type { BrowseCategory } from "./taxonomy-loader";
 import type { BrowseSort, BrowseView, Experience, StatusFilter } from "./types";
 import type { CuratedSection } from "./data";
+import { ActiveFilterSummary } from "./components/ActiveFilterSummary";
 import { BrowseEditorialContent } from "./components/BrowseEditorialContent";
 import { BrowseHero } from "./components/BrowseHero";
 import { BrowseSignupCta } from "./components/BrowseSignupCta";
@@ -16,7 +19,6 @@ import { InfiniteExperienceResults } from "./components/InfiniteExperienceResult
 import { useBrowseNavigation } from "./hooks/useBrowseNavigation";
 
 const SEARCH_DEBOUNCE_MS = 300;
-const ALL_CATEGORIES = ["All", ...CATEGORIES] as const;
 
 interface BrowseBoardProps {
   experiences: Experience[];
@@ -25,8 +27,11 @@ interface BrowseBoardProps {
   completedIds: string[];
   signedIn: boolean;
   q: string;
+  categories: BrowseCategory[];
   category: string | null;
+  type: ExperienceType | null;
   difficulty: string | null;
+  locationScope: LocationScope | null;
   status: StatusFilter;
   sort: BrowseSort;
   view: BrowseView;
@@ -42,8 +47,11 @@ export function BrowseBoard({
   completedIds,
   signedIn,
   q,
+  categories,
   category,
+  type,
   difficulty,
+  locationScope,
   status,
   sort,
   view,
@@ -61,7 +69,9 @@ export function BrowseBoard({
   const { navigate, clear } = useBrowseNavigation({
     q: searchText,
     category,
+    type,
     difficulty,
+    locationScope,
     status,
     sort,
     view,
@@ -130,7 +140,9 @@ export function BrowseBoard({
   const isDefaultView = isDefaultBrowseView({
     q,
     category,
+    type,
     difficulty,
+    locationScope,
     status,
     sort,
   });
@@ -141,6 +153,12 @@ export function BrowseBoard({
   const remainingExperiences = activeFeatured
     ? experiences.filter((experience) => experience.id !== activeFeatured.id)
     : experiences;
+
+  const activeFilterCount = countActiveTaxonomyFilters({
+    type,
+    difficulty,
+    locationScope,
+  });
 
   const results = (
     <InfiniteExperienceResults
@@ -154,10 +172,20 @@ export function BrowseBoard({
       onGuestSave={requireLogin}
       q={q}
       category={category}
+      type={type}
       difficulty={difficulty}
+      locationScope={locationScope}
       status={status}
       sort={sort}
-      resetKey={[q, category, difficulty, status, sort].join("|")}
+      resetKey={[
+        q,
+        category,
+        type,
+        difficulty,
+        locationScope,
+        status,
+        sort,
+      ].join("|")}
       inlineContent={signedIn ? undefined : <BrowseSignupCta compact />}
     />
   );
@@ -168,25 +196,18 @@ export function BrowseBoard({
         <BrowseToolbar
           search={searchText}
           onSearchChange={setSearchText}
-          categories={ALL_CATEGORIES}
-          category={category ?? "All"}
-          onCategoryChange={(next) =>
-            navigate({
-              category: next === "All" ? null : next,
-            })
-          }
+          categories={categories}
+          category={category}
+          onCategoryChange={(next) => navigate({ category: next })}
           sort={sort}
-          onSortChange={(next) =>
-            navigate({
-              sort: next,
-            })
-          }
+          onSortChange={(next) => navigate({ sort: next })}
+          type={type}
+          onTypeChange={(next) => navigate({ type: next })}
           difficulty={difficulty}
-          onDifficultyChange={(next) =>
-            navigate({
-              difficulty: next,
-            })
-          }
+          onDifficultyChange={(next) => navigate({ difficulty: next })}
+          locationScope={locationScope}
+          onLocationScopeChange={(next) => navigate({ locationScope: next })}
+          activeFilterCount={activeFilterCount}
         />
       </BrowseHero>
 
@@ -215,26 +236,39 @@ export function BrowseBoard({
             results
           ) : (
             <>
-              <div className="mb-4 flex items-center justify-between gap-3">
-                <p
-                  className="text-sm text-secondary"
-                  role="status"
-                  aria-live="polite"
-                >
-                  {resultCount === null
-                    ? null
-                    : `${resultCount} ${
-                        resultCount === 1 ? "result" : "results"
-                      }`}
-                </p>
+              <div className="mb-4 flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-3">
+                  <p
+                    className="text-sm text-secondary"
+                    role="status"
+                    aria-live="polite"
+                  >
+                    {resultCount === null
+                      ? null
+                      : `${resultCount} ${
+                          resultCount === 1 ? "result" : "results"
+                        }`}
+                  </p>
 
-                <button
-                  type="button"
-                  onClick={clear}
-                  className="text-xs font-semibold text-accent-dark hover:text-accent"
-                >
-                  Clear filters
-                </button>
+                  <button
+                    type="button"
+                    onClick={clear}
+                    className="text-xs font-semibold text-accent-dark hover:text-accent"
+                  >
+                    Clear filters
+                  </button>
+                </div>
+
+                <ActiveFilterSummary
+                  type={type}
+                  difficulty={difficulty}
+                  locationScope={locationScope}
+                  onRemoveType={() => navigate({ type: null })}
+                  onRemoveDifficulty={() => navigate({ difficulty: null })}
+                  onRemoveLocationScope={() =>
+                    navigate({ locationScope: null })
+                  }
+                />
               </div>
 
               {results}

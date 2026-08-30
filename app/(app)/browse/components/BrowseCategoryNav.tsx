@@ -2,11 +2,13 @@
 
 import { CategoryNav } from "@/components/ui";
 import type { CategoryNavItem } from "@/components/ui";
+import { categoryDisplayLabel } from "../browse-filters";
+import type { BrowseCategory } from "../taxonomy-loader";
 
 interface BrowseCategoryNavProps {
-  categories: readonly string[];
-  category: string;
-  onCategoryChange: (value: string) => void;
+  categories: BrowseCategory[];
+  category: string | null;
+  onCategoryChange: (slug: string | null) => void;
 }
 
 export function BrowseCategoryNav({
@@ -14,12 +16,20 @@ export function BrowseCategoryNav({
   category,
   onCategoryChange,
 }: BrowseCategoryNavProps) {
-  const items: CategoryNavItem[] = categories.map((option) => ({
-    key: option,
-    label: option,
-    active: option === category,
-    onClick: () => onCategoryChange(option),
-  }));
+  const items: CategoryNavItem[] = [
+    {
+      key: "all",
+      label: "All",
+      active: category === null,
+      onClick: () => onCategoryChange(null),
+    },
+    ...categories.map((option) => ({
+      key: option.slug,
+      label: categoryDisplayLabel(option.slug, option.name),
+      active: option.slug === category,
+      onClick: () => onCategoryChange(option.slug),
+    })),
+  ];
 
   return <CategoryNav items={items} ariaLabel="Categories" />;
 }
