@@ -27,13 +27,28 @@ export function LoginForm({ next }: { next: string }) {
     try {
       const supabase = createClient();
 
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data: signInData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
       if (signInError) {
+        if (signInError.code === "email_not_confirmed") {
+          window.location.assign(
+            `/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(safeNext)}`,
+          );
+          return;
+        }
+
         setError("Incorrect email or password.");
+        return;
+      }
+
+      if (signInData.user && !signInData.user.email_confirmed_at) {
+        window.location.assign(
+          `/verify-email?email=${encodeURIComponent(email.trim().toLowerCase())}&next=${encodeURIComponent(safeNext)}`,
+        );
         return;
       }
 

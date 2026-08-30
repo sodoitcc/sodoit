@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
 import { loadMyList } from "./data";
@@ -10,6 +11,10 @@ import {
   loadCollections,
   loadListVisibility,
 } from "./collections/data";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 interface MyListPageProps {
   searchParams: Promise<{ view?: string }>;

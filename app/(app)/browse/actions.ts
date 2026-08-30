@@ -15,6 +15,7 @@ import {
 import { BROWSE_SORTS, type BrowseSort, type ListStatus } from "./types";
 import type { BrowseResult } from "./data";
 import { UUID_RE } from "@/lib/validation";
+import { isEmailVerified } from "@/lib/auth/require-verified-user";
 
 const STATUS_VALUES = ["all", "completed", "uncompleted"] as const;
 
@@ -88,7 +89,7 @@ export async function setListStatus(experienceId: string, status: ListStatus) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) return;
+  if (!user || !isEmailVerified(user)) return;
 
   const completedAt = status === "completed" ? new Date().toISOString() : null;
 

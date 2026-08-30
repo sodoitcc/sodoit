@@ -30,7 +30,12 @@ function makeClient({ existingRow }: { existingRow: boolean }) {
 
   const client = {
     auth: {
-      getUser: () => Promise.resolve({ data: { user: { id: USER_ID } } }),
+      getUser: () =>
+        Promise.resolve({
+          data: {
+            user: { id: USER_ID, email_confirmed_at: "2026-01-01T00:00:00Z" },
+          },
+        }),
     },
     from() {
       return {
