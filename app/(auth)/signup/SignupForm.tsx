@@ -2,17 +2,20 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getSafeNextPath } from "@/lib/auth-redirect";
 import { INPUT_CLASS, PasswordField } from "../PasswordField";
 import { passwordStrength } from "@/lib/password";
 import { PASSWORD_MIN_LENGTH, USERNAME_RE } from "@/lib/validation";
+import { checkSignupRateLimit } from "./actions";
 
 const STRENGTH_COLORS = ["#DC2626", "#F97316", "#EAB308", "#16A34A"];
 
 const DISPLAY_NAME_MAX_LENGTH = 80;
 
 export function SignupForm({ next }: { next: string }) {
+  const router = useRouter();
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -21,7 +24,6 @@ export function SignupForm({ next }: { next: string }) {
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submittedEmail, setSubmittedEmail] = useState<string | null>(null);
 
   const strength = passwordStrength(password);
   const safeNext = getSafeNextPath(next);
@@ -62,6 +64,12 @@ export function SignupForm({ next }: { next: string }) {
     setLoading(true);
 
     try {
+      const rateLimit = await checkSignupRateLimit();
+      if (!rateLimit.allowed) {
+        setError("Too many signup attempts. Please try again later.");
+        return;
+      }
+
       const supabase = createClient();
 
       const { data: existing, error: lookupError } = await supabase
@@ -103,7 +111,10 @@ export function SignupForm({ next }: { next: string }) {
         return;
       }
 
-      setSubmittedEmail(normalizedEmail);
+      router.push(
+        `/verify-email?email=${encodeURIComponent(normalizedEmail)}&next=${encodeURIComponent(safeNext)}`,
+      );
+      return;
     } catch {
       setError(
         "Could not create your account. Please check your details and try again.",
@@ -111,21 +122,6 @@ export function SignupForm({ next }: { next: string }) {
     } finally {
       setLoading(false);
     }
-  }
-
-  if (submittedEmail) {
-    return (
-      <div>
-        <div className="mb-4 text-3xl">✓</div>
-
-        <h1 className="text-2xl font-bold text-ink">Check your email</h1>
-
-        <p className="mt-2 text-sm text-muted">
-          We sent a confirmation link to {submittedEmail}. Click it to activate
-          your account.
-        </p>
-      </div>
-    );
   }
 
   return (
