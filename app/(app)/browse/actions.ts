@@ -98,19 +98,25 @@ export async function setListStatus(experienceId: string, status: ListStatus) {
     .eq("experience_id", experienceId)
     .maybeSingle();
 
+  if (existing.error) throw new Error(existing.error.message);
+
   if (existing.data) {
-    await supabase
+    const { error } = await supabase
       .from("user_lists")
       .update({ status, completed_at: completedAt })
       .eq("user_id", user.id)
       .eq("experience_id", experienceId);
+
+    if (error) throw new Error(error.message);
   } else {
-    await supabase.from("user_lists").insert({
+    const { error } = await supabase.from("user_lists").insert({
       user_id: user.id,
       experience_id: experienceId,
       status,
       completed_at: completedAt,
     });
+
+    if (error) throw new Error(error.message);
   }
 
   revalidateListPaths(experienceId);
@@ -127,11 +133,13 @@ export async function removeFromMyList(experienceId: string) {
 
   if (!user) return;
 
-  await supabase
+  const { error } = await supabase
     .from("user_lists")
     .delete()
     .eq("user_id", user.id)
     .eq("experience_id", experienceId);
+
+  if (error) throw new Error(error.message);
 
   revalidateListPaths(experienceId);
 }
