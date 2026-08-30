@@ -19,7 +19,7 @@ test.describe("browse editorial redesign", () => {
   }) => {
     await page.goto("/");
 
-    const featuredBadge = page.getByText("Featured", { exact: true });
+    const featuredBadge = page.getByText("Today's pick", { exact: true });
 
     if ((await featuredBadge.count()) === 0) {
       test.skip();
@@ -52,15 +52,17 @@ test.describe("browse editorial redesign", () => {
     const categoryGroup = page.getByRole("group", { name: "Categories" });
     await categoryGroup.getByRole("button", { name: "Adventure" }).click();
 
-    await expect(page).toHaveURL(/[?&]category=Adventure/);
-    await expect(page.getByText("Featured", { exact: true })).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]category=adventure/);
+    await expect(page.getByText("Today's pick", { exact: true })).toHaveCount(
+      0,
+    );
     await expect(page.getByText(/result/)).toBeVisible();
   });
 
   test("clearing filters returns to the default editorial view", async ({
     page,
   }) => {
-    await page.goto("/?category=Adventure");
+    await page.goto("/?category=adventure");
 
     await page.getByRole("button", { name: "Clear filters" }).click();
 
@@ -73,15 +75,17 @@ test.describe("browse editorial redesign", () => {
   test("list view URL param combines with other filter state", async ({
     page,
   }) => {
-    await page.goto("/?category=Adventure&view=list");
+    await page.goto("/?category=adventure&view=list");
 
     await expect(page).toHaveURL(/[?&]view=list/);
-    await expect(page).toHaveURL(/[?&]category=Adventure/);
-    await expect(page.getByText("Featured", { exact: true })).toHaveCount(0);
+    await expect(page).toHaveURL(/[?&]category=adventure/);
+    await expect(page.getByText("Today's pick", { exact: true })).toHaveCount(
+      0,
+    );
   });
 
   test("marking an experience complete toggles its state", async ({ page }) => {
-    await page.goto("/?category=Adventure&view=list");
+    await page.goto("/?category=adventure&view=list");
 
     const firstToggle = page.getByRole("checkbox").first();
     await expect(firstToggle).toBeVisible();
@@ -114,19 +118,55 @@ test.describe("browse editorial redesign", () => {
   }) => {
     await page.goto("/");
 
-    const controls = page.getByRole("checkbox");
-    await expect(controls.nth(1)).toBeVisible();
+    const featuredBadge = page.getByText("Today's pick", { exact: true });
 
-    for (const index of [0, 1]) {
-      const control = controls.nth(index);
-      const before = await control.getAttribute("aria-checked");
+    if ((await featuredBadge.count()) > 0) {
+      const featureToggle = page
+        .locator("section", { has: featuredBadge })
+        .getByRole("checkbox");
 
-      await control.click();
-      await expect(control).not.toHaveAttribute("aria-checked", before ?? "");
+      await expect(featureToggle).toBeVisible();
 
-      await control.click();
-      await expect(control).toHaveAttribute("aria-checked", before ?? "false");
+      const before = await featureToggle.getAttribute("aria-checked");
+      await featureToggle.click();
+      await expect(featureToggle).not.toHaveAttribute(
+        "aria-checked",
+        before ?? "",
+      );
+
+      await featureToggle.click();
+      await expect(featureToggle).toHaveAttribute(
+        "aria-checked",
+        before ?? "false",
+      );
     }
+
+    const exploreSection = page.locator("section", {
+      has: page.getByRole("heading", { name: "Explore experiences" }),
+    });
+
+    const standardCard = exploreSection.locator("li").first();
+    const listStateButton = standardCard.getByRole("button", {
+      name: /(Add .+ to My List|Remove .+ from My List)$/,
+    });
+
+    await expect(listStateButton).toBeVisible();
+    const initialName = await listStateButton.getAttribute("aria-label");
+    const wasUnsaved = initialName?.startsWith("Add ") ?? true;
+
+    await listStateButton.click();
+
+    const toggledButton = standardCard.getByRole("button", {
+      name: wasUnsaved ? /^Remove .+ from My List$/ : /^Add .+ to My List$/,
+    });
+    await expect(toggledButton).toBeVisible();
+
+    await toggledButton.click();
+    await expect(
+      standardCard.getByRole("button", {
+        name: wasUnsaved ? /^Add .+ to My List$/ : /^Remove .+ from My List$/,
+      }),
+    ).toBeVisible();
   });
 
   test("list mode never renders the Featured hero or wide/standard sections", async ({
@@ -134,16 +174,20 @@ test.describe("browse editorial redesign", () => {
   }) => {
     await page.goto("/?view=list");
 
-    await expect(page.getByText("Featured", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Today's pick", { exact: true })).toHaveCount(
+      0,
+    );
     await expect(page.locator("main ul.grid")).toHaveCount(0);
   });
 
   test("filtered results use the Standard card, not editorial sections", async ({
     page,
   }) => {
-    await page.goto("/?category=Adventure");
+    await page.goto("/?category=adventure");
 
-    await expect(page.getByText("Featured", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("Today's pick", { exact: true })).toHaveCount(
+      0,
+    );
     await expect(page.locator("main section h2")).toHaveCount(0);
   });
 
@@ -154,20 +198,30 @@ test.describe("browse editorial redesign", () => {
 
     await page.getByRole("button", { name: "Filters", exact: true }).click();
 
-    const difficultyGroup = page.getByRole("group", { name: "Difficulty" });
+    const intensityGroup = page.getByRole("group", { name: "Intensity" });
+
     await expect(
-      difficultyGroup.getByRole("button", { name: "Extreme" }),
+      intensityGroup.getByRole("button", { name: "Easy" }),
+    ).toBeVisible();
+    await expect(
+      intensityGroup.getByRole("button", { name: "Medium" }),
+    ).toBeVisible();
+    await expect(
+      intensityGroup.getByRole("button", { name: "Hard" }),
+    ).toBeVisible();
+    await expect(
+      intensityGroup.getByRole("button", { name: "Extreme" }),
     ).toBeVisible();
 
-    await difficultyGroup.getByRole("button", { name: "Extreme" }).click();
+    await intensityGroup.getByRole("button", { name: "Extreme" }).click();
 
     await expect(page).toHaveURL(/[?&]difficulty=Extreme/);
 
     await page.reload();
-    await page.getByRole("button", { name: "Filters", exact: true }).click();
+    await page.getByRole("button", { name: /^Filters/ }).click();
     await expect(
       page
-        .getByRole("group", { name: "Difficulty" })
+        .getByRole("group", { name: "Intensity" })
         .getByRole("button", { name: "Extreme", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
   });
@@ -175,7 +229,7 @@ test.describe("browse editorial redesign", () => {
   test("difficulty indicator always exposes a readable text label", async ({
     page,
   }) => {
-    await page.goto("/?category=Adventure");
+    await page.goto("/?category=adventure");
 
     const firstCard = page.locator("main ul li").first();
     await expect(
