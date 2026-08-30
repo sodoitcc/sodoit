@@ -6,6 +6,7 @@ import { AdminFormSection } from "@/components/admin/AdminFormSection";
 import { AdminField, ADMIN_INPUT_CLASS } from "@/components/admin/AdminField";
 import { Button } from "@/components/ui";
 import { CATEGORIES, DIFFICULTIES } from "@/app/(app)/browse/types";
+import { RegenerateImageButton } from "@/components/admin/experiences/RegenerateImageButton";
 import { slugify } from "@/lib/admin/slug";
 import {
   createExperience,
@@ -213,6 +214,12 @@ export function ExperienceForm({ experience }: ExperienceFormProps) {
             className={ADMIN_INPUT_CLASS}
           />
         </AdminField>
+
+        {experience && (
+          <AdminField label="Regenerate" htmlFor="regenerate_image" full>
+            <RegenerateImageButton experienceId={experience.id} />
+          </AdminField>
+        )}
       </AdminFormSection>
 
       <AdminFormSection title="Detail content">

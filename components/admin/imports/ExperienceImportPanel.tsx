@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui";
+import { GenerateImagesButton } from "@/components/admin/experiences/GenerateImagesButton";
 import type {
   ExperienceImportChange,
   ExperienceImportPreview,
@@ -271,6 +272,21 @@ export function ExperienceImportPanel() {
               Export current data again
             </a>
           </div>
+
+          {applyState.created.length > 0 && (
+            <div className="mt-3">
+              <GenerateImagesButton
+                mode="ids"
+                ids={applyState.created
+                  .map((row) => row.id)
+                  .filter((id) => id.length > 0)}
+                initialCount={applyState.created.length}
+                label={`Generate images for ${applyState.created.length} new experience${
+                  applyState.created.length === 1 ? "" : "s"
+                }`}
+              />
+            </div>
+          )}
         </div>
       )}
 
