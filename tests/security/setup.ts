@@ -44,6 +44,11 @@ function client(key: string) {
   });
 }
 
+function projectRefFromUrl(url: string) {
+  const match = url.match(/^https:\/\/([a-z0-9]+)\.supabase\.co/i);
+  return match?.[1] ?? null;
+}
+
 function assertSecurityTestGuard() {
   if (process.env.RUN_SECURITY_TESTS !== "true") {
     throw new Error(
@@ -56,6 +61,25 @@ function assertSecurityTestGuard() {
   if (process.env.NEXT_PUBLIC_SUPABASE_SERVICE_ROLE_KEY) {
     throw new Error(
       "Refusing to run: the service-role key must never use a NEXT_PUBLIC_ variable.",
+    );
+  }
+
+  const targetUrl = env("NEXT_PUBLIC_SUPABASE_URL");
+  const targetRef = projectRefFromUrl(targetUrl);
+  const allowedRef = process.env.SECURITY_TEST_SUPABASE_PROJECT_REF;
+
+  if (!allowedRef) {
+    throw new Error(
+      "Refusing to run: SECURITY_TEST_SUPABASE_PROJECT_REF is not set. " +
+        "Security tests create and delete live rows and must target a dedicated test Supabase project, never production. " +
+        "Set SECURITY_TEST_SUPABASE_PROJECT_REF to the test project's ref to enable this suite.",
+    );
+  }
+
+  if (!targetRef || targetRef !== allowedRef) {
+    throw new Error(
+      `Refusing to run: NEXT_PUBLIC_SUPABASE_URL does not match the approved test project (SECURITY_TEST_SUPABASE_PROJECT_REF=${allowedRef}). ` +
+        "This guard exists to stop destructive security fixtures from ever running against production.",
     );
   }
 }
