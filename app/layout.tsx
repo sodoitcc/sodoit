@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Jomhuria, Inter } from "next/font/google";
 import "./globals.css";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/site";
 
 const jomhuria = Jomhuria({
   subsets: ["latin"],
@@ -14,10 +15,27 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Sodoit",
-  description: "Your life. Your list. Your proof.",
-  icons: {
-    icon: "/favicon.png",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s | ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+    url: "/",
+    locale: "en_US",
+  },
+  twitter: {
+    card: "summary",
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
 };
 

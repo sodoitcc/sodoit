@@ -16,7 +16,7 @@ import {
 import type { Guide } from "@/lib/guides/types";
 
 export const metadata: Metadata = {
-  title: "Discovery | Sodoit",
+  title: "Discovery",
   description:
     "Curated itineraries, collections, and local recommendations for your next city.",
 };
