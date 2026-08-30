@@ -4,36 +4,36 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { loadCompletedIds, loadExperiences } from "./data";
 import {
-  BROWSE_SORTS,
-  CATEGORIES,
-  DIFFICULTIES,
-  type BrowseSort,
-  type ListStatus,
-} from "./types";
+  parseDifficultyFilter,
+  parseExperienceType,
+  parseLocationScope,
+} from "./browse-filters";
+import {
+  loadActiveBrowseCategories,
+  resolveCategoryId,
+} from "./taxonomy-loader";
+import { BROWSE_SORTS, type BrowseSort, type ListStatus } from "./types";
 import type { BrowseResult } from "./data";
 import { UUID_RE } from "@/lib/validation";
 
 const STATUS_VALUES = ["all", "completed", "uncompleted"] as const;
-const CATEGORY_VALUES: readonly string[] = CATEGORIES;
-const DIFFICULTY_VALUES: readonly string[] = DIFFICULTIES.map((d) => d.label);
 
 export async function loadMoreExperiences(params: {
   q: string;
   category: string | null;
+  type: string | null;
   difficulty: string | null;
+  locationScope: string | null;
   status: string;
   sort: string;
   cursor: string | null;
 }): Promise<BrowseResult> {
-  const category =
-    params.category && CATEGORY_VALUES.includes(params.category)
-      ? params.category
-      : null;
+  const categories = await loadActiveBrowseCategories();
+  const categoryId = resolveCategoryId(categories, params.category);
 
-  const difficulty =
-    params.difficulty && DIFFICULTY_VALUES.includes(params.difficulty)
-      ? params.difficulty
-      : null;
+  const type = parseExperienceType(params.type ?? undefined);
+  const difficulty = parseDifficultyFilter(params.difficulty ?? undefined);
+  const locationScope = parseLocationScope(params.locationScope ?? undefined);
 
   const status = STATUS_VALUES.includes(
     params.status as (typeof STATUS_VALUES)[number],
@@ -55,8 +55,10 @@ export async function loadMoreExperiences(params: {
   return loadExperiences(
     {
       q: params.q.trim().slice(0, 200),
-      category,
+      categoryId,
+      type,
       difficulty,
+      locationScope,
       status: user ? status : "all",
       sort,
       cursor: params.cursor,
@@ -66,9 +68,10 @@ export async function loadMoreExperiences(params: {
 }
 
 function revalidateListPaths(experienceId: string) {
-  revalidatePath("/browse");
+  revalidatePath("/");
   revalidatePath("/list");
   revalidatePath(`/tasks/${experienceId}`);
+  revalidatePath("/u/[username]", "page");
 }
 
 export async function setListStatus(experienceId: string, status: ListStatus) {
@@ -87,17 +90,48 @@ export async function setListStatus(experienceId: string, status: ListStatus) {
 
   if (!user) return;
 
-  await supabase.from("user_lists").upsert(
-    {
+  const completedAt = status === "completed" ? new Date().toISOString() : null;
+
+  const existing = await supabase
+    .from("user_lists")
+    .select("experience_id")
+    .eq("user_id", user.id)
+    .eq("experience_id", experienceId)
+    .maybeSingle();
+
+  if (existing.error) throw new Error(existing.error.message);
+
+  if (existing.data) {
+    const { error } = await supabase
+      .from("user_lists")
+      .update({ status, completed_at: completedAt })
+      .eq("user_id", user.id)
+      .eq("experience_id", experienceId);
+
+    if (error) throw new Error(error.message);
+  } else {
+    const { error } = await supabase.from("user_lists").insert({
       user_id: user.id,
       experience_id: experienceId,
       status,
-      completed_at: status === "completed" ? new Date().toISOString() : null,
-    },
-    { onConflict: "user_id,experience_id" },
-  );
+      completed_at: completedAt,
+    });
+
+    if (error) throw new Error(error.message);
+  }
 
   revalidateListPaths(experienceId);
+}
+
+export async function toggleCompletion(
+  experienceId: string,
+  currentlyCompleted: boolean,
+) {
+  if (currentlyCompleted) {
+    await setListStatus(experienceId, "saved");
+  } else {
+    await setListStatus(experienceId, "completed");
+  }
 }
 
 export async function removeFromMyList(experienceId: string) {
@@ -111,11 +145,13 @@ export async function removeFromMyList(experienceId: string) {
 
   if (!user) return;
 
-  await supabase
+  const { error } = await supabase
     .from("user_lists")
     .delete()
     .eq("user_id", user.id)
     .eq("experience_id", experienceId);
+
+  if (error) throw new Error(error.message);
 
   revalidateListPaths(experienceId);
 }

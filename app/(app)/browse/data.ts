@@ -2,6 +2,8 @@ import { createClient } from "@/lib/supabase/server";
 import { BATCH_SIZE, DIFFICULTIES } from "./types";
 import type { Experience, StatusFilter, BrowseSort } from "./types";
 import type { ExperienceDifficulty } from "@/lib/experiences/types";
+import type { ExperienceType, LocationScope } from "@/lib/experiences/taxonomy";
+import { selectFeaturedExperienceId } from "./featured-rotation";
 
 const EXPERIENCE_COLUMNS =
   "id, title, slug, description, category, difficulty, location_type, country_code, city, featured, is_public, image_url, image_alt, saved_count, completed_count";
@@ -16,6 +18,18 @@ export async function loadCompletedIds(userId: string): Promise<string[]> {
     .select("experience_id")
     .eq("user_id", userId)
     .eq("status", "completed");
+
+  return (data ?? []).map((row) => row.experience_id);
+}
+
+export async function loadSavedIds(userId: string): Promise<string[]> {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("user_lists")
+    .select("experience_id")
+    .eq("user_id", userId)
+    .eq("status", "saved");
 
   return (data ?? []).map((row) => row.experience_id);
 }
@@ -35,8 +49,10 @@ const DIFFICULTY_LABELS: readonly string[] = DIFFICULTIES.map((d) => d.label);
 
 export interface BrowseQuery {
   q: string;
-  category: string | null;
+  categoryId: string | null;
+  type: ExperienceType | null;
   difficulty: string | null;
+  locationScope: LocationScope | null;
   status: StatusFilter;
   sort: BrowseSort;
   cursor: string | null;
@@ -55,7 +71,16 @@ function decodeCursor(cursor: string | null): number {
 }
 
 export async function loadExperiences(
-  { q, category, difficulty, status, sort, cursor }: BrowseQuery,
+  {
+    q,
+    categoryId,
+    type,
+    difficulty,
+    locationScope,
+    status,
+    sort,
+    cursor,
+  }: BrowseQuery,
   completedIds: string[],
 ): Promise<BrowseResult> {
   const supabase = await createClient();
@@ -69,8 +94,16 @@ export async function loadExperiences(
     query = query.ilike("title", `%${q}%`);
   }
 
-  if (category) {
-    query = query.eq("category", category);
+  if (categoryId) {
+    query = query.eq("primary_category_id", categoryId);
+  }
+
+  if (type) {
+    query = query.eq("experience_type", type);
+  }
+
+  if (locationScope) {
+    query = query.eq("location_scope", locationScope);
   }
 
   if (difficulty && DIFFICULTY_LABELS.includes(difficulty)) {
@@ -112,7 +145,14 @@ export async function loadExperiences(
 }
 
 export async function loadExperiencesCount(
-  { q, category, difficulty, status }: Omit<BrowseQuery, "sort" | "cursor">,
+  {
+    q,
+    categoryId,
+    type,
+    difficulty,
+    locationScope,
+    status,
+  }: Omit<BrowseQuery, "sort" | "cursor">,
   completedIds: string[],
 ): Promise<number> {
   const supabase = await createClient();
@@ -126,8 +166,16 @@ export async function loadExperiencesCount(
     query = query.ilike("title", `%${q}%`);
   }
 
-  if (category) {
-    query = query.eq("category", category);
+  if (categoryId) {
+    query = query.eq("primary_category_id", categoryId);
+  }
+
+  if (type) {
+    query = query.eq("experience_type", type);
+  }
+
+  if (locationScope) {
+    query = query.eq("location_scope", locationScope);
   }
 
   if (difficulty && DIFFICULTY_LABELS.includes(difficulty)) {
@@ -145,10 +193,45 @@ export async function loadExperiencesCount(
   return count ?? 0;
 }
 
-const CURATED_SECTIONS_DEF: { title: string; categories: string[] }[] = [
-  { title: "Adventure picks", categories: ["Adventure"] },
-  { title: "Food & skills", categories: ["Food", "Skills"] },
-  { title: "Travel ideas", categories: ["Travel"] },
+const FEATURED_ELIGIBLE_DIFFICULTIES: ExperienceDifficulty[] = [
+  "Easy",
+  "Medium",
+];
+
+export async function loadFeaturedExperience(
+  nowMs: number = Date.now(),
+): Promise<Experience | null> {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("experiences")
+    .select("id, image_url")
+    .eq("is_public", true)
+    .in("difficulty", FEATURED_ELIGIBLE_DIFFICULTIES);
+
+  const eligibleIds = (data ?? [])
+    .filter(
+      (row) =>
+        typeof row.image_url === "string" && row.image_url.trim().length > 0,
+    )
+    .map((row) => row.id as string);
+
+  const selectedId = selectFeaturedExperienceId(eligibleIds, nowMs);
+  if (!selectedId) return null;
+
+  const { data: row } = await supabase
+    .from("experiences")
+    .select(EXPERIENCE_COLUMNS)
+    .eq("id", selectedId)
+    .maybeSingle();
+
+  return (row as Experience | null) ?? null;
+}
+
+const CURATED_SECTIONS_DEF: { title: string; categorySlugs: string[] }[] = [
+  { title: "Adventure picks", categorySlugs: ["adventure"] },
+  { title: "Food & skills", categorySlugs: ["food-drink", "learn-create"] },
+  { title: "Travel ideas", categorySlugs: ["places"] },
 ];
 
 const CURATED_SECTION_LIMIT = 6;
@@ -159,22 +242,32 @@ export interface CuratedSection {
   items: Experience[];
 }
 
-export async function loadCuratedSections(): Promise<CuratedSection[]> {
+export async function loadCuratedSections(
+  categories: readonly { id: string; slug: string }[],
+): Promise<CuratedSection[]> {
   const supabase = await createClient();
 
   const results = await Promise.all(
-    CURATED_SECTIONS_DEF.map(async ({ title, categories }) => {
+    CURATED_SECTIONS_DEF.map(async ({ title, categorySlugs }) => {
+      const categoryIds = categorySlugs
+        .map((slug) => categories.find((c) => c.slug === slug)?.id)
+        .filter((id): id is string => Boolean(id));
+
+      if (categoryIds.length === 0) {
+        return { title, category: categorySlugs[0], items: [] };
+      }
+
       const { data } = await supabase
         .from("experiences")
         .select(EXPERIENCE_COLUMNS)
         .eq("is_public", true)
-        .in("category", categories)
+        .in("primary_category_id", categoryIds)
         .order("created_at", { ascending: false })
         .limit(CURATED_SECTION_LIMIT);
 
       return {
         title,
-        category: categories[0],
+        category: categorySlugs[0],
         items: (data ?? []) as Experience[],
       };
     }),

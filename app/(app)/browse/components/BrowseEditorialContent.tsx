@@ -9,6 +9,9 @@ interface BrowseEditorialContentProps {
   featured: Experience | null;
   curatedSections: CuratedSection[];
   completed: Set<string>;
+  saved: Set<string>;
+  onSave: (id: string) => Promise<void>;
+  onRemoveSaved: (id: string) => Promise<void>;
   signedIn: boolean;
   onToggle: (id: string) => Promise<void>;
   onGuestSave: () => void;
@@ -18,6 +21,9 @@ export function BrowseEditorialContent({
   featured,
   curatedSections,
   completed,
+  saved,
+  onSave,
+  onRemoveSaved,
   signedIn,
   onToggle,
   onGuestSave,
@@ -53,6 +59,9 @@ export function BrowseEditorialContent({
           experiences={section.items}
           completed={completed}
           onToggle={onToggle}
+          saved={saved}
+          onSave={onSave}
+          onRemoveSaved={onRemoveSaved}
           guest={!signedIn}
           onGuestSave={onGuestSave}
           variant={index === 0 ? "wide" : "standard"}

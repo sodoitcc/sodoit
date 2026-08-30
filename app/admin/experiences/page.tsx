@@ -8,8 +8,10 @@ import { AdminVisibilityToggle } from "@/components/admin/AdminVisibilityToggle"
 import { AdminLinkButton } from "@/components/admin/AdminLinkButton";
 import { EmptyState } from "@/components/ui";
 import { CATEGORIES, DIFFICULTIES } from "@/app/(app)/browse/types";
+import { GenerateImagesButton } from "@/components/admin/experiences/GenerateImagesButton";
 import { listExperiencesAdmin } from "@/lib/admin/experiences/queries";
 import { setExperienceVisibility } from "@/lib/admin/experiences/actions";
+import { countMissingExperienceImages } from "@/lib/admin/experiences/image-actions";
 
 interface AdminExperiencesPageProps {
   searchParams: Promise<{
@@ -47,8 +49,11 @@ export default async function AdminExperiencesPage({
     page: Number(params.page ?? 1),
   };
 
-  const { experiences, total, page, pageCount } =
-    await listExperiencesAdmin(filters);
+  const [{ experiences, total, page, pageCount }, missingImageCount] =
+    await Promise.all([
+      listExperiencesAdmin(filters),
+      countMissingExperienceImages(),
+    ]);
 
   return (
     <div>
@@ -56,10 +61,18 @@ export default async function AdminExperiencesPage({
         title="Experiences"
         description="Manage and publish the experience catalog."
         actions={
-          <AdminLinkButton href="/admin/experiences/new">
-            <Plus className="h-4 w-4" />
-            New experience
-          </AdminLinkButton>
+          <>
+            <AdminLinkButton
+              href="/admin/experiences/recategorize"
+              variant="outline"
+            >
+              Recategorize
+            </AdminLinkButton>
+            <AdminLinkButton href="/admin/experiences/new">
+              <Plus className="h-4 w-4" />
+              New experience
+            </AdminLinkButton>
+          </>
         }
       />
 
@@ -198,7 +211,15 @@ export default async function AdminExperiencesPage({
         </div>
       )}
 
-      <p className="mt-3 text-xs text-muted">{total} experiences total</p>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <p className="text-xs text-muted">{total} experiences total</p>
+
+        <GenerateImagesButton
+          mode="missing"
+          initialCount={missingImageCount}
+          label="Generate missing images"
+        />
+      </div>
 
       <AdminPagination
         basePath="/admin/experiences"

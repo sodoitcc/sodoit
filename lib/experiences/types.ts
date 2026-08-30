@@ -1,4 +1,5 @@
 import type { EXPERIENCE_DIFFICULTIES } from "./difficulty.mjs";
+import type { ExperienceType, LocationScope } from "./taxonomy";
 
 export type ExperienceLocationType = "global" | "country" | "city";
 
@@ -26,4 +27,7 @@ export interface Experience {
   best_time: string | null;
   duration_text: string | null;
   location_note: string | null;
+  primary_category_id?: string | null;
+  experience_type?: ExperienceType | null;
+  location_scope?: LocationScope | null;
 }

@@ -4,26 +4,28 @@ import {
   loadExperiences,
   loadExperiencesCount,
   loadCompletedIds,
+  loadSavedIds,
   loadCuratedSections,
+  loadFeaturedExperience,
 } from "./browse/data";
 import { isDefaultBrowseView } from "./browse/browse-editorial";
+import { parseTaxonomyFilters } from "./browse/browse-filters";
 import {
-  BROWSE_SORTS,
-  BROWSE_VIEWS,
-  CATEGORIES,
-  DIFFICULTIES,
-} from "./browse/types";
+  loadActiveBrowseCategories,
+  resolveCategoryId,
+} from "./browse/taxonomy-loader";
+import { BROWSE_SORTS, BROWSE_VIEWS } from "./browse/types";
 import type { BrowseSort, BrowseView, StatusFilter } from "./browse/types";
 
 const STATUS_VALUES: StatusFilter[] = ["all", "completed", "uncompleted"];
-const CATEGORY_VALUES: readonly string[] = CATEGORIES;
-const DIFFICULTY_VALUES: readonly string[] = DIFFICULTIES.map((d) => d.label);
 
 interface HomePageProps {
   searchParams: Promise<{
     q?: string;
     category?: string;
+    type?: string;
     difficulty?: string;
+    location?: string;
     status?: string;
     sort?: string;
     view?: string;
@@ -40,15 +42,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   const q = (params.q ?? "").trim().slice(0, 200);
 
-  const category =
-    params.category && CATEGORY_VALUES.includes(params.category)
-      ? params.category
-      : null;
-
-  const difficulty =
-    params.difficulty && DIFFICULTY_VALUES.includes(params.difficulty)
-      ? params.difficulty
-      : null;
+  const { categorySlug, type, difficulty, locationScope } =
+    parseTaxonomyFilters(params);
 
   const sort: BrowseSort = BROWSE_SORTS.includes(params.sort as BrowseSort)
     ? (params.sort as BrowseSort)
@@ -64,37 +59,63 @@ export default async function HomePage({ searchParams }: HomePageProps) {
     ? (params.status as StatusFilter)
     : "all";
 
-  const completedIds = user ? await loadCompletedIds(user.id) : [];
+  const categories = await loadActiveBrowseCategories();
+  const categoryId = resolveCategoryId(categories, categorySlug);
+  const resolvedCategorySlug = categoryId ? categorySlug : null;
+
+  const [completedIds, savedIds] = user
+    ? await Promise.all([loadCompletedIds(user.id), loadSavedIds(user.id)])
+    : [[], []];
   const effectiveStatus: StatusFilter = user ? status : "all";
   const isDefaultView = isDefaultBrowseView({
     q,
-    category,
+    category: resolvedCategorySlug,
+    type,
     difficulty,
+    locationScope,
     status: effectiveStatus,
     sort,
   });
 
-  const [{ experiences, nextCursor, hasMore }, curatedSections, resultCount] =
-    await Promise.all([
-      loadExperiences(
-        {
-          q,
-          category,
-          difficulty,
-          status: effectiveStatus,
-          sort,
-          cursor: null,
-        },
-        completedIds,
-      ),
-      !user && isDefaultView ? loadCuratedSections() : Promise.resolve([]),
-      isDefaultView
-        ? Promise.resolve(null)
-        : loadExperiencesCount(
-            { q, category, difficulty, status: effectiveStatus },
-            completedIds,
-          ),
-    ]);
+  const showEditorial = isDefaultView && view === "grid";
+
+  const [
+    { experiences, nextCursor, hasMore },
+    curatedSections,
+    resultCount,
+    featured,
+  ] = await Promise.all([
+    loadExperiences(
+      {
+        q,
+        categoryId,
+        type,
+        difficulty,
+        locationScope,
+        status: effectiveStatus,
+        sort,
+        cursor: null,
+      },
+      completedIds,
+    ),
+    !user && isDefaultView
+      ? loadCuratedSections(categories)
+      : Promise.resolve([]),
+    isDefaultView
+      ? Promise.resolve(null)
+      : loadExperiencesCount(
+          {
+            q,
+            categoryId,
+            type,
+            difficulty,
+            locationScope,
+            status: effectiveStatus,
+          },
+          completedIds,
+        ),
+    showEditorial ? loadFeaturedExperience() : Promise.resolve(null),
+  ]);
 
   return (
     <BrowseBoard
@@ -102,15 +123,20 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       nextCursor={nextCursor}
       hasMore={hasMore}
       completedIds={completedIds}
+      savedIds={savedIds}
       signedIn={Boolean(user)}
       q={q}
-      category={category}
+      categories={categories}
+      category={resolvedCategorySlug}
+      type={type}
       difficulty={difficulty}
+      locationScope={locationScope}
       status={effectiveStatus}
       sort={sort}
       view={view}
       curatedSections={curatedSections}
       resultCount={resultCount}
+      featured={featured}
     />
   );
 }

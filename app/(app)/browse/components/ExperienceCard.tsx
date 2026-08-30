@@ -8,8 +8,10 @@ import { ExperienceImage, experienceLocation } from "@/components/ui";
 import type { ExperienceCardData } from "../types";
 import { getDifficulty, getTaskMeta } from "../types";
 import { useCompletionToggle } from "../hooks/useCompletionToggle";
+import { resolveExperienceCardActionState } from "../experience-card-state";
 import { SaveButton } from "./SaveButton";
 import { ExperienceSaveControl } from "./ExperienceSaveControl";
+import { ExperienceListStateControl } from "./ExperienceListStateControl";
 import { ExperienceMetaLine } from "./ExperienceMetaLine";
 import { ExperienceSocialProof } from "./ExperienceSocialProof";
 import { COMPLETED_MEDIA } from "./completedStyles";
@@ -18,6 +20,9 @@ interface ExperienceCardProps {
   experience: ExperienceCardData;
   done: boolean;
   onToggle: () => Promise<void>;
+  saved?: boolean;
+  onSave?: () => void;
+  onRemoveSaved?: () => void;
   onRemove?: () => void;
   removeLabel?: string;
   onManageCollections?: () => void;
@@ -38,6 +43,9 @@ export function ExperienceCard({
   experience,
   done,
   onToggle,
+  saved,
+  onSave,
+  onRemoveSaved,
   onRemove,
   removeLabel,
   onManageCollections,
@@ -51,6 +59,8 @@ export function ExperienceCard({
   const { thumbnail } = getTaskMeta(experience.id);
   const difficulty = getDifficulty(experience.id, experience.difficulty);
   const { isToggling, handleToggle } = useCompletionToggle(done, onToggle);
+  const usesListState = onSave !== undefined && onRemoveSaved !== undefined;
+  const actionState = resolveExperienceCardActionState(Boolean(saved), done);
 
   const related = variant === "related";
 
@@ -119,17 +129,29 @@ export function ExperienceCard({
         )}
 
         <div className="absolute right-2 top-2 z-20">
-          <ExperienceSaveControl
-            mode={guest ? "guest" : "toggle"}
-            done={done}
-            onClick={guest ? (onGuestSave ?? (() => {})) : handleToggle}
-            disabled={!guest && isToggling}
-            label={
-              guest
-                ? `Save ${experience.title}`
-                : `${done ? "Mark as incomplete" : "Mark as complete"}: ${experience.title}`
-            }
-          />
+          {usesListState ? (
+            <ExperienceListStateControl
+              state={actionState}
+              guest={guest}
+              onSave={onSave!}
+              onRemoveSaved={onRemoveSaved!}
+              onUncomplete={handleToggle}
+              disabled={isToggling}
+              title={experience.title}
+            />
+          ) : (
+            <ExperienceSaveControl
+              mode={guest ? "guest" : "toggle"}
+              done={done}
+              onClick={guest ? (onGuestSave ?? (() => {})) : handleToggle}
+              disabled={!guest && isToggling}
+              label={
+                guest
+                  ? `Save ${experience.title}`
+                  : `${done ? "Mark as incomplete" : "Mark as complete"}: ${experience.title}`
+              }
+            />
+          )}
         </div>
       </div>
 

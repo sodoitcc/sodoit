@@ -50,7 +50,9 @@ export function MyListView({
     isEmpty,
     visible,
     completedIds,
+    savedIds,
     toggle,
+    save,
     remove,
   } = useMyListState(saved, completed);
 
@@ -156,6 +158,9 @@ export function MyListView({
                   view={view}
                   completed={completedIds}
                   onToggle={toggle}
+                  saved={savedIds}
+                  onSave={save}
+                  onRemoveSaved={remove}
                   onRemove={remove}
                   onManageCollections={setManagingId}
                 />

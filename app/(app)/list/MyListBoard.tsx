@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { TaskRow } from "@/app/(app)/browse/components/TaskRow";
-import { setListStatus, removeFromMyList } from "@/app/(app)/browse/actions";
+import { toggleCompletion, removeFromMyList } from "@/app/(app)/browse/actions";
 import type { Experience, ListStatus } from "@/app/(app)/browse/types";
 
 const TABS: { key: ListStatus; label: string }[] = [
@@ -46,8 +46,7 @@ export function MyListBoard({
   const [pending, setPending] = useState<Set<string>>(() => new Set());
 
   async function toggle(id: string, currentStatus: ListStatus): Promise<void> {
-    const nextStatus: ListStatus =
-      currentStatus === "saved" ? "completed" : "saved";
+    const wasCompleted = currentStatus === "completed";
 
     setPending((previous) => {
       const next = new Set(previous);
@@ -55,8 +54,10 @@ export function MyListBoard({
       return next;
     });
 
+    const nextStatus: ListStatus = wasCompleted ? "saved" : "completed";
+
     try {
-      await setListStatus(id, nextStatus);
+      await toggleCompletion(id, wasCompleted);
 
       await delay(ANIMATION_DELAY_MS);
 

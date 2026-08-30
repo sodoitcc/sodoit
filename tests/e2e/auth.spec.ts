@@ -136,7 +136,7 @@ test.describe("authentication", () => {
     }
 
     await wideSection
-      .getByRole("button", { name: /^Save /i })
+      .getByRole("button", { name: /^Add .+ to My List$/ })
       .first()
       .click();
 

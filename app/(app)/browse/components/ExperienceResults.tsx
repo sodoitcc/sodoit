@@ -9,6 +9,9 @@ interface ExperienceResultsProps {
   view: BrowseView;
   completed: Set<string>;
   onToggle: (id: string) => Promise<void>;
+  saved?: Set<string>;
+  onSave?: (id: string) => Promise<void>;
+  onRemoveSaved?: (id: string) => Promise<void>;
   onRemove?: (id: string) => void;
   removeLabel?: string;
   onManageCollections?: (id: string) => void;
@@ -23,6 +26,9 @@ export function ExperienceResults({
   view,
   completed,
   onToggle,
+  saved,
+  onSave,
+  onRemoveSaved,
   onRemove,
   removeLabel,
   onManageCollections,
@@ -38,6 +44,11 @@ export function ExperienceResults({
       experience,
       done: completed.has(experience.id),
       onToggle: () => onToggle(experience.id),
+      saved: saved?.has(experience.id),
+      onSave: onSave ? () => onSave(experience.id) : undefined,
+      onRemoveSaved: onRemoveSaved
+        ? () => onRemoveSaved(experience.id)
+        : undefined,
       guest,
       onGuestSave,
       onRemove: onRemove ? () => onRemove(experience.id) : undefined,

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { loadMoreExperiences } from "../actions";
 import { Button, EmptyState } from "@/components/ui";
+import type { ExperienceType, LocationScope } from "@/lib/experiences/taxonomy";
 import type { BrowseView, BrowseSort, Experience } from "../types";
 import { ExperienceResults } from "./ExperienceResults";
 
@@ -13,11 +14,16 @@ interface InfiniteExperienceResultsProps {
   view: BrowseView;
   completed: Set<string>;
   onToggle: (id: string) => Promise<void>;
+  saved: Set<string>;
+  onSave: (id: string) => Promise<void>;
+  onRemoveSaved: (id: string) => Promise<void>;
   guest: boolean;
   onGuestSave: () => void;
   q: string;
   category: string | null;
+  type: ExperienceType | null;
   difficulty: string | null;
+  locationScope: LocationScope | null;
   status: string;
   sort: BrowseSort;
   resetKey: string;
@@ -31,11 +37,16 @@ export function InfiniteExperienceResults({
   view,
   completed,
   onToggle,
+  saved,
+  onSave,
+  onRemoveSaved,
   guest,
   onGuestSave,
   q,
   category,
+  type,
   difficulty,
+  locationScope,
   status,
   sort,
   resetKey,
@@ -67,7 +78,9 @@ export function InfiniteExperienceResults({
       const result = await loadMoreExperiences({
         q,
         category,
+        type,
         difficulty,
+        locationScope,
         status,
         sort,
         cursor,
@@ -105,7 +118,7 @@ export function InfiniteExperienceResults({
     return (
       <EmptyState
         title="Nothing matches"
-        description="Try a different search or category."
+        description="Try a different search, category, or filter combination."
       />
     );
   }
@@ -117,6 +130,9 @@ export function InfiniteExperienceResults({
         view={view}
         completed={completed}
         onToggle={onToggle}
+        saved={saved}
+        onSave={onSave}
+        onRemoveSaved={onRemoveSaved}
         guest={guest}
         onGuestSave={onGuestSave}
         inlineContent={inlineContent}
@@ -136,7 +152,12 @@ export function InfiniteExperienceResults({
             <p className="text-xs text-muted">
               Couldn&apos;t load more experiences.
             </p>
-            <Button type="button" variant="outline" size="sm" onClick={loadMore}>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={loadMore}
+            >
               Retry
             </Button>
           </>

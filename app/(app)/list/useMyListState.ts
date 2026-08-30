@@ -1,7 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { setListStatus, removeFromMyList } from "@/app/(app)/browse/actions";
+import {
+  setListStatus,
+  removeFromMyList,
+  toggleCompletion,
+} from "@/app/(app)/browse/actions";
 import type { Experience, ListStatus } from "@/app/(app)/browse/types";
 
 export type MyListStatus = "all" | ListStatus;
@@ -43,12 +47,18 @@ export function useMyListState(saved: Experience[], completed: Experience[]) {
       .map((entry) => entry.experience.id),
   );
 
+  const savedIds = new Set(
+    entries
+      .filter((entry) => entry.status === "saved")
+      .map((entry) => entry.experience.id),
+  );
+
   async function toggle(id: string): Promise<void> {
     const entry = entries.find((row) => row.experience.id === id);
     if (!entry) return;
 
-    const nextStatus: ListStatus =
-      entry.status === "completed" ? "saved" : "completed";
+    const wasCompleted = entry.status === "completed";
+    const nextStatus: ListStatus = wasCompleted ? "saved" : "completed";
 
     setEntries((previous) =>
       previous.map((row) =>
@@ -57,7 +67,29 @@ export function useMyListState(saved: Experience[], completed: Experience[]) {
     );
 
     try {
-      await setListStatus(id, nextStatus);
+      await toggleCompletion(id, wasCompleted);
+    } catch (error) {
+      setEntries((previous) =>
+        previous.map((row) =>
+          row.experience.id === id ? { ...row, status: entry.status } : row,
+        ),
+      );
+      throw error;
+    }
+  }
+
+  async function save(id: string): Promise<void> {
+    const entry = entries.find((row) => row.experience.id === id);
+    if (!entry || entry.status === "saved") return;
+
+    setEntries((previous) =>
+      previous.map((row) =>
+        row.experience.id === id ? { ...row, status: "saved" as const } : row,
+      ),
+    );
+
+    try {
+      await setListStatus(id, "saved");
     } catch (error) {
       setEntries((previous) =>
         previous.map((row) =>
@@ -94,7 +126,9 @@ export function useMyListState(saved: Experience[], completed: Experience[]) {
     isEmpty,
     visible,
     completedIds,
+    savedIds,
     toggle,
+    save,
     remove,
   };
 }
