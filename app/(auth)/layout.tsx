@@ -1,4 +1,9 @@
+import type { Metadata } from "next";
 import { Header } from "@/components/layout/Header";
+
+export const metadata: Metadata = {
+  robots: { index: false, follow: false },
+};
 
 export default function AuthLayout({
   children,
