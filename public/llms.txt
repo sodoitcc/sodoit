@@ -1,0 +1,23 @@
+# Sodoit
+
+> Sodoit is a bucket list and experience discovery platform for finding fun, memorable, and inspiring things to do.
+
+## About
+
+Sodoit helps people discover bucket list ideas, find new experiences, save things they want to do, organize them into collections, and keep track of what they have completed.
+
+## Main sections
+
+- Browse Experiences: https://www.sodoit.cc/
+- Discovery: https://www.sodoit.cc/discovery
+- Guides: https://www.sodoit.cc/guides
+- Public Profiles: https://www.sodoit.cc/u/{username}
+- Public Collections: https://www.sodoit.cc/u/{username}/collections/{slug}
+
+## Content
+
+Sodoit includes public Experiences, curated Guides, public Collections, and public user Profiles.
+
+Experiences cover travel, adventure, food, nature, wellness, learning, entertainment, and other memorable things worth doing.
+
+Private Profiles and Collections are not publicly indexed.
