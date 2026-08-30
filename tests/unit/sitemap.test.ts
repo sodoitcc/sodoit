@@ -202,8 +202,99 @@ describe("sitemap", () => {
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
     expect(urls).toContain(`${SITE_URL}/experiences/exp-ok`);
-    expect(urls.some((url) => url === `${SITE_URL}/experiences/`)).toBe(
-      false,
-    );
+    expect(urls.some((url) => url === `${SITE_URL}/experiences/`)).toBe(false);
+  });
+
+  it("treats a genuinely empty table as zero entries, not an error", async () => {
+    createAdminClientMock.mockReturnValue({
+      from: () => ({
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        then(resolve: (result: { data: unknown[]; error: null }) => void) {
+          resolve({ data: [], error: null });
+        },
+      }),
+    });
+
+    const entries = await sitemap();
+    const urls = entries.map((entry) => entry.url);
+    expect(urls).toEqual([
+      SITE_URL,
+      `${SITE_URL}/discovery`,
+      `${SITE_URL}/guides`,
+    ]);
+  });
+
+  it("logs and omits a section's entries on a genuine query failure, without crashing the whole sitemap", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    createAdminClientMock.mockReturnValue({
+      from: () => ({
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        then(
+          resolve: (result: { data: null; error: { message: string } }) => void,
+        ) {
+          resolve({ data: null, error: { message: "connection refused" } });
+        },
+      }),
+    });
+
+    const entries = await sitemap();
+    const urls = entries.map((entry) => entry.url);
+
+    expect(urls).toEqual([
+      SITE_URL,
+      `${SITE_URL}/discovery`,
+      `${SITE_URL}/guides`,
+    ]);
+    expect(errorSpy).toHaveBeenCalled();
+
+    errorSpy.mockRestore();
+  });
+
+  it("returns hundreds of dynamic entries for a successful, populated dataset", async () => {
+    const manyExperiences = Array.from({ length: 250 }, (_, index) => ({
+      slug: `experience-${index}`,
+      is_public: true,
+      created_at: "2026-01-01T00:00:00Z",
+    }));
+
+    createAdminClientMock.mockReturnValue({
+      from: (table: string) => ({
+        select() {
+          return this;
+        },
+        eq() {
+          return this;
+        },
+        not() {
+          return this;
+        },
+        then(resolve: (result: { data: unknown[]; error: null }) => void) {
+          resolve({
+            data: table === "experiences" ? manyExperiences : [],
+            error: null,
+          });
+        },
+      }),
+    });
+
+    const entries = await sitemap();
+    expect(entries.length).toBeGreaterThan(200);
   });
 });

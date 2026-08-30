@@ -2,16 +2,20 @@ import type { MetadataRoute } from "next";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { SITE_URL } from "@/lib/site";
 
+export const revalidate = 3600;
+
 function isValidSlug(value: unknown): value is string {
   return typeof value === "string" && value.trim().length > 0;
 }
 
 async function loadExperienceEntries(): Promise<MetadataRoute.Sitemap> {
   const client = createAdminClient();
-  const { data } = await client
+  const { data, error } = await client
     .from("experiences")
     .select("slug, created_at")
     .eq("is_public", true);
+
+  if (error) throw error;
 
   return (data ?? [])
     .filter((row) => isValidSlug(row.slug))
@@ -23,10 +27,12 @@ async function loadExperienceEntries(): Promise<MetadataRoute.Sitemap> {
 
 async function loadGuideEntries(): Promise<MetadataRoute.Sitemap> {
   const client = createAdminClient();
-  const { data } = await client
+  const { data, error } = await client
     .from("guides")
     .select("slug, updated_at")
     .eq("is_public", true);
+
+  if (error) throw error;
 
   return (data ?? [])
     .filter((row) => isValidSlug(row.slug))
@@ -38,10 +44,12 @@ async function loadGuideEntries(): Promise<MetadataRoute.Sitemap> {
 
 async function loadProfileEntries(): Promise<MetadataRoute.Sitemap> {
   const client = createAdminClient();
-  const { data } = await client
+  const { data, error } = await client
     .from("profiles")
     .select("username, created_at")
     .not("username", "is", null);
+
+  if (error) throw error;
 
   return (data ?? [])
     .filter((row) => isValidSlug(row.username))
@@ -53,10 +61,12 @@ async function loadProfileEntries(): Promise<MetadataRoute.Sitemap> {
 
 async function loadCollectionEntries(): Promise<MetadataRoute.Sitemap> {
   const client = createAdminClient();
-  const { data } = await client
+  const { data, error } = await client
     .from("collections")
     .select("slug, visibility, updated_at, profiles(username)")
     .eq("visibility", "public");
+
+  if (error) throw error;
 
   return (data ?? [])
     .filter((row) => isValidSlug(row.slug))
@@ -77,6 +87,21 @@ async function loadCollectionEntries(): Promise<MetadataRoute.Sitemap> {
     }));
 }
 
+async function loadSection(
+  name: string,
+  loader: () => Promise<MetadataRoute.Sitemap>,
+): Promise<MetadataRoute.Sitemap> {
+  try {
+    return await loader();
+  } catch (error) {
+    console.error(
+      `sitemap: ${name} section failed, omitting its entries`,
+      error instanceof Error ? error.message : error,
+    );
+    return [];
+  }
+}
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticEntries: MetadataRoute.Sitemap = [
     { url: SITE_URL },
@@ -84,12 +109,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/guides` },
   ];
 
-  const empty: MetadataRoute.Sitemap = [];
   const [experiences, guides, profiles, collections] = await Promise.all([
-    loadExperienceEntries().catch(() => empty),
-    loadGuideEntries().catch(() => empty),
-    loadProfileEntries().catch(() => empty),
-    loadCollectionEntries().catch(() => empty),
+    loadSection("experiences", loadExperienceEntries),
+    loadSection("guides", loadGuideEntries),
+    loadSection("profiles", loadProfileEntries),
+    loadSection("collections", loadCollectionEntries),
   ]);
 
   return [
