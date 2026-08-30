@@ -47,14 +47,14 @@ describe("buildCollectionMetadata", () => {
       },
     });
 
-    expect(metadata.title).toBe("Prague Weekend — Sodoit");
+    expect(metadata.title).toBe("Prague Weekend by @amina");
     expect(metadata.description).toBe("48 hours in Prague");
     expect(metadata.robots).toEqual({ index: true, follow: true });
     expect(metadata.alternates).toEqual({
       canonical: "https://sodoit.example/u/amina/collections/prague-weekend",
     });
     expect(metadata.openGraph).toMatchObject({
-      title: "Prague Weekend — Sodoit",
+      title: "Prague Weekend by @amina",
       url: "https://sodoit.example/u/amina/collections/prague-weekend",
       images: [{ url: "https://cdn.example/prague.jpg" }],
     });
@@ -78,7 +78,7 @@ describe("buildCollectionMetadata", () => {
     });
 
     expect(metadata.description).toBe(
-      "A public collection by @amina on Sodoit.",
+      "Explore No Description, a collection of experiences curated by @amina on Sodoit.",
     );
     expect(metadata.twitter).toMatchObject({ card: "summary" });
     expect(metadata.openGraph).not.toHaveProperty("images");
@@ -98,7 +98,7 @@ describe("buildCollectionMetadata", () => {
     });
 
     expect(metadata.description).toBe(
-      "A public collection by @amina on Sodoit.",
+      "Explore Blank Description, a collection of experiences curated by @amina on Sodoit.",
     );
   });
 });

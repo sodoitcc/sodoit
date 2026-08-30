@@ -8,6 +8,8 @@ import { GuideCover } from "@/components/guides/GuideCover";
 import { GuideItinerary } from "@/components/guides/GuideItinerary";
 import { ShareGuideButton } from "@/components/guides/ShareGuideButton";
 import { getGuideBySlug, getGuideResolvedImages } from "@/lib/guides/queries";
+import { SITE_URL } from "@/lib/site";
+import { isValidPublicImageUrl } from "@/lib/seo/image";
 
 const loadGuide = cache(async (slug: string) => {
   const guide = await getGuideBySlug(slug);
@@ -33,7 +35,7 @@ export async function generateMetadata({
 
   if (!guide) {
     return {
-      title: "Guide not found | Sodoit",
+      title: "Guide not found",
       robots: {
         index: false,
         follow: false,
@@ -41,10 +43,34 @@ export async function generateMetadata({
     };
   }
 
+  const description =
+    guide.description ?? `A curated Sodoit guide to ${guide.city}.`;
+  const canonical = `${SITE_URL}/guides/${guide.slug}`;
+  const hasImage = isValidPublicImageUrl(guide.cover_image_url);
+
   return {
-    title: `${guide.title} | Sodoit`,
-    description:
-      guide.description ?? `A curated Sodoit guide to ${guide.city}.`,
+    title: guide.title,
+    description,
+    alternates: { canonical },
+    openGraph: {
+      title: guide.title,
+      description,
+      url: canonical,
+      images: hasImage
+        ? [
+            {
+              url: guide.cover_image_url as string,
+              alt: guide.cover_image_alt || guide.title,
+            },
+          ]
+        : undefined,
+    },
+    twitter: {
+      card: hasImage ? "summary_large_image" : "summary",
+      title: guide.title,
+      description,
+      images: hasImage ? [guide.cover_image_url as string] : undefined,
+    },
   };
 }
 

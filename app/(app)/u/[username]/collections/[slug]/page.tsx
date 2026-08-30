@@ -1,10 +1,10 @@
-import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { loadCollectionBySlug } from "@/app/(app)/list/collections/data";
 import { buildCollectionMetadata } from "@/app/(app)/list/collections/metadata";
 import { loadMyList } from "@/app/(app)/list/data";
+import { SITE_URL } from "@/lib/site";
 import { CollectionDetailView } from "./CollectionDetailView";
 
 interface PageProps {
@@ -25,25 +25,17 @@ async function loadCollectionResult(ownerId: string | null, slug: string) {
   return ownerId ? loadCollectionBySlug(ownerId, slug) : null;
 }
 
-async function getOrigin(): Promise<string> {
-  const headerList = await headers();
-  const host = headerList.get("x-forwarded-host") ?? headerList.get("host");
-  const protocol = headerList.get("x-forwarded-proto") ?? "https";
-  return host ? `${protocol}://${host}` : "";
-}
-
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const { username, slug } = await params;
   const ownerId = await loadOwnerId(username);
   const result = await loadCollectionResult(ownerId, slug);
-  const origin = await getOrigin();
 
   return buildCollectionMetadata({
     username,
     slug,
-    origin,
+    origin: SITE_URL,
     collection: result?.collection ?? null,
   });
 }

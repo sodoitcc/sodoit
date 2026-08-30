@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ErrorState } from "@/components/ui";
+import { SITE_URL } from "@/lib/site";
 import { loadProfile } from "./data";
 import { loadMyList } from "@/app/(app)/list/data";
 import {
@@ -23,6 +25,33 @@ function resolveView(raw: string | undefined): View {
   if (raw === "collections") return "collections";
   if (raw === "achievements") return raw;
   return "overview";
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ username: string }>;
+}): Promise<Metadata> {
+  const { username } = await params;
+
+  let profile;
+  try {
+    profile = await loadProfile(username);
+  } catch {
+    return {};
+  }
+
+  if (!profile) return {};
+
+  const description = profile.bio
+    ? profile.bio
+    : `@${profile.username} has completed ${profile.completedCount} experiences on Sodoit.`;
+
+  return {
+    title: { absolute: `@${profile.username} on Sodoit` },
+    description,
+    alternates: { canonical: `${SITE_URL}/u/${profile.username}` },
+  };
 }
 
 export default async function UserProfilePage({

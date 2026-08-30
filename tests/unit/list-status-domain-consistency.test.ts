@@ -10,8 +10,8 @@ function read(relativePath: string): string {
 
 const CALL_SITES = [
   "app/(app)/browse/BrowseBoard.tsx",
-  "app/(app)/tasks/[id]/ExperienceDetailActions.tsx",
-  "app/(app)/tasks/[id]/RelatedExperienceCard.tsx",
+  "app/(app)/experiences/[slug]/ExperienceDetailActions.tsx",
+  "app/(app)/experiences/[slug]/RelatedExperienceCard.tsx",
   "app/(app)/list/useMyListState.ts",
   "app/(app)/list/MyListBoard.tsx",
 ];
