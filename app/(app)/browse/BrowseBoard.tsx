@@ -25,6 +25,7 @@ interface BrowseBoardProps {
   nextCursor: string | null;
   hasMore: boolean;
   completedIds: string[];
+  savedIds: string[];
   signedIn: boolean;
   q: string;
   categories: BrowseCategory[];
@@ -45,6 +46,7 @@ export function BrowseBoard({
   nextCursor,
   hasMore,
   completedIds,
+  savedIds,
   signedIn,
   q,
   categories,
@@ -63,6 +65,7 @@ export function BrowseBoard({
   const pathname = usePathname();
 
   const [completed, setCompleted] = useState(() => new Set(completedIds));
+  const [saved, setSaved] = useState(() => new Set(savedIds));
   const [searchText, setSearchText] = useState(q);
   const firstSearchRender = useRef(true);
 
@@ -137,6 +140,41 @@ export function BrowseBoard({
     router.push(loginHrefWithNext(pathname));
   }
 
+  async function save(id: string) {
+    if (!signedIn) {
+      requireLogin();
+      return;
+    }
+
+    setSaved((current) => new Set(current).add(id));
+
+    try {
+      await setListStatus(id, "saved");
+    } catch (error) {
+      setSaved((current) => {
+        const next = new Set(current);
+        next.delete(id);
+        return next;
+      });
+      throw error;
+    }
+  }
+
+  async function removeSaved(id: string) {
+    setSaved((current) => {
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+
+    try {
+      await removeFromMyList(id);
+    } catch (error) {
+      setSaved((current) => new Set(current).add(id));
+      throw error;
+    }
+  }
+
   const isDefaultView = isDefaultBrowseView({
     q,
     category,
@@ -168,6 +206,9 @@ export function BrowseBoard({
       view={view}
       completed={completed}
       onToggle={toggle}
+      saved={saved}
+      onSave={save}
+      onRemoveSaved={removeSaved}
       guest={!signedIn}
       onGuestSave={requireLogin}
       q={q}
@@ -219,6 +260,9 @@ export function BrowseBoard({
                 featured={activeFeatured}
                 curatedSections={curatedSections}
                 completed={completed}
+                saved={saved}
+                onSave={save}
+                onRemoveSaved={removeSaved}
                 signedIn={signedIn}
                 onToggle={toggle}
                 onGuestSave={requireLogin}

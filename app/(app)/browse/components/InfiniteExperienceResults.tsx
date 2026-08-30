@@ -14,6 +14,9 @@ interface InfiniteExperienceResultsProps {
   view: BrowseView;
   completed: Set<string>;
   onToggle: (id: string) => Promise<void>;
+  saved: Set<string>;
+  onSave: (id: string) => Promise<void>;
+  onRemoveSaved: (id: string) => Promise<void>;
   guest: boolean;
   onGuestSave: () => void;
   q: string;
@@ -34,6 +37,9 @@ export function InfiniteExperienceResults({
   view,
   completed,
   onToggle,
+  saved,
+  onSave,
+  onRemoveSaved,
   guest,
   onGuestSave,
   q,
@@ -124,6 +130,9 @@ export function InfiniteExperienceResults({
         view={view}
         completed={completed}
         onToggle={onToggle}
+        saved={saved}
+        onSave={onSave}
+        onRemoveSaved={onRemoveSaved}
         guest={guest}
         onGuestSave={onGuestSave}
         inlineContent={inlineContent}

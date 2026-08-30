@@ -22,6 +22,18 @@ export async function loadCompletedIds(userId: string): Promise<string[]> {
   return (data ?? []).map((row) => row.experience_id);
 }
 
+export async function loadSavedIds(userId: string): Promise<string[]> {
+  const supabase = await createClient();
+
+  const { data } = await supabase
+    .from("user_lists")
+    .select("experience_id")
+    .eq("user_id", userId)
+    .eq("status", "saved");
+
+  return (data ?? []).map((row) => row.experience_id);
+}
+
 export async function loadGrandTotal(): Promise<number> {
   const supabase = await createClient();
 

@@ -4,6 +4,7 @@ import {
   loadExperiences,
   loadExperiencesCount,
   loadCompletedIds,
+  loadSavedIds,
   loadCuratedSections,
   loadFeaturedExperience,
 } from "./browse/data";
@@ -62,7 +63,9 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const categoryId = resolveCategoryId(categories, categorySlug);
   const resolvedCategorySlug = categoryId ? categorySlug : null;
 
-  const completedIds = user ? await loadCompletedIds(user.id) : [];
+  const [completedIds, savedIds] = user
+    ? await Promise.all([loadCompletedIds(user.id), loadSavedIds(user.id)])
+    : [[], []];
   const effectiveStatus: StatusFilter = user ? status : "all";
   const isDefaultView = isDefaultBrowseView({
     q,
@@ -120,6 +123,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
       nextCursor={nextCursor}
       hasMore={hasMore}
       completedIds={completedIds}
+      savedIds={savedIds}
       signedIn={Boolean(user)}
       q={q}
       categories={categories}

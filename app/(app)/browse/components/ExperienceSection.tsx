@@ -21,6 +21,9 @@ interface ExperienceSectionProps {
   experiences: Experience[];
   completed: Set<string>;
   onToggle: (id: string) => Promise<void>;
+  saved: Set<string>;
+  onSave: (id: string) => Promise<void>;
+  onRemoveSaved: (id: string) => Promise<void>;
   guest: boolean;
   onGuestSave: () => void;
   variant: SectionVariant;
@@ -32,6 +35,9 @@ export function ExperienceSection({
   experiences,
   completed,
   onToggle,
+  saved,
+  onSave,
+  onRemoveSaved,
   guest,
   onGuestSave,
   variant,
@@ -67,6 +73,9 @@ export function ExperienceSection({
             experience={experience}
             done={completed.has(experience.id)}
             onToggle={() => onToggle(experience.id)}
+            saved={saved.has(experience.id)}
+            onSave={() => onSave(experience.id)}
+            onRemoveSaved={() => onRemoveSaved(experience.id)}
             guest={guest}
             onGuestSave={onGuestSave}
             className={spanClassName(variant, index, items.length)}
