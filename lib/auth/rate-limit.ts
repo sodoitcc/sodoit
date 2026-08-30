@@ -1,5 +1,6 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { isE2eTestModeActive } from "@/lib/env/e2e";
 
 export interface RateLimitCheck {
   identityKey: string;
@@ -16,6 +17,10 @@ export interface RateLimitOutcome {
 export async function consumeAuthRateLimit(
   check: RateLimitCheck,
 ): Promise<RateLimitOutcome> {
+  if (isE2eTestModeActive()) {
+    return { allowed: true, retryAfterSeconds: 0 };
+  }
+
   const client = createAdminClient();
 
   const { data, error } = await client
