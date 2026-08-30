@@ -23,6 +23,7 @@ export function ActivityListItem({ item }: { item: ActivityItem }) {
           experiences: [
             {
               id: item.experience.id,
+              slug: item.experience.slug,
               title: item.experience.title,
               imageUrl: item.experience.imageUrl,
               imageAlt: item.experience.imageAlt,

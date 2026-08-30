@@ -4,6 +4,7 @@ import Link from "next/link";
 import { FolderPlus } from "lucide-react";
 
 import { ExperienceImage, experienceLocation } from "@/components/ui";
+import { getExperienceHref } from "@/lib/experiences/href";
 
 import type { ExperienceCardData } from "../types";
 import { getDifficulty, getTaskMeta } from "../types";
@@ -87,7 +88,7 @@ export function ExperienceCard({
         ].join(" ")}
       >
         <Link
-          href={`/tasks/${experience.id}`}
+          href={getExperienceHref(experience)}
           aria-label={experience.title}
           className="absolute inset-0 z-10 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
         />
@@ -162,7 +163,7 @@ export function ExperienceCard({
         ].join(" ")}
       >
         <Link
-          href={`/tasks/${experience.id}`}
+          href={getExperienceHref(experience)}
           className="relative z-10 w-fit max-w-full outline-none"
         >
           <h3

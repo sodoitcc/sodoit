@@ -10,6 +10,7 @@ import { ExperienceDetailActions } from "./ExperienceDetailActions";
 interface ExperienceDetailHeroProps {
   experience: {
     id: string;
+    slug: string;
     title: string;
     category: string | null;
     description: string | null;
@@ -73,6 +74,7 @@ export function ExperienceDetailHero({
         <div className="mt-7">
           <ExperienceDetailActions
             taskId={experience.id}
+            taskSlug={experience.slug}
             taskTitle={experience.title}
             initialStatus={initialStatus}
             signedIn={signedIn}

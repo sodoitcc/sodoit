@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExperienceImage, ExperienceMeta } from "@/components/ui";
+import { getExperienceHref } from "@/lib/experiences/href";
 import type { ExperienceActivityItem } from "@/app/(app)/feed/data";
 import { ActivityActorLine } from "./ActivityActorLine";
 import { ActivityCardShell } from "./ActivityCardShell";
@@ -30,7 +31,7 @@ export function CompletedExperienceCard({
       </div>
 
       <Link
-        href={`/tasks/${item.experience.id}`}
+        href={getExperienceHref(item.experience)}
         className="relative block aspect-[16/10] w-full"
       >
         <ExperienceImage
@@ -45,7 +46,7 @@ export function CompletedExperienceCard({
 
       <div className="p-4 sm:p-5">
         <Link
-          href={`/tasks/${item.experience.id}`}
+          href={getExperienceHref(item.experience)}
           className="block text-xl font-bold leading-snug text-ink hover:text-accent-dark"
         >
           {item.experience.title}
@@ -59,7 +60,7 @@ export function CompletedExperienceCard({
         />
 
         <Link
-          href={`/tasks/${item.experience.id}`}
+          href={getExperienceHref(item.experience)}
           className="mt-4 inline-block text-xs font-semibold text-accent-dark hover:text-accent"
         >
           View experience

@@ -22,6 +22,7 @@ function savedItem(
     actor,
     experience: {
       id: experienceId,
+      slug: `experience-${experienceId}`,
       title: `Experience ${experienceId}`,
       category: null,
       difficulty: null,

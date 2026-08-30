@@ -29,7 +29,7 @@ import {
   nextSaveStatus,
   resolveCompleteLabel,
   resolveSaveLabel,
-} from "../../app/(app)/tasks/[id]/ExperienceDetailActions";
+} from "../../app/(app)/experiences/[slug]/ExperienceDetailActions";
 import { resolveExperienceCardActionState } from "../../app/(app)/browse/experience-card-state";
 
 describe("resolveExperienceCardActionState — detail states", () => {

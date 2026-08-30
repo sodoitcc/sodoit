@@ -11,6 +11,7 @@ export interface AddedToListGroupItem {
   actor: ActivityActor;
   experiences: {
     id: string;
+    slug: string;
     title: string;
     imageUrl: string | null;
     imageAlt: string | null;
@@ -40,6 +41,7 @@ export function aggregateAddedToListActivity(
       actor: first.actor,
       experiences: currentGroup.map((item) => ({
         id: item.experience.id,
+        slug: item.experience.slug,
         title: item.experience.title,
         imageUrl: item.experience.imageUrl,
         imageAlt: item.experience.imageAlt,

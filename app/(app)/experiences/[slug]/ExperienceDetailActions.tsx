@@ -38,6 +38,7 @@ export function nextSaveStatus(
 
 interface ExperienceDetailActionsProps {
   taskId: string;
+  taskSlug: string;
   taskTitle: string;
   initialStatus: ListStatus | null;
   signedIn: boolean;
@@ -46,6 +47,7 @@ interface ExperienceDetailActionsProps {
 
 export function ExperienceDetailActions({
   taskId,
+  taskSlug,
   taskTitle,
   initialStatus,
   signedIn,
@@ -149,7 +151,7 @@ export function ExperienceDetailActions({
         </Button>
 
         <ShareButton
-          url={`/tasks/${taskId}`}
+          url={`/experiences/${taskSlug}`}
           title={taskTitle}
           variant="ghost"
         />

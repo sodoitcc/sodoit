@@ -43,7 +43,7 @@ describe("RelatedExperienceCard status derivation", () => {
 });
 
 describe("RelatedExperienceCard architecture", () => {
-  const source = read("app/(app)/tasks/[id]/RelatedExperienceCard.tsx");
+  const source = read("app/(app)/experiences/[slug]/RelatedExperienceCard.tsx");
 
   it("wires the shared list-state props so ExperienceCard renders ExperienceListStateControl", () => {
     expect(source).toMatch(/saved=\{saved\}/);

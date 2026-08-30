@@ -10,13 +10,13 @@ async function loadExperienceEntries(): Promise<MetadataRoute.Sitemap> {
   const client = createAdminClient();
   const { data } = await client
     .from("experiences")
-    .select("id, created_at")
+    .select("slug, created_at")
     .eq("is_public", true);
 
   return (data ?? [])
-    .filter((row) => isValidSlug(row.id))
+    .filter((row) => isValidSlug(row.slug))
     .map((row) => ({
-      url: `${SITE_URL}/tasks/${row.id}`,
+      url: `${SITE_URL}/experiences/${row.slug}`,
       lastModified: row.created_at ?? undefined,
     }));
 }

@@ -24,10 +24,10 @@ export function buildCollectionMetadata({
   }
 
   const canonicalUrl = `${origin}/u/${username}/collections/${slug}`;
-  const title = `${collection.name} — Sodoit`;
+  const title = `${collection.name} by @${username}`;
   const description =
     collection.description?.trim() ||
-    `A public collection by @${username} on Sodoit.`;
+    `Explore ${collection.name}, a collection of experiences curated by @${username} on Sodoit.`;
   const image = collection.coverImages?.[0];
 
   return {

@@ -12,8 +12,16 @@ import sitemap from "@/app/sitemap";
 import { SITE_URL } from "@/lib/site";
 
 const EXPERIENCES = [
-  { id: "exp-public", is_public: true, created_at: "2026-01-01T00:00:00Z" },
-  { id: "exp-private", is_public: false, created_at: "2026-01-01T00:00:00Z" },
+  {
+    slug: "exp-public",
+    is_public: true,
+    created_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    slug: "exp-private",
+    is_public: false,
+    created_at: "2026-01-01T00:00:00Z",
+  },
 ];
 
 const GUIDES = [
@@ -98,8 +106,14 @@ describe("sitemap", () => {
   it("includes a public experience and excludes a private one", async () => {
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
-    expect(urls).toContain(`${SITE_URL}/tasks/exp-public`);
-    expect(urls).not.toContain(`${SITE_URL}/tasks/exp-private`);
+    expect(urls).toContain(`${SITE_URL}/experiences/exp-public`);
+    expect(urls).not.toContain(`${SITE_URL}/experiences/exp-private`);
+  });
+
+  it("never emits a legacy /tasks/{uuid} experience URL", async () => {
+    const entries = await sitemap();
+    const urls = entries.map((entry) => entry.url);
+    expect(urls.every((url) => !url.includes("/tasks/"))).toBe(true);
   });
 
   it("includes a public guide and excludes a private one", async () => {
@@ -151,7 +165,7 @@ describe("sitemap", () => {
         },
         then(resolve: (result: { data: unknown[] }) => void) {
           resolve({
-            data: [{ id: "exp-no-date", is_public: true, created_at: null }],
+            data: [{ slug: "exp-no-date", is_public: true, created_at: null }],
           });
         },
       }),
@@ -177,8 +191,8 @@ describe("sitemap", () => {
         then(resolve: (result: { data: unknown[] }) => void) {
           resolve({
             data: [
-              { id: "", is_public: true, created_at: null },
-              { id: "exp-ok", is_public: true, created_at: null },
+              { slug: "", is_public: true, created_at: null },
+              { slug: "exp-ok", is_public: true, created_at: null },
             ],
           });
         },
@@ -187,7 +201,9 @@ describe("sitemap", () => {
 
     const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
-    expect(urls).toContain(`${SITE_URL}/tasks/exp-ok`);
-    expect(urls.some((url) => url === `${SITE_URL}/tasks/`)).toBe(false);
+    expect(urls).toContain(`${SITE_URL}/experiences/exp-ok`);
+    expect(urls.some((url) => url === `${SITE_URL}/experiences/`)).toBe(
+      false,
+    );
   });
 });

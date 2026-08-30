@@ -72,6 +72,7 @@ function revalidateListPaths(experienceId: string) {
   revalidatePath("/");
   revalidatePath("/list");
   revalidatePath(`/tasks/${experienceId}`);
+  revalidatePath("/experiences/[slug]", "page");
   revalidatePath("/u/[username]", "page");
 }
 

@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { EmptyState, ExperienceImage } from "@/components/ui";
 import { getCategoryAccent } from "@/app/(app)/achievements/data";
 import { getTaskMeta } from "@/app/(app)/browse/types";
+import { getExperienceHref } from "@/lib/experiences/href";
 
 import type { CompletedExperience } from "../types";
 
@@ -40,7 +41,7 @@ function ExperienceRow({ experience }: { experience: CompletedExperience }) {
   return (
     <li>
       <Link
-        href={`/tasks/${experience.id}`}
+        href={getExperienceHref(experience)}
         className="group flex items-center gap-3 py-3 transition-colors hover:bg-surface-subtle"
       >
         <ExperienceImage
