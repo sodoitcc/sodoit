@@ -89,15 +89,29 @@ export async function setListStatus(experienceId: string, status: ListStatus) {
 
   if (!user) return;
 
-  await supabase.from("user_lists").upsert(
-    {
+  const completedAt = status === "completed" ? new Date().toISOString() : null;
+
+  const existing = await supabase
+    .from("user_lists")
+    .select("experience_id")
+    .eq("user_id", user.id)
+    .eq("experience_id", experienceId)
+    .maybeSingle();
+
+  if (existing.data) {
+    await supabase
+      .from("user_lists")
+      .update({ status, completed_at: completedAt })
+      .eq("user_id", user.id)
+      .eq("experience_id", experienceId);
+  } else {
+    await supabase.from("user_lists").insert({
       user_id: user.id,
       experience_id: experienceId,
       status,
-      completed_at: status === "completed" ? new Date().toISOString() : null,
-    },
-    { onConflict: "user_id,experience_id" },
-  );
+      completed_at: completedAt,
+    });
+  }
 
   revalidateListPaths(experienceId);
 }
