@@ -20,6 +20,8 @@ describe("isDefaultBrowseView", () => {
     { ...DEFAULT_PARAMS, difficulty: "Easy" },
     { ...DEFAULT_PARAMS, status: "completed" as const },
     { ...DEFAULT_PARAMS, sort: "newest" as const },
+    { ...DEFAULT_PARAMS, type: "activity" as const },
+    { ...DEFAULT_PARAMS, locationScope: "anywhere" as const },
   ])("is false when any filter is active: %j", (params) => {
     expect(isDefaultBrowseView(params)).toBe(false);
   });
