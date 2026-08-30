@@ -22,13 +22,14 @@ export function RelatedExperienceCard({
   const router = useRouter();
   const pathname = usePathname();
   const [status, setStatus] = useState(initialStatus);
+  const saved = status === "saved";
   const done = status === "completed";
 
   function requireLogin() {
     router.push(loginHrefWithNext(pathname));
   }
 
-  async function toggle() {
+  async function toggleComplete() {
     const wasDone = done;
     setStatus(wasDone ? null : "completed");
 
@@ -44,11 +45,38 @@ export function RelatedExperienceCard({
     }
   }
 
+  async function save() {
+    const previous = status;
+    setStatus("saved");
+
+    try {
+      await setListStatus(experience.id, "saved");
+    } catch (error) {
+      setStatus(previous);
+      throw error;
+    }
+  }
+
+  async function removeSaved() {
+    const previous = status;
+    setStatus(null);
+
+    try {
+      await removeFromMyList(experience.id);
+    } catch (error) {
+      setStatus(previous);
+      throw error;
+    }
+  }
+
   return (
     <ExperienceCard
       experience={experience}
       done={done}
-      onToggle={toggle}
+      onToggle={toggleComplete}
+      saved={saved}
+      onSave={save}
+      onRemoveSaved={removeSaved}
       guest={!signedIn}
       onGuestSave={requireLogin}
       variant="related"

@@ -5,7 +5,7 @@ import { ExperienceSocialProof } from "@/app/(app)/browse/components/ExperienceS
 
 import type { ListStatus } from "@/app/(app)/browse/types";
 import type { ExperienceLocationType } from "@/lib/experiences/types";
-import { ActionPanel } from "./ActionPanel";
+import { ExperienceDetailActions } from "./ExperienceDetailActions";
 
 interface ExperienceDetailHeroProps {
   experience: {
@@ -71,7 +71,7 @@ export function ExperienceDetailHero({
         />
 
         <div className="mt-7">
-          <ActionPanel
+          <ExperienceDetailActions
             taskId={experience.id}
             taskTitle={experience.title}
             initialStatus={initialStatus}
