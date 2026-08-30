@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import { getExperienceHref } from "@/lib/experiences/href";
 import { ExperienceMetaLine } from "./ExperienceMetaLine";
 import { Badge, ExperienceImage, experienceLocation } from "@/components/ui";
 import type { Experience } from "../types";
@@ -34,7 +35,7 @@ export function ExperienceFeature({
     <section className="h-full overflow-hidden rounded-panel border border-border bg-surface md:grid md:grid-cols-[1.08fr_0.92fr]">
       <div className="relative h-[220px] sm:h-[280px] md:h-full">
         <Link
-          href={`/tasks/${experience.id}`}
+          href={getExperienceHref(experience)}
           aria-label={`View ${experience.title}`}
           className="absolute inset-0 z-10 outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-accent/30"
         />
@@ -77,7 +78,7 @@ export function ExperienceFeature({
       </div>
       <div className="flex min-w-0 flex-col justify-center px-5 py-6 sm:px-7 md:px-8">
         <Link
-          href={`/tasks/${experience.id}`}
+          href={getExperienceHref(experience)}
           className="group w-fit outline-none"
         >
           <h2 className="max-w-[520px] text-2xl font-extrabold leading-[1.05] tracking-[-0.025em] text-ink transition-colors group-hover:text-accent-dark sm:text-3xl">
@@ -101,7 +102,7 @@ export function ExperienceFeature({
 
         <div className="mt-6">
           <Link
-            href={`/tasks/${experience.id}`}
+            href={getExperienceHref(experience)}
             className="inline-flex h-10 items-center justify-center rounded-control bg-accent px-5 text-sm font-semibold text-white outline-none transition-colors hover:bg-accent-hover focus-visible:ring-2 focus-visible:ring-accent/30"
           >
             View experience

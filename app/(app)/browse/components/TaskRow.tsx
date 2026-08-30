@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Check, FolderPlus } from "lucide-react";
+import { getExperienceHref } from "@/lib/experiences/href";
 
 import {
   ExperienceImage,
@@ -79,7 +80,7 @@ export function TaskRow({
       ].join(" ")}
     >
       <Link
-        href={`/tasks/${experience.id}`}
+        href={getExperienceHref(experience)}
         aria-label={experience.title}
         className="absolute inset-0 z-10 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
       />

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Experience } from "@/lib/experiences/types";
+import { getExperienceHref } from "@/lib/experiences/href";
 
 export function DiscoveryExperiencesSection({
   experiences,
@@ -21,7 +22,7 @@ export function DiscoveryExperiencesSection({
         {experiences.map((experience) => (
           <Link
             key={experience.id}
-            href={`/tasks/${experience.id}`}
+            href={getExperienceHref(experience)}
             className="group block h-full rounded-card outline-none focus-visible:ring-2 focus-visible:ring-accent focus-visible:ring-offset-4"
           >
             <article className="flex h-full flex-col">

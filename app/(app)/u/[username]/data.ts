@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { AchievementStats } from "@/app/(app)/achievements/data";
 import { loadAchievementDefinitions } from "@/app/(app)/achievements/queries";
@@ -13,6 +14,7 @@ interface ProfileRow {
 
 interface ExperienceRow {
   id: string;
+  slug: string;
   title: string;
   category: string | null;
   image_url: string | null;
@@ -33,7 +35,7 @@ function toSingle<T>(value: T | T[] | null): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-export async function loadProfile(
+export const loadProfile = cache(async function loadProfile(
   username: string,
 ): Promise<ProfileViewModel | null> {
   const supabase = await createClient();
@@ -52,7 +54,9 @@ export async function loadProfile(
   const [listResult, achievementsResult, definitions] = await Promise.all([
     supabase
       .from("user_lists")
-      .select("status, experiences(id, title, category, image_url, image_alt)")
+      .select(
+        "status, experiences(id, slug, title, category, image_url, image_alt)",
+      )
       .eq("user_id", profile.id),
 
     supabase
@@ -112,6 +116,7 @@ export async function loadProfile(
     achievementCount: earnedAchievements.length,
     recentCompleted: completedExperiences.slice(0, 5).map((experience) => ({
       id: experience.id,
+      slug: experience.slug,
       title: experience.title,
       category: experience.category,
       image_url: experience.image_url,
@@ -122,4 +127,4 @@ export async function loadProfile(
     achievementDefinitions: definitions,
     stats,
   };
-}
+});

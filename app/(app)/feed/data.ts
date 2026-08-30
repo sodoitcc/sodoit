@@ -32,6 +32,7 @@ export interface ExperienceActivityItem {
   actor: ActivityActor;
   experience: {
     id: string;
+    slug: string;
     title: string;
     category: string | null;
     difficulty: string | null;
@@ -104,7 +105,7 @@ async function loadListActivity(
     supabase
       .from("experiences")
       .select(
-        "id, title, category, difficulty, location_type, city, country_code, image_url, image_alt",
+        "id, slug, title, category, difficulty, location_type, city, country_code, image_url, image_alt",
       )
       .in("id", experienceIds),
     supabase
@@ -142,6 +143,7 @@ async function loadListActivity(
       },
       experience: {
         id: experience.id,
+        slug: experience.slug,
         title: experience.title,
         category: experience.category,
         difficulty: experience.difficulty,

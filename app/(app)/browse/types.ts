@@ -6,6 +6,7 @@ export type { Experience } from "@/lib/experiences/types";
 export type ExperienceCardData = Pick<
   Experience,
   | "id"
+  | "slug"
   | "title"
   | "image_url"
   | "image_alt"

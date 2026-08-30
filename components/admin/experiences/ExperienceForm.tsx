@@ -8,6 +8,7 @@ import { Button } from "@/components/ui";
 import { CATEGORIES, DIFFICULTIES } from "@/app/(app)/browse/types";
 import { RegenerateImageButton } from "@/components/admin/experiences/RegenerateImageButton";
 import { slugify } from "@/lib/admin/slug";
+import { getExperienceHref } from "@/lib/experiences/href";
 import {
   createExperience,
   updateExperience,
@@ -324,7 +325,7 @@ export function ExperienceForm({ experience }: ExperienceFormProps) {
 
         {experience && (
           <a
-            href={`/tasks/${experience.id}`}
+            href={getExperienceHref(experience)}
             target="_blank"
             rel="noreferrer"
             className="text-sm font-medium text-secondary hover:text-ink"

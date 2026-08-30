@@ -5,6 +5,7 @@ import type {
 
 export interface CompletedExperience {
   id: string;
+  slug: string;
   title: string;
   category: string | null;
   image_url: string | null;

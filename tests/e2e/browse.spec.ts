@@ -31,7 +31,10 @@ test.describe("browse editorial redesign", () => {
       .getByRole("link")
       .first();
 
-    await expect(featureLink).toHaveAttribute("href", /^\/tasks\/[^/]+$/);
+    await expect(featureLink).toHaveAttribute(
+      "href",
+      /^\/experiences\/[^/]+$/,
+    );
 
     const accessibleName = await featureLink.getAttribute("aria-label");
     expect(accessibleName?.length ?? 0).toBeGreaterThan(0);

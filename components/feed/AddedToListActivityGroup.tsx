@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExperienceImage } from "@/components/ui";
+import { getExperienceHref } from "@/lib/experiences/href";
 import type { AddedToListGroupItem } from "@/app/(app)/feed/added-to-list-aggregation";
 import { ActivityActorLine } from "./ActivityActorLine";
 import { ActivityCardShell } from "./ActivityCardShell";
@@ -25,7 +26,7 @@ export function AddedToListActivityGroup({
     return (
       <ActivityCardShell className="flex items-center gap-3 p-3 sm:p-4">
         <Link
-          href={`/tasks/${experience.id}`}
+          href={getExperienceHref(experience)}
           className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-md"
         >
           <ExperienceImage
@@ -45,7 +46,7 @@ export function AddedToListActivityGroup({
             action="added to their list"
           />
           <Link
-            href={`/tasks/${experience.id}`}
+            href={getExperienceHref(experience)}
             className="mt-0.5 block truncate text-sm font-semibold text-ink hover:text-accent-dark"
           >
             {experience.title}
@@ -74,7 +75,7 @@ export function AddedToListActivityGroup({
         {visible.map((experience) => (
           <Link
             key={experience.id}
-            href={`/tasks/${experience.id}`}
+            href={getExperienceHref(experience)}
             title={experience.title}
             className="relative block aspect-square w-full overflow-hidden rounded-md"
           >
