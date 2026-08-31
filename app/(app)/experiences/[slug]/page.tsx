@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, MoveRight, Sparkles } from "lucide-react";
+import { MoveRight, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 
 import { createClient } from "@/lib/supabase/server";
@@ -14,6 +14,8 @@ import { ExperienceDetailHero } from "./ExperienceDetailHero";
 import { ExperienceDetailFacts } from "./ExperienceDetailFacts";
 import { RelatedExperienceCard } from "./RelatedExperienceCard";
 import { loadExperienceBySlug } from "./data";
+import { ScrollToTop } from "./ScrollToTop";
+import { ExperienceBackButton } from "./ExperienceBackButton";
 
 type SimilarExperience = ExperienceCardData;
 
@@ -147,17 +149,9 @@ export default async function ExperienceDetailPage({
 
   return (
     <main className="mx-auto w-full max-w-[1440px] px-4 pb-14 pt-4 sm:px-6 lg:px-8">
-      <Link
-        href="/"
-        className={[
-          "inline-flex items-center gap-1 rounded-control text-sm font-semibold text-muted",
-          "transition-colors hover:text-ink",
-          "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-        ].join(" ")}
-      >
-        <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-        Back to Browse
-      </Link>
+      <ScrollToTop />
+
+      <ExperienceBackButton />
 
       <div className="mt-4">
         <ExperienceDetailHero

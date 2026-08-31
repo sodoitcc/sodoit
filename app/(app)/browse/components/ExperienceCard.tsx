@@ -90,6 +90,8 @@ export function ExperienceCard({
         <Link
           href={getExperienceHref(experience)}
           aria-label={experience.title}
+          data-experience-link="true"
+          scroll
           className="absolute inset-0 z-10 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
         />
 
@@ -164,6 +166,8 @@ export function ExperienceCard({
       >
         <Link
           href={getExperienceHref(experience)}
+          data-experience-link="true"
+          scroll
           className="relative z-10 w-fit max-w-full outline-none"
         >
           <h3
