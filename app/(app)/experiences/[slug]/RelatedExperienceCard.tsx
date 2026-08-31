@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
 
 import { ExperienceCard } from "@/app/(app)/browse/components/ExperienceCard";
 import {
@@ -9,7 +8,6 @@ import {
   setListStatus,
   toggleCompletion,
 } from "@/app/(app)/browse/actions";
-import { loginHrefWithNext } from "@/lib/auth-redirect";
 import type { ExperienceCardData, ListStatus } from "@/app/(app)/browse/types";
 
 interface RelatedExperienceCardProps {
@@ -23,15 +21,9 @@ export function RelatedExperienceCard({
   initialStatus,
   signedIn,
 }: RelatedExperienceCardProps) {
-  const router = useRouter();
-  const pathname = usePathname();
   const [status, setStatus] = useState(initialStatus);
   const saved = status === "saved";
   const done = status === "completed";
-
-  function requireLogin() {
-    router.push(loginHrefWithNext(pathname));
-  }
 
   async function toggleComplete() {
     const wasDone = done;
@@ -79,7 +71,6 @@ export function RelatedExperienceCard({
       onSave={save}
       onRemoveSaved={removeSaved}
       guest={!signedIn}
-      onGuestSave={requireLogin}
       variant="related"
       showCategory={false}
     />

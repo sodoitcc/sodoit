@@ -10,9 +10,7 @@ import type { ExperienceCardData } from "../types";
 import { getDifficulty, getTaskMeta } from "../types";
 import { useCompletionToggle } from "../hooks/useCompletionToggle";
 import { resolveExperienceCardActionState } from "../experience-card-state";
-import { SaveButton } from "./SaveButton";
-import { ExperienceSaveControl } from "./ExperienceSaveControl";
-import { ExperienceListStateControl } from "./ExperienceListStateControl";
+import { ExperienceCardActions } from "./ExperienceCardActions";
 import { ExperienceMetaLine } from "./ExperienceMetaLine";
 import { ExperienceSocialProof } from "./ExperienceSocialProof";
 import { COMPLETED_MEDIA } from "./completedStyles";
@@ -24,11 +22,8 @@ interface ExperienceCardProps {
   saved?: boolean;
   onSave?: () => void;
   onRemoveSaved?: () => void;
-  onRemove?: () => void;
-  removeLabel?: string;
   onManageCollections?: () => void;
   guest?: boolean;
-  onGuestSave?: () => void;
   className?: string;
   ratio?: "wide" | "standard";
   showCategory?: boolean;
@@ -47,11 +42,8 @@ export function ExperienceCard({
   saved,
   onSave,
   onRemoveSaved,
-  onRemove,
-  removeLabel,
   onManageCollections,
   guest = false,
-  onGuestSave,
   className = "",
   ratio = "standard",
   showCategory = true,
@@ -59,8 +51,11 @@ export function ExperienceCard({
 }: ExperienceCardProps) {
   const { thumbnail } = getTaskMeta(experience.id);
   const difficulty = getDifficulty(experience.id, experience.difficulty);
+
   const { isToggling, handleToggle } = useCompletionToggle(done, onToggle);
-  const usesListState = onSave !== undefined && onRemoveSaved !== undefined;
+
+  const hasListActions = onSave !== undefined && onRemoveSaved !== undefined;
+
   const actionState = resolveExperienceCardActionState(Boolean(saved), done);
 
   const related = variant === "related";
@@ -115,46 +110,18 @@ export function ExperienceCard({
           ].join(" ")}
         />
 
-        {!guest && onRemove && !related && (
-          <div className="absolute left-2 top-2 z-20">
-            <SaveButton
-              label={
-                removeLabel
-                  ? `${removeLabel}: ${experience.title}`
-                  : `Remove ${experience.title} from My List`
-              }
-              onClick={onRemove}
-              saved
-              className="bg-surface/90 backdrop-blur-sm"
-            />
-          </div>
+        {hasListActions && (
+          <ExperienceCardActions
+            state={actionState}
+            guest={guest}
+            title={experience.title}
+            onSave={onSave}
+            onRemoveSaved={onRemoveSaved}
+            onComplete={handleToggle}
+            onUncomplete={handleToggle}
+            disabled={isToggling}
+          />
         )}
-
-        <div className="absolute right-2 top-2 z-20">
-          {usesListState ? (
-            <ExperienceListStateControl
-              state={actionState}
-              guest={guest}
-              onSave={onSave!}
-              onRemoveSaved={onRemoveSaved!}
-              onUncomplete={handleToggle}
-              disabled={isToggling}
-              title={experience.title}
-            />
-          ) : (
-            <ExperienceSaveControl
-              mode={guest ? "guest" : "toggle"}
-              done={done}
-              onClick={guest ? (onGuestSave ?? (() => {})) : handleToggle}
-              disabled={!guest && isToggling}
-              label={
-                guest
-                  ? `Save ${experience.title}`
-                  : `${done ? "Mark as incomplete" : "Mark as complete"}: ${experience.title}`
-              }
-            />
-          )}
-        </div>
       </div>
 
       <div
@@ -186,7 +153,7 @@ export function ExperienceCard({
             difficulty={difficulty.label}
             category={experience.category}
             showCategory={showCategory}
-            size={related ? "xs" : "xs"}
+            size="xs"
           />
         </div>
 
@@ -203,7 +170,12 @@ export function ExperienceCard({
               type="button"
               onClick={onManageCollections}
               aria-label={`Manage collections for ${experience.title}`}
-              className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+              className={[
+                "inline-flex h-9 w-9 shrink-0 items-center justify-center",
+                "rounded-control text-muted transition-colors",
+                "hover:bg-surface-subtle hover:text-ink",
+                "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
+              ].join(" ")}
             >
               <FolderPlus aria-hidden="true" className="h-4 w-4" />
             </button>

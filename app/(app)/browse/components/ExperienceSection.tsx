@@ -77,7 +77,6 @@ export function ExperienceSection({
             onSave={() => onSave(experience.id)}
             onRemoveSaved={() => onRemoveSaved(experience.id)}
             guest={guest}
-            onGuestSave={onGuestSave}
             className={spanClassName(variant, index, items.length)}
             ratio={variant}
             showCategory={false}
