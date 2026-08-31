@@ -4,6 +4,7 @@ import { MoveRight, Sparkles } from "lucide-react";
 import type { Metadata } from "next";
 
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { getDifficulty, getTaskMeta } from "@/app/(app)/browse/types";
 import type { ListStatus } from "@/app/(app)/browse/types";
 import type { ExperienceCardData } from "@/app/(app)/browse/types";
@@ -86,61 +87,58 @@ export default async function ExperienceDetailPage({
 
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  let status: ListStatus | null = null;
-  let totalCompleted = 0;
-
-  if (user) {
-    const [{ data: mine }, { count }] = await Promise.all([
-      supabase
-        .from("user_lists")
-        .select("status")
-        .eq("user_id", user.id)
-        .eq("experience_id", task.id)
-        .maybeSingle<{ status: ListStatus }>(),
-      supabase
-        .from("user_lists")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .eq("status", "completed"),
-    ]);
-
-    status = mine?.status ?? null;
-    totalCompleted = count ?? 0;
-  }
-
-  const { data: similar } = task.category
-    ? await supabase
-        .from("experiences")
-        .select(SIMILAR_COLUMNS)
-        .eq("is_public", true)
-        .eq("category", task.category)
-        .neq("id", task.id)
-        .limit(4)
-    : { data: [] as SimilarExperience[] };
+  const [user, { data: similar }] = await Promise.all([
+    getCurrentUser(),
+    task.category
+      ? supabase
+          .from("experiences")
+          .select(SIMILAR_COLUMNS)
+          .eq("is_public", true)
+          .eq("category", task.category)
+          .neq("id", task.id)
+          .limit(4)
+      : Promise.resolve({ data: [] as SimilarExperience[] }),
+  ]);
 
   const similarExperiences: SimilarExperience[] = similar ?? [];
 
+  let status: ListStatus | null = null;
+  let totalCompleted = 0;
   let similarStatuses: Record<string, ListStatus> = {};
 
-  if (user && similarExperiences.length > 0) {
-    const { data: statusRows } = await supabase
-      .from("user_lists")
-      .select("experience_id, status")
-      .eq("user_id", user.id)
-      .in(
-        "experience_id",
-        similarExperiences.map((item) => item.id),
-      );
+  if (user) {
+    const [{ data: mine }, { count }, { data: statusRows }] = await Promise.all(
+      [
+        supabase
+          .from("user_lists")
+          .select("status")
+          .eq("user_id", user.id)
+          .eq("experience_id", task.id)
+          .maybeSingle<{ status: ListStatus }>(),
+        supabase
+          .from("user_lists")
+          .select("id", { count: "exact", head: true })
+          .eq("user_id", user.id)
+          .eq("status", "completed"),
+        similarExperiences.length > 0
+          ? supabase
+              .from("user_lists")
+              .select("experience_id, status")
+              .eq("user_id", user.id)
+              .in(
+                "experience_id",
+                similarExperiences.map((item) => item.id),
+              )
+          : Promise.resolve({
+              data: [] as { experience_id: string; status: ListStatus }[],
+            }),
+      ],
+    );
 
+    status = mine?.status ?? null;
+    totalCompleted = count ?? 0;
     similarStatuses = Object.fromEntries(
-      (statusRows ?? []).map((row) => [
-        row.experience_id,
-        row.status as ListStatus,
-      ]),
+      (statusRows ?? []).map((row) => [row.experience_id, row.status]),
     );
   }
 

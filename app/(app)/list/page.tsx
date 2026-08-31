@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
 import { loadMyList } from "./data";
 import { MyListView } from "./MyListView";
@@ -21,15 +22,13 @@ interface MyListPageProps {
 }
 
 export default async function MyListPage({ searchParams }: MyListPageProps) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   if (!user) {
     redirect(loginHrefWithNext("/list"));
   }
+
+  const supabase = await createClient();
 
   const { data: profile } = await supabase
     .from("profiles")

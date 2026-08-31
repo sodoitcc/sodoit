@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { experienceLocation } from "@/components/ui";
 import {
@@ -296,11 +297,10 @@ export async function loadViewerListStatuses(
 ): Promise<Map<string, "saved" | "completed">> {
   if (experienceIds.length === 0) return new Map();
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
   if (!user) return new Map();
+
+  const supabase = await createClient();
 
   const { data, error } = await supabase
     .from("user_lists")

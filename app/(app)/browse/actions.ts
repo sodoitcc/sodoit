@@ -29,7 +29,18 @@ export async function loadMoreExperiences(params: {
   sort: string;
   cursor: string | null;
 }): Promise<BrowseResult> {
-  const categories = await loadActiveBrowseCategories();
+  const supabase = await createClient();
+
+  const [
+    categories,
+    {
+      data: { user },
+    },
+  ] = await Promise.all([
+    loadActiveBrowseCategories(),
+    supabase.auth.getUser(),
+  ]);
+
   const categoryId = resolveCategoryId(categories, params.category);
 
   const type = parseExperienceType(params.type ?? undefined);
@@ -45,11 +56,6 @@ export async function loadMoreExperiences(params: {
   const sort: BrowseSort = BROWSE_SORTS.includes(params.sort as BrowseSort)
     ? (params.sort as BrowseSort)
     : "recommended";
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const completedIds = user ? await loadCompletedIds(user.id) : [];
 

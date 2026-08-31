@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { ErrorState } from "@/components/ui";
 import { SITE_URL } from "@/lib/site";
 import { ScrollRestoration } from "@/lib/navigation/ScrollRestoration";
@@ -65,14 +65,13 @@ export default async function UserProfilePage({
   const { username } = await params;
   const { view } = await searchParams;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
   let profile;
+  let user;
   try {
-    profile = await loadProfile(username);
+    [profile, user] = await Promise.all([
+      loadProfile(username),
+      getCurrentUser(),
+    ]);
   } catch {
     return (
       <div className="mx-auto max-w-[1440px] px-4 py-10 sm:px-6 lg:px-8">

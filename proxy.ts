@@ -22,6 +22,16 @@ export async function proxy(request: NextRequest) {
       ? `/admin${originalPathname === "/" ? "" : originalPathname}`
       : originalPathname;
 
+  if (!isProtectedRoute(pathname)) {
+    if (pathname !== originalPathname) {
+      const rewriteUrl = request.nextUrl.clone();
+      rewriteUrl.pathname = pathname;
+      return NextResponse.rewrite(rewriteUrl, { request });
+    }
+
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(

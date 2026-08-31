@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { BrowseBoard } from "./browse/BrowseBoard";
 import {
   loadExperiences,
@@ -35,10 +35,7 @@ interface HomePageProps {
 export default async function HomePage({ searchParams }: HomePageProps) {
   const params = await searchParams;
 
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getCurrentUser();
 
   const q = (params.q ?? "").trim().slice(0, 200);
 
