@@ -107,7 +107,6 @@ export function ExperienceCard({
                 ? "(min-width: 1024px) 45vw, 90vw"
                 : "(min-width: 1024px) 280px, (min-width: 640px) 45vw, 90vw"
           }
-          quality={90}
           className={[
             imageRatio,
             "w-full motion-safe:transition-transform motion-safe:duration-300",

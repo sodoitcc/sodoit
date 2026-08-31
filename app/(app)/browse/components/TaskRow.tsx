@@ -92,7 +92,6 @@ export function TaskRow({
           title={experience.title}
           fallbackColor={thumbnail}
           sizes="56px"
-          quality={90}
           className={[
             "h-14 w-14 shrink-0 rounded-media transition-opacity",
             done ? COMPLETED_MEDIA : "",
