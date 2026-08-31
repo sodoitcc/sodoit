@@ -28,11 +28,7 @@ describe("scroll-history with a window present", () => {
         get state() {
           return state;
         },
-        replaceState: (
-          newState: Record<string, unknown>,
-          _title: string,
-          _url: string,
-        ) => {
+        replaceState: (newState: Record<string, unknown>) => {
           state = newState;
         },
       },

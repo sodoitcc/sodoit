@@ -40,10 +40,6 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
   const nav = signedIn ? AUTHENTICATED_NAV : BASE_NAV;
 
   useEffect(() => {
-    setMobileMenuOpen(false);
-  }, [pathname]);
-
-  useEffect(() => {
     if (!mobileMenuOpen) {
       document.body.style.overflow = "";
       return;
