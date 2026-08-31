@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import posthog from "posthog-js";
 import { Button, Card } from "@/components/ui";
 
 import { updateProfile } from "../actions";
@@ -71,6 +72,10 @@ export function ProfileForm({
       setUsername(normalizedUsername);
       setBio(normalizedBio);
 
+      posthog.capture("profile_updated", {
+        username_changed: normalizedUsername !== savedUsername,
+        bio_changed: normalizedBio !== savedBio,
+      });
       setSuccess(true);
       onSaved?.();
     });

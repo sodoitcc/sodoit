@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { MoreHorizontal } from "lucide-react";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 
 export function ProfileMenu() {
@@ -29,6 +30,7 @@ export function ProfileMenu() {
     setSigningOut(true);
     const supabase = createClient();
     await supabase.auth.signOut();
+    posthog.reset();
     router.push("/");
     router.refresh();
   }

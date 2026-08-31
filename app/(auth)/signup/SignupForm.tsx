@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import { getSafeNextPath } from "@/lib/auth-redirect";
 import { INPUT_CLASS, PasswordField } from "../PasswordField";
@@ -111,6 +112,7 @@ export function SignupForm({ next }: { next: string }) {
         return;
       }
 
+      posthog.capture("account_signup_created");
       router.push(
         `/verify-email?email=${encodeURIComponent(normalizedEmail)}&next=${encodeURIComponent(safeNext)}`,
       );

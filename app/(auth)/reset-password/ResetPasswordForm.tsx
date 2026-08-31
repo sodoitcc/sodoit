@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { createClient } from "@/lib/supabase/client";
 import { PASSWORD_MIN_LENGTH } from "@/lib/validation";
 import { PasswordField } from "../PasswordField";
@@ -41,6 +42,7 @@ export function ResetPasswordForm() {
     }
 
     await supabase.auth.signOut();
+    posthog.reset();
     router.replace("/login");
     router.refresh();
   }

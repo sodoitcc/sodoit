@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import posthog from "posthog-js";
 
 import { createClient } from "@/lib/supabase/client";
 import { getSafeNextPath } from "@/lib/auth-redirect";
@@ -52,6 +53,7 @@ export function LoginForm({ next }: { next: string }) {
         return;
       }
 
+      posthog.capture("user_logged_in");
       window.location.assign(safeNext);
     } catch {
       setError("Unable to log in. Please try again.");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import posthog from "posthog-js";
 import { Card } from "@/components/ui";
 import { deleteAccount } from "../actions";
 
@@ -18,10 +19,13 @@ export function DeleteAccount() {
 
     setError(null);
     startTransition(async () => {
-      const result = await deleteAccount(confirmation);
-
-      if (!result.success) {
+      try {
+        const result = await deleteAccount(confirmation);
         setError(result.error ?? "Could not delete your account.");
+      } catch (error) {
+        posthog.capture("account_deleted");
+        posthog.reset();
+        throw error;
       }
     });
   }

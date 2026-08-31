@@ -1,5 +1,6 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { PostHogIdentity } from "@/components/analytics/PostHogIdentity";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { AchievementUnlockProvider } from "./achievements/components/AchievementUnlockProvider";
@@ -32,6 +33,8 @@ export default async function AppLayout({
 
   return (
     <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+      <PostHogIdentity userId={user?.id} username={username} />
+
       <Header
         signedIn={Boolean(user)}
         username={username}

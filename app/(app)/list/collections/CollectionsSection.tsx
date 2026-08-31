@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Plus } from "lucide-react";
+import posthog from "posthog-js";
 
 import { createCollection } from "./actions";
 import { CollectionCard } from "./CollectionCard";
@@ -40,6 +41,7 @@ export function CollectionsSection({
       const result = await createCollection(trimmed);
 
       if (result) {
+        posthog.capture("collection_created");
         onCollectionsChange([
           {
             id: result.id,
