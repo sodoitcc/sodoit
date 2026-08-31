@@ -37,8 +37,11 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const isAuthRoute = pathname === "/login" || pathname === "/signup";
-
   const nav = signedIn ? AUTHENTICATED_NAV : BASE_NAV;
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     if (!mobileMenuOpen) {
@@ -69,13 +72,17 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
           <Link
             href="/"
             aria-label="Sodoit home"
-            className="relative z-[70] shrink-0 rounded-control outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+            className={[
+              "relative z-[70] flex min-h-11 shrink-0 items-center",
+              "rounded-control outline-none",
+              "focus-visible:ring-2 focus-visible:ring-accent/30",
+            ].join(" ")}
           >
-            <span className="sm:hidden">
-              <Logo size="sm" />
+            <span className="lg:hidden">
+              <Logo size="md" />
             </span>
 
-            <span className="hidden sm:block">
+            <span className="hidden lg:block">
               <Logo size="lg" />
             </span>
           </Link>
@@ -83,7 +90,10 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
           {!isAuthRoute && (
             <nav
               aria-label="Primary navigation"
-              className="absolute left-1/2 hidden h-16 -translate-x-1/2 items-center gap-6 sm:flex md:gap-8"
+              className={[
+                "absolute left-1/2 hidden h-16 -translate-x-1/2",
+                "items-center gap-1 lg:flex",
+              ].join(" ")}
             >
               {nav.map((item) => {
                 const active = isActiveRoute(pathname, item.href);
@@ -94,10 +104,13 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                     href={item.href}
                     aria-current={active ? "page" : undefined}
                     className={[
-                      "relative flex h-full items-center text-sm font-semibold",
+                      "relative inline-flex h-11 items-center justify-center px-3",
+                      "rounded-control text-sm font-semibold",
                       "outline-none transition-colors",
-                      "focus-visible:text-accent",
-                      active ? "text-ink" : "text-secondary hover:text-ink",
+                      "focus-visible:ring-2 focus-visible:ring-accent/30",
+                      active
+                        ? "text-ink"
+                        : "text-secondary hover:bg-surface-subtle hover:text-ink",
                     ].join(" ")}
                   >
                     {item.label}
@@ -105,7 +118,7 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                     <span
                       aria-hidden="true"
                       className={[
-                        "absolute inset-x-0 bottom-0 h-0.5 rounded-pill bg-accent",
+                        "absolute bottom-0 left-3 right-3 h-0.5 rounded-pill bg-accent",
                         "origin-center transition-transform duration-200",
                         active ? "scale-x-100" : "scale-x-0",
                       ].join(" ")}
@@ -118,12 +131,17 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
 
           {!isAuthRoute && (
             <>
-              <div className="ml-auto hidden items-center sm:flex">
+              <div className="ml-auto hidden items-center lg:flex">
                 {signedIn ? (
                   <Link
                     href={username ? `/u/${username}` : "/settings/profile"}
                     aria-label="Your profile"
-                    className="shrink-0 rounded-full outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-accent/30"
+                    className={[
+                      "flex h-11 w-11 shrink-0 items-center justify-center",
+                      "rounded-full outline-none transition-colors",
+                      "hover:bg-surface-subtle",
+                      "focus-visible:ring-2 focus-visible:ring-accent/30",
+                    ].join(" ")}
                   >
                     <Avatar
                       name={username ?? "You"}
@@ -132,11 +150,11 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                     />
                   </Link>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
                     <Link
                       href="/login"
                       className={[
-                        "inline-flex h-10 items-center justify-center rounded-control px-3",
+                        "inline-flex h-11 items-center justify-center rounded-control px-4",
                         "text-sm font-semibold text-secondary transition-colors",
                         "hover:bg-surface-subtle hover:text-ink",
                         "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
@@ -148,9 +166,9 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                     <Link
                       href="/signup"
                       className={[
-                        "inline-flex h-10 items-center justify-center rounded-control bg-accent px-4",
-                        "text-sm font-semibold text-white transition-colors",
-                        "hover:bg-accent-hover",
+                        "inline-flex h-11 items-center justify-center rounded-control",
+                        "bg-accent px-4 text-sm font-semibold text-white",
+                        "transition-colors hover:bg-accent-hover",
                         "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
                       ].join(" ")}
                     >
@@ -167,7 +185,7 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                 aria-controls="mobile-navigation"
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
                 className={[
-                  "relative z-[70] ml-auto flex h-10 w-10 items-center justify-center sm:hidden",
+                  "relative z-[70] ml-auto flex h-12 w-12 items-center justify-center lg:hidden",
                   "rounded-control text-ink transition-colors",
                   mobileMenuOpen
                     ? "bg-accent-wash text-accent-dark"
@@ -205,7 +223,7 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
       {!isAuthRoute && (
         <div
           className={[
-            "fixed inset-0 z-50 sm:hidden",
+            "fixed inset-x-0 bottom-0 top-16 z-50 lg:hidden",
             "transition-[visibility] duration-200",
             mobileMenuOpen ? "visible" : "pointer-events-none invisible",
           ].join(" ")}
@@ -216,8 +234,7 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
             aria-label="Close menu"
             onClick={() => setMobileMenuOpen(false)}
             className={[
-              "absolute inset-0 bg-black/20",
-              "transition-opacity duration-200",
+              "absolute inset-0 bg-black/20 transition-opacity duration-200",
               mobileMenuOpen ? "opacity-100" : "opacity-0",
             ].join(" ")}
           />
@@ -225,99 +242,109 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
           <div
             id="mobile-navigation"
             className={[
-              "absolute inset-x-3 top-[76px]",
-              "overflow-hidden rounded-control border border-border",
-              "bg-[#FFFDF9]",
-              "transition-all duration-250 ease-out",
+              "relative w-full border-b border-border bg-surface",
+              "shadow-[0_12px_30px_rgba(0,0,0,0.06)]",
+              "transition-all duration-200 ease-out",
               mobileMenuOpen
                 ? "translate-y-0 opacity-100"
-                : "-translate-y-3 opacity-0",
+                : "-translate-y-2 opacity-0",
             ].join(" ")}
           >
-            <nav aria-label="Mobile navigation" className="p-3">
-              {nav.map((item) => {
-                const active = isActiveRoute(pathname, item.href);
+            <div className="mx-auto w-full max-w-[1440px] px-4 py-3 sm:px-6">
+              <nav aria-label="Mobile navigation" className="space-y-1">
+                {nav.map((item) => {
+                  const active = isActiveRoute(pathname, item.href);
 
-                return (
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={[
+                        "flex min-h-14 items-center justify-between px-3",
+                        "rounded-control text-base font-bold tracking-[-0.015em]",
+                        "outline-none transition-colors",
+                        active
+                          ? "bg-accent-wash text-accent-dark"
+                          : "text-ink hover:bg-surface-subtle",
+                        "focus-visible:ring-2 focus-visible:ring-accent/30",
+                      ].join(" ")}
+                    >
+                      <span>{item.label}</span>
+
+                      {active && (
+                        <span
+                          aria-hidden="true"
+                          className="h-2 w-2 rounded-full bg-accent"
+                        />
+                      )}
+                    </Link>
+                  );
+                })}
+              </nav>
+
+              <div className="mt-3 border-t border-border pt-3">
+                {signedIn ? (
                   <Link
-                    key={item.href}
-                    href={item.href}
-                    aria-current={active ? "page" : undefined}
+                    href={username ? `/u/${username}` : "/settings/profile"}
                     onClick={() => setMobileMenuOpen(false)}
                     className={[
-                      "flex min-h-14 items-center justify-between rounded-control px-4",
-                      "text-base font-extrabold tracking-[-0.02em]",
-                      "outline-none transition-colors",
-                      active
-                        ? "bg-accent-wash text-accent-dark"
-                        : "text-ink hover:bg-surface-subtle",
+                      "flex min-h-14 items-center gap-3 rounded-control px-3",
+                      "text-sm font-bold text-ink",
+                      "outline-none transition-colors hover:bg-surface-subtle",
                       "focus-visible:ring-2 focus-visible:ring-accent/30",
                     ].join(" ")}
                   >
-                    <span>{item.label}</span>
-
-                    {active && (
-                      <span
-                        aria-hidden="true"
-                        className="h-2 w-2 rounded-full bg-accent"
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center">
+                      <Avatar
+                        name={username ?? "You"}
+                        src={avatarUrl}
+                        size="md"
                       />
-                    )}
-                  </Link>
-                );
-              })}
-            </nav>
+                    </span>
 
-            <div className="border-t border-border p-3">
-              {signedIn ? (
-                <Link
-                  href={username ? `/u/${username}` : "/settings/profile"}
-                  onClick={() => setMobileMenuOpen(false)}
-                  className={[
-                    "flex min-h-14 items-center gap-3 rounded-control px-4",
-                    "text-sm font-bold text-ink",
-                    "transition-colors hover:bg-surface-subtle",
-                    "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                  ].join(" ")}
-                >
-                  <Avatar name={username ?? "You"} src={avatarUrl} size="sm" />
+                    <div className="min-w-0">
+                      <div className="truncate">
+                        {username ?? "Your account"}
+                      </div>
 
-                  <div className="min-w-0">
-                    <div className="truncate">{username ?? "Your account"}</div>
-
-                    <div className="text-xs font-medium text-secondary">
-                      View profile
+                      <div className="mt-0.5 text-xs font-medium text-secondary">
+                        View profile
+                      </div>
                     </div>
-                  </div>
-                </Link>
-              ) : (
-                <div className="grid grid-cols-[0.9fr_1.1fr] gap-2">
-                  <Link
-                    href="/login"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={[
-                      "inline-flex h-11 items-center justify-center rounded-control",
-                      "text-sm font-bold text-secondary",
-                      "transition-colors hover:bg-surface-subtle hover:text-ink",
-                      "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                    ].join(" ")}
-                  >
-                    Log in
                   </Link>
+                ) : (
+                  <div className="grid grid-cols-2 gap-2">
+                    <Link
+                      href="/login"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={[
+                        "inline-flex h-12 items-center justify-center rounded-control",
+                        "text-sm font-bold text-secondary",
+                        "outline-none transition-colors",
+                        "hover:bg-surface-subtle hover:text-ink",
+                        "focus-visible:ring-2 focus-visible:ring-accent/30",
+                      ].join(" ")}
+                    >
+                      Log in
+                    </Link>
 
-                  <Link
-                    href="/signup"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className={[
-                      "inline-flex h-11 items-center justify-center rounded-control",
-                      "bg-accent px-4 text-sm font-bold text-white",
-                      "transition-colors hover:bg-accent-hover",
-                      "outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-                    ].join(" ")}
-                  >
-                    Sign up
-                  </Link>
-                </div>
-              )}
+                    <Link
+                      href="/signup"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className={[
+                        "inline-flex h-12 items-center justify-center rounded-control",
+                        "bg-accent px-4 text-sm font-bold text-white",
+                        "outline-none transition-colors hover:bg-accent-hover",
+                        "focus-visible:ring-2 focus-visible:ring-accent/30",
+                      ].join(" ")}
+                    >
+                      Sign up
+                    </Link>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
