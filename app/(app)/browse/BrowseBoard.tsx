@@ -146,6 +146,16 @@ export function BrowseBoard({
       return;
     }
 
+    const wasCompleted = completed.has(id);
+
+    setCompleted((current) => {
+      if (!wasCompleted) return current;
+
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+
     setSaved((current) => new Set(current).add(id));
 
     try {
@@ -156,6 +166,11 @@ export function BrowseBoard({
         next.delete(id);
         return next;
       });
+
+      if (wasCompleted) {
+        setCompleted((current) => new Set(current).add(id));
+      }
+
       throw error;
     }
   }

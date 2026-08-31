@@ -25,7 +25,8 @@ const BASE_CLASS = [
 
 const STATE_CLASS: Record<ExperienceCardActionState, string> = {
   unsaved: "border-border/70 bg-surface/90 text-ink hover:border-border-strong",
-  saved: "border-accent/40 bg-accent-wash text-accent-dark hover:border-accent/60",
+  saved:
+    "border-accent/40 bg-accent-wash text-accent-dark hover:border-accent/60",
   completed: "border-accent bg-accent text-white",
 };
 

@@ -2,7 +2,11 @@
 
 import { useState } from "react";
 import { TaskRow } from "@/app/(app)/browse/components/TaskRow";
-import { toggleCompletion, removeFromMyList } from "@/app/(app)/browse/actions";
+import {
+  toggleCompletion,
+  removeFromMyList,
+  setListStatus,
+} from "@/app/(app)/browse/actions";
 import type { Experience, ListStatus } from "@/app/(app)/browse/types";
 
 const TABS: { key: ListStatus; label: string }[] = [
@@ -72,6 +76,30 @@ export function MyListBoard({
         next.delete(id);
         return next;
       });
+    }
+  }
+
+  async function save(id: string): Promise<void> {
+    const previousRow = rows.find((row) => row.experience.id === id);
+    if (!previousRow || previousRow.status === "saved") return;
+
+    setRows((previous) =>
+      previous.map((row) =>
+        row.experience.id === id ? { ...row, status: "saved" as const } : row,
+      ),
+    );
+
+    try {
+      await setListStatus(id, "saved");
+    } catch (error) {
+      setRows((previous) =>
+        previous.map((row) =>
+          row.experience.id === id
+            ? { ...row, status: previousRow.status }
+            : row,
+        ),
+      );
+      throw error;
     }
   }
 
@@ -153,7 +181,9 @@ export function MyListBoard({
                 experience={row.experience}
                 done={done}
                 onToggle={() => toggle(row.experience.id, row.status)}
-                onRemove={() => void remove(row.experience.id)}
+                saved={row.status === "saved"}
+                onSave={() => void save(row.experience.id)}
+                onRemoveSaved={() => void remove(row.experience.id)}
               />
             );
           })}

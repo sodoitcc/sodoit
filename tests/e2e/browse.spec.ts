@@ -31,10 +31,7 @@ test.describe("browse editorial redesign", () => {
       .getByRole("link")
       .first();
 
-    await expect(featureLink).toHaveAttribute(
-      "href",
-      /^\/experiences\/[^/]+$/,
-    );
+    await expect(featureLink).toHaveAttribute("href", /^\/experiences\/[^/]+$/);
 
     const accessibleName = await featureLink.getAttribute("aria-label");
     expect(accessibleName?.length ?? 0).toBeGreaterThan(0);
@@ -90,22 +87,24 @@ test.describe("browse editorial redesign", () => {
   test("marking an experience complete toggles its state", async ({ page }) => {
     await page.goto("/?category=adventure&view=list");
 
-    const firstToggle = page.getByRole("checkbox").first();
+    const firstToggle = page
+      .getByRole("button", { name: /Mark .+ as (completed|not completed)/ })
+      .first();
     await expect(firstToggle).toBeVisible();
 
     const wasChecked =
-      (await firstToggle.getAttribute("aria-checked")) === "true";
+      (await firstToggle.getAttribute("aria-pressed")) === "true";
 
     await firstToggle.click();
 
     await expect(firstToggle).toHaveAttribute(
-      "aria-checked",
+      "aria-pressed",
       wasChecked ? "false" : "true",
     );
 
     await firstToggle.click();
     await expect(firstToggle).toHaveAttribute(
-      "aria-checked",
+      "aria-pressed",
       wasChecked ? "true" : "false",
     );
   });
@@ -150,24 +149,24 @@ test.describe("browse editorial redesign", () => {
 
     const standardCard = exploreSection.locator("li").first();
     const listStateButton = standardCard.getByRole("button", {
-      name: /(Add .+ to My List|Remove .+ from My List)$/,
+      name: /(Save .+ to My List|Remove .+ from My List)$/,
     });
 
     await expect(listStateButton).toBeVisible();
     const initialName = await listStateButton.getAttribute("aria-label");
-    const wasUnsaved = initialName?.startsWith("Add ") ?? true;
+    const wasUnsaved = initialName?.startsWith("Save ") ?? true;
 
     await listStateButton.click();
 
     const toggledButton = standardCard.getByRole("button", {
-      name: wasUnsaved ? /^Remove .+ from My List$/ : /^Add .+ to My List$/,
+      name: wasUnsaved ? /^Remove .+ from My List$/ : /^Save .+ to My List$/,
     });
     await expect(toggledButton).toBeVisible();
 
     await toggledButton.click();
     await expect(
       standardCard.getByRole("button", {
-        name: wasUnsaved ? /^Add .+ to My List$/ : /^Remove .+ from My List$/,
+        name: wasUnsaved ? /^Save .+ to My List$/ : /^Remove .+ from My List$/,
       }),
     ).toBeVisible();
   });

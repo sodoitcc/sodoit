@@ -1,6 +1,7 @@
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { AchievementUnlockProvider } from "./achievements/components/AchievementUnlockProvider";
 import { loadAchievementDefinitions } from "./achievements/queries";
 
@@ -9,17 +10,16 @@ export default async function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = await createClient();
-  const definitions = await loadAchievementDefinitions().catch(() => []);
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [definitions, user] = await Promise.all([
+    loadAchievementDefinitions().catch(() => []),
+    getCurrentUser(),
+  ]);
 
   let username: string | null = null;
   let avatarUrl: string | null = null;
 
   if (user) {
+    const supabase = await createClient();
     const { data: profile } = await supabase
       .from("profiles")
       .select("username, avatar_url")

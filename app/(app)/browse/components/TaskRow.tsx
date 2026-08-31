@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, FolderPlus } from "lucide-react";
+import { Check, FolderPlus, X } from "lucide-react";
 import { getExperienceHref } from "@/lib/experiences/href";
 
 import {
@@ -14,18 +14,21 @@ import {
 import type { Experience } from "../types";
 import { getDifficulty, getTaskMeta } from "../types";
 import { useCompletionToggle } from "../hooks/useCompletionToggle";
+import { resolveExperienceCardActionState } from "../experience-card-state";
 import { COMPLETED_MEDIA } from "./completedStyles";
-import { SaveButton } from "./SaveButton";
+import { SaveDoneButtons } from "./SaveDoneButtons";
 
 interface TaskRowProps {
   experience: Experience;
   done: boolean;
   onToggle: () => Promise<void>;
+  saved?: boolean;
+  onSave?: () => void;
+  onRemoveSaved?: () => void;
   onRemove?: () => void;
   removeLabel?: string;
   onManageCollections?: () => void;
   guest?: boolean;
-  onGuestSave?: () => void;
   className?: string;
 }
 
@@ -33,11 +36,13 @@ export function TaskRow({
   experience,
   done,
   onToggle,
+  saved,
+  onSave,
+  onRemoveSaved,
   onRemove,
   removeLabel,
   onManageCollections,
   guest = false,
-  onGuestSave,
   className = "",
 }: TaskRowProps) {
   const [prevDone, setPrevDone] = useState(done);
@@ -46,6 +51,9 @@ export function TaskRow({
 
   const { thumbnail } = getTaskMeta(experience.id);
   const difficulty = getDifficulty(experience.id, experience.difficulty);
+
+  const hasListActions = onSave !== undefined && onRemoveSaved !== undefined;
+  const actionState = resolveExperienceCardActionState(Boolean(saved), done);
 
   if (prevDone !== done) {
     const justCompleted = done && !prevDone;
@@ -82,6 +90,8 @@ export function TaskRow({
       <Link
         href={getExperienceHref(experience)}
         aria-label={experience.title}
+        data-experience-link="true"
+        scroll
         className="absolute inset-0 z-10 rounded-card outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
       />
 
@@ -92,30 +102,11 @@ export function TaskRow({
           title={experience.title}
           fallbackColor={thumbnail}
           sizes="56px"
-          quality={90}
           className={[
             "h-14 w-14 shrink-0 rounded-media transition-opacity",
             done ? COMPLETED_MEDIA : "",
           ].join(" ")}
         />
-
-        {!guest && (
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={done}
-            aria-label={`${
-              done ? "Mark as incomplete" : "Mark as complete"
-            }: ${experience.title}`}
-            onClick={handleToggle}
-            disabled={isToggling}
-            className="pointer-events-auto relative z-20 flex h-8 w-8 shrink-0 items-center justify-center rounded-control outline-none focus-visible:ring-2 focus-visible:ring-accent/30 disabled:pointer-events-none disabled:opacity-60"
-          >
-            <span className="task-checkbox" aria-hidden="true">
-              <Check className="task-checkmark h-3 w-3" strokeWidth={3} />
-            </span>
-          </button>
-        )}
 
         <div className="min-w-0 flex-1">
           <span className="task-title-wrap">
@@ -143,34 +134,60 @@ export function TaskRow({
           />
         </div>
 
-        {guest && onGuestSave && (
-          <SaveButton
-            label={`Save ${experience.title}`}
-            onClick={onGuestSave}
-          />
-        )}
-
         {!guest && onManageCollections && (
           <button
             type="button"
             onClick={onManageCollections}
             aria-label={`Manage collections for ${experience.title}`}
-            className="pointer-events-auto relative z-20 inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+            className="pointer-events-auto relative z-20 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
           >
             <FolderPlus aria-hidden="true" className="h-4 w-4" />
           </button>
         )}
 
-        {!guest && onRemove && (
-          <SaveButton
-            label={
+        {hasListActions || guest ? (
+          <SaveDoneButtons
+            state={actionState}
+            guest={guest}
+            title={experience.title}
+            onSave={onSave ?? (() => {})}
+            onRemoveSaved={onRemoveSaved ?? (() => {})}
+            onComplete={handleToggle}
+            onUncomplete={handleToggle}
+            disabled={isToggling}
+            className="pointer-events-auto relative z-20 shrink-0"
+          />
+        ) : (
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={done}
+            aria-label={`${
+              done ? "Mark as incomplete" : "Mark as complete"
+            }: ${experience.title}`}
+            onClick={handleToggle}
+            disabled={isToggling}
+            className="pointer-events-auto relative z-20 flex h-10 w-10 shrink-0 items-center justify-center rounded-control outline-none focus-visible:ring-2 focus-visible:ring-accent/30 disabled:pointer-events-none disabled:opacity-60"
+          >
+            <span className="task-checkbox" aria-hidden="true">
+              <Check className="task-checkmark h-3 w-3" strokeWidth={3} />
+            </span>
+          </button>
+        )}
+
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label={
               removeLabel
                 ? `${removeLabel}: ${experience.title}`
-                : `Remove ${experience.title} from My List`
+                : `Remove ${experience.title}`
             }
-            onClick={onRemove}
-            saved
-          />
+            className="pointer-events-auto relative z-20 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-control text-muted transition-colors hover:bg-surface-subtle hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+          >
+            <X aria-hidden="true" className="h-4 w-4" />
+          </button>
         )}
       </div>
     </li>

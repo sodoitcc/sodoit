@@ -18,7 +18,7 @@ export function ExperienceImage({
   fallbackColor,
   className = "",
   sizes = "56px",
-  quality = 90,
+  quality = 75,
   priority = false,
 }: ExperienceImageProps) {
   if (!imageUrl) {
