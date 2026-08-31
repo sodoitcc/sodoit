@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ErrorState } from "@/components/ui";
 import { SITE_URL } from "@/lib/site";
+import { ScrollRestoration } from "@/lib/navigation/ScrollRestoration";
 import { loadProfile } from "./data";
 import { loadMyList } from "@/app/(app)/list/data";
 import {
@@ -102,6 +103,8 @@ export default async function UserProfilePage({
 
   return (
     <div className="mx-auto max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+      <ScrollRestoration />
+
       <ProfileHeader
         userId={profile.id}
         username={profile.username}

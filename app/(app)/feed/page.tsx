@@ -1,4 +1,5 @@
 import { ErrorState } from "@/components/ui";
+import { ScrollRestoration } from "@/lib/navigation/ScrollRestoration";
 import { ActivityFeed } from "@/components/feed/ActivityFeed";
 import { FeedHero } from "./FeedHero";
 import {
@@ -26,6 +27,8 @@ export default async function FeedPage({ searchParams }: FeedPageProps) {
   } catch {
     return (
       <div className="overflow-x-hidden">
+        <ScrollRestoration />
+
         <FeedHero filter={filter} />
 
         <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">
@@ -40,6 +43,8 @@ export default async function FeedPage({ searchParams }: FeedPageProps) {
 
   return (
     <div className="overflow-x-hidden">
+      <ScrollRestoration />
+
       <FeedHero filter={filter} />
 
       <div className="mx-auto w-full max-w-[1440px] px-4 sm:px-6 lg:px-8">

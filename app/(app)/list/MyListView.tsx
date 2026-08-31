@@ -6,6 +6,7 @@ import { useState } from "react";
 import { EmptyState, Button } from "@/components/ui";
 import { ExperienceResults } from "@/app/(app)/browse/components/ExperienceResults";
 import type { BrowseView, Experience } from "@/app/(app)/browse/types";
+import { useScrollRestoration } from "@/lib/navigation/useScrollRestoration";
 
 import { MyListHero } from "./MyListHero";
 import { MyListResultsHeader } from "./MyListResultsHeader";
@@ -40,6 +41,7 @@ export function MyListView({
   membership: initialMembership,
 }: MyListViewProps) {
   const router = useRouter();
+  useScrollRestoration();
 
   const {
     entries,

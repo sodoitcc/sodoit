@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 
+import { ScrollRestoration } from "@/lib/navigation/ScrollRestoration";
 import type { DiscoveryCategorySlug } from "@/components/discovery/DiscoveryCategories";
 import { DiscoveryExperiencesSection } from "@/components/discovery/DiscoveryExperiencesSection";
 import { DiscoveryFeaturedCard } from "@/components/discovery/DiscoveryFeaturedCard";
@@ -175,6 +176,8 @@ export default async function DiscoveryPage({
 
   return (
     <>
+      <ScrollRestoration />
+
       <DiscoveryHero
         cities={cities}
         selectedCity={selectedCity}
