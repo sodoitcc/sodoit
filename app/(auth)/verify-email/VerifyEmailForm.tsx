@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { maskEmail } from "@/lib/email-mask";
 import { resendVerificationCode, verifyEmailCode } from "./actions";
 
@@ -98,6 +99,7 @@ export function VerifyEmailForm({
       return;
     }
 
+    posthog.capture("email_verified");
     setState({ status: "verified" });
     router.push(result.next ?? next);
     router.refresh();
