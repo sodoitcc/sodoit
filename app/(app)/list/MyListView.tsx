@@ -163,7 +163,6 @@ export function MyListView({
                   saved={savedIds}
                   onSave={save}
                   onRemoveSaved={remove}
-                  onRemove={remove}
                   onManageCollections={setManagingId}
                 />
               )}
