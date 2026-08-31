@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import posthog from "posthog-js";
 import { loginHrefWithNext } from "@/lib/auth-redirect";
 import type { ExperienceType, LocationScope } from "@/lib/experiences/taxonomy";
 import { removeFromMyList, setListStatus, toggleCompletion } from "./actions";
@@ -117,6 +118,10 @@ export function BrowseBoard({
 
     try {
       await toggleCompletion(id, wasDone);
+      posthog.capture(
+        wasDone ? "experience_uncompleted" : "experience_completed",
+        { experience_id: id, source: "browse" },
+      );
     } catch (error) {
       setCompleted((current) => {
         const next = new Set(current);
@@ -160,6 +165,10 @@ export function BrowseBoard({
 
     try {
       await setListStatus(id, "saved");
+      posthog.capture("experience_saved", {
+        experience_id: id,
+        source: "browse",
+      });
     } catch (error) {
       setSaved((current) => {
         const next = new Set(current);
@@ -184,6 +193,10 @@ export function BrowseBoard({
 
     try {
       await removeFromMyList(id);
+      posthog.capture("experience_unsaved", {
+        experience_id: id,
+        source: "browse",
+      });
     } catch (error) {
       setSaved((current) => new Set(current).add(id));
       throw error;

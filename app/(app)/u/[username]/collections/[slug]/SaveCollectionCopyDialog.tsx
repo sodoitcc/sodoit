@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { X } from "lucide-react";
+import posthog from "posthog-js";
 
 import { Button } from "@/components/ui";
 import {
@@ -60,6 +61,7 @@ export function SaveCollectionCopyDialog({
       return;
     }
 
+    posthog.capture("collection_forked");
     onSaved(result);
   }
 

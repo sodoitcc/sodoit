@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Globe2, Lock, MoreHorizontal } from "lucide-react";
+import posthog from "posthog-js";
 
 import {
   deleteCollection,
@@ -88,6 +89,7 @@ export function CollectionCard({
 
     try {
       await setCollectionVisibility(collection.id, next);
+      posthog.capture("collection_visibility_updated", { visibility: next });
     } catch (error) {
       onVisibilityChanged(collection.id, previous);
       throw error;
