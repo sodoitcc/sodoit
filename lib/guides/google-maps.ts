@@ -36,6 +36,8 @@ const ROUTE_TRAVEL_MODE: Record<GuideRouteMode, string> = {
   transit: "transit",
 };
 
+export const MAX_GOOGLE_MAPS_ROUTE_STOPS = 10;
+
 export function buildGoogleMapsDirectionsUrl(
   stops: GoogleMapsPlaceInput[],
   routeMode?: GuideRouteMode | null,
@@ -44,7 +46,9 @@ export function buildGoogleMapsDirectionsUrl(
     .map((stop) => placeQuery(stop))
     .filter((query): query is string => Boolean(query));
 
-  if (queries.length < 2) return null;
+  if (queries.length < 2 || queries.length > MAX_GOOGLE_MAPS_ROUTE_STOPS) {
+    return null;
+  }
 
   const origin = queries[0];
   const destination = queries[queries.length - 1];
