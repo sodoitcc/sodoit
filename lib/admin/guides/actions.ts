@@ -11,6 +11,7 @@ import {
   readGuideItemInput,
   validateGuideInput,
   validateGuideItemInput,
+  parseTags,
 } from "./validation";
 
 export interface AdminActionResult {
@@ -32,6 +33,9 @@ function toGuideRow(input: ReturnType<typeof readGuideInput>) {
     cover_image_alt: input.cover_image_alt || null,
     duration_label: input.duration_label || null,
     editorial_attribution: input.editorial_attribution || null,
+    best_time: input.best_time || null,
+    local_tip: input.local_tip || null,
+    route_mode: input.route_mode || null,
     sort_order: input.sort_order,
     featured: input.featured,
     is_public: input.is_public,
@@ -44,13 +48,18 @@ function revalidateGuidePaths(id?: string) {
   if (id) revalidatePath(`/admin/guides/${id}`);
 }
 
-function mapDbError(error: { code?: string; message: string }, fallback: string) {
+function mapDbError(
+  error: { code?: string; message: string },
+  fallback: string,
+) {
   if (error.code === "23505") return "That slug is already in use.";
   if (error.code === "23503") return "That city reference does not exist.";
   return fallback;
 }
 
-export async function createGuide(formData: FormData): Promise<AdminActionResult> {
+export async function createGuide(
+  formData: FormData,
+): Promise<AdminActionResult> {
   const admin = await requireAdmin();
   if (!admin.ok) return { success: false, error: admin.error };
 
@@ -71,7 +80,11 @@ export async function createGuide(formData: FormData): Promise<AdminActionResult
     .select("id")
     .single();
 
-  if (error) return { success: false, error: mapDbError(error, "Could not create the guide.") };
+  if (error)
+    return {
+      success: false,
+      error: mapDbError(error, "Could not create the guide."),
+    };
 
   revalidateGuidePaths(data.id);
   return { success: true, id: data.id };
@@ -97,9 +110,16 @@ export async function updateGuide(
   }
 
   const client = createAdminClient();
-  const { error } = await client.from("guides").update(toGuideRow(input)).eq("id", id);
+  const { error } = await client
+    .from("guides")
+    .update(toGuideRow(input))
+    .eq("id", id);
 
-  if (error) return { success: false, error: mapDbError(error, "Could not update the guide.") };
+  if (error)
+    return {
+      success: false,
+      error: mapDbError(error, "Could not update the guide."),
+    };
 
   revalidateGuidePaths(id);
   return { success: true, id };
@@ -130,7 +150,8 @@ export async function addGuideItem(
   guideId: string,
   formData: FormData,
 ): Promise<AdminActionResult> {
-  if (!UUID_RE.test(guideId)) return { success: false, error: "Invalid guide." };
+  if (!UUID_RE.test(guideId))
+    return { success: false, error: "Invalid guide." };
 
   const admin = await requireAdmin();
   if (!admin.ok) return { success: false, error: admin.error };
@@ -147,7 +168,8 @@ export async function addGuideItem(
     .order("position", { ascending: false })
     .limit(1);
 
-  if (existing.error) return { success: false, error: "Could not add the item." };
+  if (existing.error)
+    return { success: false, error: "Could not add the item." };
 
   const nextPosition = (existing.data?.[0]?.position ?? -1) + 1;
 
@@ -160,6 +182,12 @@ export async function addGuideItem(
     image_url: input.image_url || null,
     image_alt: input.image_alt || null,
     external_url: input.external_url || null,
+    neighborhood: input.neighborhood || null,
+    address: input.address || null,
+    latitude: input.latitude ? Number(input.latitude) : null,
+    longitude: input.longitude ? Number(input.longitude) : null,
+    google_maps_url: input.google_maps_url || null,
+    tags: parseTags(input.tags),
   });
 
   if (error) return { success: false, error: "Could not add the item." };
@@ -193,6 +221,12 @@ export async function updateGuideItem(
       image_url: input.image_url || null,
       image_alt: input.image_alt || null,
       external_url: input.external_url || null,
+      neighborhood: input.neighborhood || null,
+      address: input.address || null,
+      latitude: input.latitude ? Number(input.latitude) : null,
+      longitude: input.longitude ? Number(input.longitude) : null,
+      google_maps_url: input.google_maps_url || null,
+      tags: parseTags(input.tags),
     })
     .eq("id", itemId)
     .eq("guide_id", guideId);
@@ -256,8 +290,7 @@ export async function moveGuideItem(
 
   const current = ordered[index];
   const swap = ordered[swapIndex];
-  const tempPosition =
-    Math.max(...ordered.map((item) => item.position)) + 1;
+  const tempPosition = Math.max(...ordered.map((item) => item.position)) + 1;
 
   const step1 = await client
     .from("guide_items")

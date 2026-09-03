@@ -407,6 +407,9 @@ function toGuideValidationInput(candidate: GuideImportCandidate): GuideInput {
     cover_image_alt: candidate.cover_image_alt ?? "",
     duration_label: candidate.duration_label ?? "",
     editorial_attribution: candidate.editorial_attribution ?? "",
+    best_time: "",
+    local_tip: "",
+    route_mode: "",
     sort_order: candidate.sort_order,
     featured: candidate.featured,
     is_public: candidate.is_public,
@@ -423,6 +426,12 @@ function toGuideItemValidationInput(
     image_url: candidate.image_url ?? "",
     image_alt: candidate.image_alt ?? "",
     external_url: candidate.external_url ?? "",
+    neighborhood: "",
+    address: "",
+    latitude: "",
+    longitude: "",
+    google_maps_url: "",
+    tags: "",
   };
 }
 

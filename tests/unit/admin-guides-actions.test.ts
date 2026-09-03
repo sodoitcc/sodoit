@@ -85,12 +85,12 @@ describe("createGuide authorization and validation", () => {
   });
 
   it("creates and persists the guide type", async () => {
-    const result = await createGuide(validFormData({ type: "collection" }));
+    const result = await createGuide(validFormData({ type: "hidden_gems" }));
 
     expect(result).toEqual({ success: true, id: "new-guide-id" });
     expect(insertMock).toHaveBeenCalledWith(
       expect.objectContaining({
-        type: "collection",
+        type: "hidden_gems",
         city: "Lisbon",
         country_code: "PT",
       }),
