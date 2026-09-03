@@ -2,14 +2,23 @@ import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
 import { UUID_RE } from "@/lib/validation";
-import type { Guide, GuideCity, GuideItem, GuideWithItems } from "./types";
+import { getGuideRenderer } from "./types";
+import type {
+  Guide,
+  GuideCity,
+  GuideComparisonPair,
+  GuideItem,
+  GuideWithItems,
+} from "./types";
 
 const GUIDE_COLUMNS =
-  "id, slug, title, description, city, country_code, cover_image_url, cover_image_alt, duration_label, is_public, featured, created_at, updated_at";
+  "id, slug, title, description, city, country_code, cover_image_url, cover_image_alt, duration_label, is_public, featured, type, best_time, local_tip, route_mode, created_at, updated_at";
 const ITEM_COLUMNS =
-  "id, guide_id, position, title, description, place_name, image_url, image_alt, external_url, place_id, created_at, updated_at";
+  "id, guide_id, position, title, description, place_name, image_url, image_alt, external_url, place_id, neighborhood, address, latitude, longitude, google_maps_url, tags, created_at, updated_at";
 const CITY_COLUMNS =
   "slug, city, country_code, hero_image_url, hero_image_alt, eyebrow, title, description, created_at, updated_at";
+const COMPARISON_COLUMNS =
+  "id, guide_id, position, skip_title, skip_description, go_instead_title, go_instead_description, created_at, updated_at";
 
 export async function getPublicGuides(): Promise<Guide[]> {
   const supabase = await createClient();
@@ -65,16 +74,30 @@ export async function getGuideBySlug(
   if (guide.error) throw guide.error;
   if (!guide.data) return null;
 
-  const items = await supabase
-    .from("guide_items")
-    .select(ITEM_COLUMNS)
-    .eq("guide_id", guide.data.id)
-    .order("position");
+  const guideRow = guide.data as Guide;
+
+  const [items, comparisons] = await Promise.all([
+    supabase
+      .from("guide_items")
+      .select(ITEM_COLUMNS)
+      .eq("guide_id", guideRow.id)
+      .order("position"),
+    getGuideRenderer(guideRow.type) === "comparison"
+      ? supabase
+          .from("guide_comparisons")
+          .select(COMPARISON_COLUMNS)
+          .eq("guide_id", guideRow.id)
+          .order("position")
+      : Promise.resolve({ data: [] as GuideComparisonPair[], error: null }),
+  ]);
+
   if (items.error) throw items.error;
+  if (comparisons.error) throw comparisons.error;
 
   return {
-    ...(guide.data as Guide),
+    ...guideRow,
     items: (items.data ?? []) as GuideItem[],
+    comparisons: (comparisons.data ?? []) as GuideComparisonPair[],
   };
 }
 
