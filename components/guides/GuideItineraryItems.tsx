@@ -1,5 +1,5 @@
 import type { GuideItem } from "@/lib/guides/types";
-import { GuideItineraryItem } from "./GuideItineraryItem";
+import { GuideItineraryStop } from "./GuideItineraryStop";
 
 export function GuideItineraryItems({ items }: { items: GuideItem[] }) {
   if (items.length === 0) return null;
@@ -7,7 +7,7 @@ export function GuideItineraryItems({ items }: { items: GuideItem[] }) {
   return (
     <ol>
       {items.map((item, index) => (
-        <GuideItineraryItem
+        <GuideItineraryStop
           key={item.id}
           item={item}
           index={index}

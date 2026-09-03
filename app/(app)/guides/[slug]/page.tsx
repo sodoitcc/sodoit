@@ -5,12 +5,15 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, Clock3, ListOrdered, MapPin } from "lucide-react";
 
 import { GuideCover } from "@/components/guides/GuideCover";
-import { GuideItineraryItems } from "@/components/guides/GuideItineraryItems";
 import { GuideCollectionItems } from "@/components/guides/GuideCollectionItems";
 import { GuideComparisonItems } from "@/components/guides/GuideComparisonItems";
+import { GuideItineraryDetail } from "@/components/guides/GuideItineraryDetail";
 import { ShareGuideButton } from "@/components/guides/ShareGuideButton";
 import { getGuideBySlug, getGuideResolvedImages } from "@/lib/guides/queries";
 import { getGuideRenderer } from "@/lib/guides/types";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import { createClient } from "@/lib/supabase/server";
+import { isGuideSaved } from "@/lib/guides/saved";
 import { SITE_URL } from "@/lib/site";
 import { isValidPublicImageUrl } from "@/lib/seo/image";
 
@@ -86,43 +89,61 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
   }
 
   const renderer = getGuideRenderer(guide.type);
-  const comparisons = guide.comparisons ?? [];
-  const stopCount =
-    renderer === "comparison" ? comparisons.length : guide.items.length;
-
-  const stopWord =
-    renderer === "comparison"
-      ? "comparisons"
-      : renderer === "collection"
-        ? "places"
-        : "stops";
-  const stopWordCapitalized =
-    renderer === "comparison"
-      ? "Comparisons"
-      : renderer === "collection"
-        ? "Places"
-        : "Stops";
-  const sectionTitle =
-    renderer === "comparison"
-      ? "Worth it or skip it"
-      : renderer === "collection"
-        ? "Explore this collection"
-        : "Your itinerary";
 
   const resolvedImages = await getGuideResolvedImages([guide]);
   const resolvedImage = resolvedImages[guide.id];
   const imageUrl = resolvedImage?.url ?? guide.cover_image_url;
   const imageAlt = resolvedImage?.alt ?? guide.cover_image_alt;
 
+  const backLink = (
+    <Link
+      href="/discovery"
+      className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
+    >
+      <ChevronLeft aria-hidden="true" className="h-4 w-4" />
+      Back to Discovery
+    </Link>
+  );
+
+  if (renderer === "itinerary") {
+    const user = await getCurrentUser();
+    let initialSaved = false;
+
+    if (user) {
+      const supabase = await createClient();
+      initialSaved = await isGuideSaved(supabase, user.id, guide.id);
+    }
+
+    return (
+      <article className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+        {backLink}
+
+        <GuideItineraryDetail
+          guide={guide}
+          imageUrl={imageUrl}
+          imageAlt={imageAlt}
+          signedIn={Boolean(user)}
+          initialSaved={initialSaved}
+        />
+      </article>
+    );
+  }
+
+  const comparisons = guide.comparisons ?? [];
+  const stopCount =
+    renderer === "comparison" ? comparisons.length : guide.items.length;
+
+  const stopWord = renderer === "comparison" ? "comparisons" : "places";
+  const stopWordCapitalized =
+    renderer === "comparison" ? "Comparisons" : "Places";
+  const sectionTitle =
+    renderer === "comparison"
+      ? "Worth it or skip it"
+      : "Explore this collection";
+
   return (
     <article className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-      <Link
-        href="/discovery"
-        className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted transition-colors hover:text-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
-      >
-        <ChevronLeft aria-hidden="true" className="h-4 w-4" />
-        Back to Discovery
-      </Link>
+      {backLink}
 
       <div className="mx-auto mt-8 max-w-[1440px]">
         <header className="flex flex-wrap items-start justify-between gap-6">
@@ -225,9 +246,6 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
               </span>
             </div>
 
-            {renderer === "itinerary" && (
-              <GuideItineraryItems items={guide.items} />
-            )}
             {renderer === "collection" && (
               <GuideCollectionItems items={guide.items} />
             )}
