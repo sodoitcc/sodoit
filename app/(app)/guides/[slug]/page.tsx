@@ -5,9 +5,12 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, Clock3, ListOrdered, MapPin } from "lucide-react";
 
 import { GuideCover } from "@/components/guides/GuideCover";
-import { GuideItinerary } from "@/components/guides/GuideItinerary";
+import { GuideItineraryItems } from "@/components/guides/GuideItineraryItems";
+import { GuideCollectionItems } from "@/components/guides/GuideCollectionItems";
+import { GuideComparisonItems } from "@/components/guides/GuideComparisonItems";
 import { ShareGuideButton } from "@/components/guides/ShareGuideButton";
 import { getGuideBySlug, getGuideResolvedImages } from "@/lib/guides/queries";
+import { getGuideRenderer } from "@/lib/guides/types";
 import { SITE_URL } from "@/lib/site";
 import { isValidPublicImageUrl } from "@/lib/seo/image";
 
@@ -82,9 +85,29 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
     notFound();
   }
 
-  const isCollection = guide.type === "collection";
-  const stopWord = isCollection ? "places" : "stops";
-  const stopWordCapitalized = isCollection ? "Places" : "Stops";
+  const renderer = getGuideRenderer(guide.type);
+  const comparisons = guide.comparisons ?? [];
+  const stopCount =
+    renderer === "comparison" ? comparisons.length : guide.items.length;
+
+  const stopWord =
+    renderer === "comparison"
+      ? "comparisons"
+      : renderer === "collection"
+        ? "places"
+        : "stops";
+  const stopWordCapitalized =
+    renderer === "comparison"
+      ? "Comparisons"
+      : renderer === "collection"
+        ? "Places"
+        : "Stops";
+  const sectionTitle =
+    renderer === "comparison"
+      ? "Worth it or skip it"
+      : renderer === "collection"
+        ? "Explore this collection"
+        : "Your itinerary";
 
   const resolvedImages = await getGuideResolvedImages([guide]);
   const resolvedImage = resolvedImages[guide.id];
@@ -120,7 +143,7 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
               <span aria-hidden="true">·</span>
 
               <span>
-                {guide.items.length} {stopWord}
+                {stopCount} {stopWord}
               </span>
             </div>
 
@@ -152,7 +175,7 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
               <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
                 {stopWordCapitalized}
               </p>
-              <p className="text-sm font-bold text-ink">{guide.items.length}</p>
+              <p className="text-sm font-bold text-ink">{stopCount}</p>
             </div>
           </div>
 
@@ -184,7 +207,7 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
           </section>
         )}
 
-        {guide.items.length > 0 && (
+        {stopCount > 0 && (
           <section id="itinerary" className="mt-12 scroll-mt-24">
             <div className="mb-5 flex items-end justify-between gap-4 border-b border-border pb-4">
               <div>
@@ -193,16 +216,24 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
                 </p>
 
                 <h2 className="mt-1 text-2xl font-bold tracking-tight text-ink">
-                  {isCollection ? "Explore this collection" : "Your itinerary"}
+                  {sectionTitle}
                 </h2>
               </div>
 
               <span className="shrink-0 text-sm text-muted">
-                {guide.items.length} {stopWord}
+                {stopCount} {stopWord}
               </span>
             </div>
 
-            <GuideItinerary items={guide.items} />
+            {renderer === "itinerary" && (
+              <GuideItineraryItems items={guide.items} />
+            )}
+            {renderer === "collection" && (
+              <GuideCollectionItems items={guide.items} />
+            )}
+            {renderer === "comparison" && (
+              <GuideComparisonItems pairs={comparisons} />
+            )}
           </section>
         )}
       </div>

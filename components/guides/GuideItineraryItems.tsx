@@ -1,7 +1,7 @@
 import type { GuideItem } from "@/lib/guides/types";
 import { GuideItineraryItem } from "./GuideItineraryItem";
 
-export function GuideItinerary({ items }: { items: GuideItem[] }) {
+export function GuideItineraryItems({ items }: { items: GuideItem[] }) {
   if (items.length === 0) return null;
 
   return (
