@@ -28,8 +28,8 @@ export interface GuideInput {
 
 function isValidUrl(value: string) {
   try {
-    new URL(value);
-    return true;
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
   }
@@ -131,10 +131,16 @@ export function validateGuideItemInput(input: GuideItemInput): string | null {
     return "External URL must be a valid URL.";
   if (input.google_maps_url && !isValidUrl(input.google_maps_url))
     return "Google Maps URL must be a valid URL.";
-  if (input.latitude && Number.isNaN(Number(input.latitude)))
-    return "Latitude must be a number.";
-  if (input.longitude && Number.isNaN(Number(input.longitude)))
-    return "Longitude must be a number.";
+  if (input.latitude) {
+    const latitude = Number(input.latitude);
+    if (Number.isNaN(latitude) || latitude < -90 || latitude > 90)
+      return "Latitude must be a number between -90 and 90.";
+  }
+  if (input.longitude) {
+    const longitude = Number(input.longitude);
+    if (Number.isNaN(longitude) || longitude < -180 || longitude > 180)
+      return "Longitude must be a number between -180 and 180.";
+  }
   return null;
 }
 
