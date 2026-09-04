@@ -8,11 +8,11 @@ import type {
   GuideWithItems,
 } from "@/lib/guides/types";
 
-const ADMIN_GUIDE_COLUMNS =
+export const ADMIN_GUIDE_COLUMNS =
   "id, slug, title, description, city, country_code, cover_image_url, cover_image_alt, duration_label, is_public, featured, created_at, updated_at, type, city_slug, sort_order, editorial_attribution, best_time, local_tip, route_mode";
-const ADMIN_ITEM_COLUMNS =
+export const ADMIN_ITEM_COLUMNS =
   "id, guide_id, position, title, description, place_name, image_url, image_alt, external_url, created_at, updated_at, place_id, neighborhood, address, latitude, longitude, google_maps_url, tags";
-const ADMIN_COMPARISON_COLUMNS =
+export const ADMIN_COMPARISON_COLUMNS =
   "id, guide_id, position, skip_title, skip_description, skip_neighborhood, skip_address, skip_latitude, skip_longitude, skip_google_maps_url, skip_external_url, skip_tags, go_instead_title, go_instead_description, go_instead_neighborhood, go_instead_address, go_instead_latitude, go_instead_longitude, go_instead_google_maps_url, go_instead_external_url, go_instead_tags, reason, created_at, updated_at";
 
 export const GUIDES_PAGE_SIZE = 20;
@@ -130,6 +130,7 @@ const EXPORT_ROW_LIMIT = 10_000;
 export interface GuideExportResult {
   guides: Guide[];
   items: GuideItem[];
+  comparisons: GuideComparisonPair[];
 }
 
 export async function listGuidesForExport(): Promise<GuideExportResult> {
@@ -150,9 +151,18 @@ export async function listGuidesForExport(): Promise<GuideExportResult> {
     .range(0, EXPORT_ROW_LIMIT - 1);
   if (itemsResult.error) throw itemsResult.error;
 
+  const comparisonsResult = await client
+    .from("guide_comparisons")
+    .select(ADMIN_COMPARISON_COLUMNS)
+    .order("guide_id")
+    .order("position")
+    .range(0, EXPORT_ROW_LIMIT - 1);
+  if (comparisonsResult.error) throw comparisonsResult.error;
+
   return {
     guides: (guidesResult.data ?? []) as Guide[],
     items: (itemsResult.data ?? []) as GuideItem[],
+    comparisons: (comparisonsResult.data ?? []) as GuideComparisonPair[],
   };
 }
 

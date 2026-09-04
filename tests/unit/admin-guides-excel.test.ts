@@ -1,257 +1,276 @@
 import { describe, expect, it } from "vitest";
-import ExcelJS from "exceljs";
 import {
-  buildGuidesWorkbook,
+  COMPARISONS_SHEET_NAME,
+  GUIDE_COMPARISON_EXCEL_COLUMNS,
   GUIDE_EXCEL_COLUMNS,
-  GUIDE_ITEM_EXCEL_COLUMNS,
-  GUIDE_ITEMS_SHEET_NAME,
+  GUIDE_SPOT_EXCEL_COLUMNS,
   GUIDES_SHEET_NAME,
+  README_SHEET_NAME,
+  SPOTS_SHEET_NAME,
+  buildGuidesWorkbook,
   guideExportFilename,
+  toGuideComparisonExcelRow,
   toGuideExcelRow,
-  toGuideItemExcelRow,
-  workbookToBlob,
-  type GuideExcelRow,
-  type GuideItemExcelRow,
-} from "@/lib/admin/guides/excel";
-import type {
-  GuideExportSource,
-  GuideItemExportSource,
+  toGuideSpotExcelRow,
 } from "@/lib/admin/guides/excel";
 
-const GUIDE_HEADERS = [
-  "id",
-  "import_ref",
-  "title",
-  "slug",
-  "description",
-  "type",
-  "city",
-  "country_code",
-  "city_slug",
-  "cover_image_url",
-  "cover_image_alt",
-  "duration_label",
-  "featured",
-  "is_public",
-  "sort_order",
-  "editorial_attribution",
-];
-
-const GUIDE_ITEM_HEADERS = [
-  "id",
-  "guide_id",
-  "guide_ref",
-  "position",
-  "title",
-  "description",
-  "place_id",
-  "place_name",
-  "image_url",
-  "image_alt",
-  "external_url",
-];
-
-function guideSource(
-  overrides: Partial<GuideExportSource> = {},
-): GuideExportSource {
+function guide(overrides: Record<string, unknown> = {}) {
   return {
-    id: "11111111-1111-4111-8111-111111111111",
+    id: "g1",
     title: "48 Hours in Prague",
     slug: "48-hours-in-prague",
-    description: "A weekend in Prague.",
-    type: "itinerary",
+    description: "A weekend plan.",
+    type: "itinerary" as const,
     city: "Prague",
     country_code: "CZ",
-    city_slug: "prague-cz",
-    cover_image_url: "https://example.com/cover.jpg",
-    cover_image_alt: "Prague skyline",
-    duration_label: "Weekend",
+    city_slug: "prague",
+    cover_image_url: null,
+    cover_image_alt: null,
+    duration_label: "2 days",
+    best_time: "Morning",
+    local_tip: "Arrive early.",
+    route_mode: "walking" as const,
     featured: true,
     is_public: true,
     sort_order: 0,
-    editorial_attribution: "Sodoit team",
+    editorial_attribution: "Sodoit editorial",
     ...overrides,
   };
 }
 
-function itemSource(
-  overrides: Partial<GuideItemExportSource> = {},
-): GuideItemExportSource {
+function spot(overrides: Record<string, unknown> = {}) {
   return {
-    id: "22222222-2222-4222-8222-222222222222",
-    guide_id: "11111111-1111-4111-8111-111111111111",
+    id: "s1",
+    guide_id: "g1",
     position: 0,
-    title: "Explore the National Museum",
-    description: "A great start.",
-    place_id: "33333333-3333-4333-8333-333333333333",
-    place_name: "National Museum",
-    image_url: "https://example.com/museum.jpg",
-    image_alt: "Museum facade",
-    external_url: "https://example.com",
+    title: "Old Town Square",
+    description: "Start here.",
+    place_name: "Old Town Square",
+    image_url: null,
+    image_alt: null,
+    external_url: null,
+    neighborhood: "Staré Město",
+    address: null,
+    latitude: 50.087,
+    longitude: 14.421,
+    google_maps_url: null,
+    tags: ["historic", "square"],
     ...overrides,
   };
 }
 
-async function readBack(workbook: ExcelJS.Workbook) {
-  const blob = await workbookToBlob(workbook);
-  const arrayBuffer = await blob.arrayBuffer();
-  const roundTrip = new ExcelJS.Workbook();
-  await roundTrip.xlsx.load(arrayBuffer);
-  return roundTrip;
+function comparison(overrides: Record<string, unknown> = {}) {
+  return {
+    id: "c1",
+    guide_id: "g1",
+    position: 0,
+    skip_title: "Old Town tourist restaurants",
+    skip_description: "Overpriced.",
+    skip_neighborhood: "Staré Město",
+    skip_address: null,
+    skip_latitude: null,
+    skip_longitude: null,
+    skip_google_maps_url: null,
+    skip_external_url: null,
+    skip_tags: null,
+    go_instead_title: "Lokál Dlouhááá",
+    go_instead_description: "Better value.",
+    go_instead_neighborhood: "Staré Město",
+    go_instead_address: null,
+    go_instead_latitude: null,
+    go_instead_longitude: null,
+    go_instead_google_maps_url: null,
+    go_instead_external_url: null,
+    go_instead_tags: null,
+    reason: "Same neighborhood, real food.",
+    ...overrides,
+  };
 }
 
-describe("Guide Excel column contract", () => {
-  it("has the canonical Guide column order", () => {
-    expect(GUIDE_EXCEL_COLUMNS.map((c) => c.header)).toEqual(GUIDE_HEADERS);
-  });
-
-  it("has the canonical Guide Item column order", () => {
-    expect(GUIDE_ITEM_EXCEL_COLUMNS.map((c) => c.header)).toEqual(
-      GUIDE_ITEM_HEADERS,
-    );
-  });
-});
-
-describe("toGuideExcelRow / toGuideItemExcelRow", () => {
-  it("coerces null Guide fields to blank/zero safely", () => {
-    const row = toGuideExcelRow(
-      guideSource({
-        description: null,
-        city_slug: null,
-        cover_image_url: null,
-        cover_image_alt: null,
-        duration_label: null,
-        editorial_attribution: null,
-        sort_order: undefined,
-        type: undefined,
-      }),
-    );
-
-    expect(row.description).toBe("");
-    expect(row.city_slug).toBe("");
-    expect(row.cover_image_url).toBe("");
-    expect(row.duration_label).toBe("");
-    expect(row.editorial_attribution).toBe("");
-    expect(row.sort_order).toBe(0);
-    expect(row.type).toBe("");
-  });
-
-  it("keeps sort_order numeric, not stringified", () => {
-    const row = toGuideExcelRow(guideSource({ sort_order: 7 }));
-    expect(row.sort_order).toBe(7);
-    expect(typeof row.sort_order).toBe("number");
-  });
-
-  it("preserves booleans deterministically", () => {
-    const row = toGuideExcelRow(
-      guideSource({ featured: false, is_public: true }),
-    );
-    expect(row.featured).toBe(false);
-    expect(row.is_public).toBe(true);
-  });
-
-  it("coerces null Guide Item fields to blank safely and keeps guide_id linkage", () => {
-    const row = toGuideItemExcelRow(
-      itemSource({ description: null, place_id: null, place_name: null }),
-    );
-
-    expect(row.description).toBe("");
-    expect(row.place_id).toBe("");
-    expect(row.place_name).toBe("");
-    expect(row.guide_id).toBe("11111111-1111-4111-8111-111111111111");
-  });
-
-  it("keeps position numeric", () => {
-    const row = toGuideItemExcelRow(itemSource({ position: 3 }));
-    expect(row.position).toBe(3);
-    expect(typeof row.position).toBe("number");
-  });
-
-  it("always exports blank import_ref/guide_ref for real DB data", () => {
-    const guideRow = toGuideExcelRow(guideSource());
-    const itemRow = toGuideItemExcelRow(itemSource());
-
-    expect(guideRow.import_ref).toBe("");
-    expect(itemRow.guide_ref).toBe("");
-  });
-});
-
-describe("buildGuidesWorkbook", () => {
-  it("produces exactly the Guides and Guide Items sheets", async () => {
-    const workbook = buildGuidesWorkbook([], []);
-    const roundTrip = await readBack(workbook);
-
-    const names = roundTrip.worksheets.map((sheet) => sheet.name);
-    expect(names).toEqual([GUIDES_SHEET_NAME, GUIDE_ITEMS_SHEET_NAME]);
-  });
-
-  it("writes exact ordered headers on both sheets", async () => {
-    const workbook = buildGuidesWorkbook([], []);
-    const roundTrip = await readBack(workbook);
-
-    const guideHeaders = roundTrip.getWorksheet(GUIDES_SHEET_NAME)!.getRow(1)
-      .values as unknown as (string | undefined)[];
-    expect(guideHeaders.slice(1)).toEqual(GUIDE_HEADERS);
-
-    const itemHeaders = roundTrip
-      .getWorksheet(GUIDE_ITEMS_SHEET_NAME)!
-      .getRow(1).values as unknown as (string | undefined)[];
-    expect(itemHeaders.slice(1)).toEqual(GUIDE_ITEM_HEADERS);
-  });
-
-  it("serializes a Guide Item row linked by guide_id, with numeric fields intact", async () => {
-    const guideRow: GuideExcelRow = toGuideExcelRow(guideSource());
-    const itemRow: GuideItemExcelRow = toGuideItemExcelRow(itemSource());
-
-    const workbook = buildGuidesWorkbook([guideRow], [itemRow]);
-    const roundTrip = await readBack(workbook);
-
-    const itemValues = roundTrip.getWorksheet(GUIDE_ITEMS_SHEET_NAME)!.getRow(2)
-      .values as unknown as unknown[];
-
-    expect(itemValues.slice(1)).toEqual([
-      itemRow.id,
-      guideRow.id,
-      "",
-      0,
-      itemRow.title,
-      itemRow.description,
-      itemRow.place_id,
-      itemRow.place_name,
-      itemRow.image_url,
-      itemRow.image_alt,
-      itemRow.external_url,
-    ]);
-    expect(typeof itemValues[4]).toBe("number");
-  });
-
-  it("produces a blank template with headers but no records on either sheet", async () => {
-    const workbook = buildGuidesWorkbook([], []);
-    const roundTrip = await readBack(workbook);
-
-    expect(roundTrip.getWorksheet(GUIDES_SHEET_NAME)!.rowCount).toBe(1);
-    expect(roundTrip.getWorksheet(GUIDE_ITEMS_SHEET_NAME)!.rowCount).toBe(1);
-  });
-
-  it("freezes the header row and enables autofilter on both sheets", () => {
-    const workbook = buildGuidesWorkbook([], []);
-
-    const guidesSheet = workbook.getWorksheet(GUIDES_SHEET_NAME)!;
-    const itemsSheet = workbook.getWorksheet(GUIDE_ITEMS_SHEET_NAME)!;
-
-    expect(guidesSheet.views?.[0]).toMatchObject({
-      state: "frozen",
-      ySplit: 1,
+describe("Guide export row mapping", () => {
+  it("maps a guide to its excel row, including new fields", () => {
+    const row = toGuideExcelRow(guide());
+    expect(row).toMatchObject({
+      id: "g1",
+      slug: "48-hours-in-prague",
+      type: "itinerary",
+      best_time: "Morning",
+      local_tip: "Arrive early.",
+      route_mode: "walking",
+      featured: true,
+      is_public: true,
     });
-    expect(guidesSheet.autoFilter).toBeTruthy();
-    expect(itemsSheet.views?.[0]).toMatchObject({ state: "frozen", ySplit: 1 });
-    expect(itemsSheet.autoFilter).toBeTruthy();
+  });
+
+  it("resolves a spot's guide_id to guide_slug via the lookup map", () => {
+    const row = toGuideSpotExcelRow(spot(), new Map([["g1", "48-hours-in-prague"]]));
+    expect(row.guide_slug).toBe("48-hours-in-prague");
+    expect(row.tags).toBe("historic, square");
+    expect(row.latitude).toBe("50.087");
+  });
+
+  it("leaves guide_slug blank when the guide is not in the lookup map", () => {
+    const row = toGuideSpotExcelRow(spot(), new Map());
+    expect(row.guide_slug).toBe("");
+  });
+
+  it("maps a comparison pair including both sides and reason", () => {
+    const row = toGuideComparisonExcelRow(
+      comparison(),
+      new Map([["g1", "48-hours-in-prague"]]),
+    );
+    expect(row.guide_slug).toBe("48-hours-in-prague");
+    expect(row.skip_title).toBe("Old Town tourist restaurants");
+    expect(row.go_instead_title).toBe("Lokál Dlouhááá");
+    expect(row.reason).toBe("Same neighborhood, real food.");
+  });
+});
+
+describe("Guides workbook structure", () => {
+  const guideSlugById = new Map([["g1", "48-hours-in-prague"]]);
+  const workbook = buildGuidesWorkbook(
+    [toGuideExcelRow(guide())],
+    [toGuideSpotExcelRow(spot(), guideSlugById)],
+    [toGuideComparisonExcelRow(comparison(), guideSlugById)],
+  );
+
+  it("creates all four sheets", () => {
+    expect(workbook.getWorksheet(GUIDES_SHEET_NAME)).toBeDefined();
+    expect(workbook.getWorksheet(SPOTS_SHEET_NAME)).toBeDefined();
+    expect(workbook.getWorksheet(COMPARISONS_SHEET_NAME)).toBeDefined();
+    expect(workbook.getWorksheet(README_SHEET_NAME)).toBeDefined();
+  });
+
+  it("puts stable identifiers first on each data sheet", () => {
+    expect(GUIDE_EXCEL_COLUMNS[0].key).toBe("id");
+    expect(GUIDE_EXCEL_COLUMNS[1].key).toBe("slug");
+    expect(GUIDE_SPOT_EXCEL_COLUMNS[0].key).toBe("id");
+    expect(GUIDE_SPOT_EXCEL_COLUMNS[1].key).toBe("guide_slug");
+    expect(GUIDE_COMPARISON_EXCEL_COLUMNS[0].key).toBe("id");
+    expect(GUIDE_COMPARISON_EXCEL_COLUMNS[1].key).toBe("guide_slug");
+  });
+
+  it("keeps latitude/longitude optional and near the end of the Spots sheet", () => {
+    const keys = GUIDE_SPOT_EXCEL_COLUMNS.map((c) => c.key);
+    const latIndex = keys.indexOf("latitude");
+    const lngIndex = keys.indexOf("longitude");
+    expect(latIndex).toBeGreaterThan(keys.length - 4);
+    expect(lngIndex).toBeGreaterThan(latIndex);
+  });
+
+  it("writes matching header rows for each sheet", () => {
+    const guidesSheet = workbook.getWorksheet(GUIDES_SHEET_NAME)!;
+    const headerRow = guidesSheet.getRow(1);
+    GUIDE_EXCEL_COLUMNS.forEach((column, index) => {
+      expect(headerRow.getCell(index + 1).text).toBe(column.header);
+    });
+  });
+
+  it("freezes the header row and adds an autofilter on data sheets", () => {
+    const guidesSheet = workbook.getWorksheet(GUIDES_SHEET_NAME)!;
+    expect(guidesSheet.views[0]).toMatchObject({ state: "frozen", ySplit: 1 });
+    expect(guidesSheet.autoFilter).toBeDefined();
+  });
+
+  it("bolds header cells", () => {
+    const guidesSheet = workbook.getWorksheet(GUIDES_SHEET_NAME)!;
+    expect(guidesSheet.getRow(1).getCell(1).font?.bold).toBe(true);
+  });
+
+  it("adds a guide type dropdown on the Guides sheet", () => {
+    const guidesSheet = workbook.getWorksheet(GUIDES_SHEET_NAME)!;
+    const typeColumnIndex =
+      GUIDE_EXCEL_COLUMNS.findIndex((c) => c.key === "type") + 1;
+    const validation = guidesSheet.getCell(2, typeColumnIndex).dataValidation;
+    expect(validation?.type).toBe("list");
+    expect(validation?.formulae?.[0]).toContain("worth_it_or_skip_it");
+  });
+
+  it("adds a route_mode dropdown on the Guides sheet", () => {
+    const guidesSheet = workbook.getWorksheet(GUIDES_SHEET_NAME)!;
+    const routeColumnIndex =
+      GUIDE_EXCEL_COLUMNS.findIndex((c) => c.key === "route_mode") + 1;
+    const validation = guidesSheet.getCell(2, routeColumnIndex).dataValidation;
+    expect(validation?.formulae?.[0]).toContain("walking");
+  });
+
+  it("adds TRUE/FALSE dropdowns for boolean columns", () => {
+    const guidesSheet = workbook.getWorksheet(GUIDES_SHEET_NAME)!;
+    const featuredColumnIndex =
+      GUIDE_EXCEL_COLUMNS.findIndex((c) => c.key === "featured") + 1;
+    const validation = guidesSheet.getCell(
+      2,
+      featuredColumnIndex,
+    ).dataValidation;
+    expect(validation?.formulae?.[0]).toBe('"TRUE,FALSE"');
+  });
+});
+
+describe("README sheet", () => {
+  const workbook = buildGuidesWorkbook([], [], []);
+  const readme = workbook.getWorksheet(README_SHEET_NAME)!;
+
+  function readmeText(): string {
+    let text = "";
+    readme.eachRow((row) => {
+      text += `${row.getCell(1).text}\n`;
+    });
+    return text;
+  }
+
+  it("documents one row = one entity and guide_slug linking", () => {
+    const text = readmeText();
+    expect(text).toMatch(/one row = one entity/i);
+    expect(text).toContain("guide_slug");
+  });
+
+  it("lists all five supported guide types", () => {
+    const text = readmeText();
+    for (const type of [
+      "itinerary",
+      "hidden_gems",
+      "food_drink",
+      "local_favorites",
+      "worth_it_or_skip_it",
+    ]) {
+      expect(text).toContain(type);
+    }
+  });
+
+  it("lists all four supported route modes", () => {
+    const text = readmeText();
+    for (const mode of ["walking", "driving", "bicycling", "transit"]) {
+      expect(text).toContain(mode);
+    }
+  });
+
+  it("documents blank/null behavior and the instruction against inventing data", () => {
+    const text = readmeText();
+    expect(text.toLowerCase()).toMatch(/blank/);
+    expect(text.toLowerCase()).toMatch(/never invent/);
+  });
+
+  it("documents coordinate ranges", () => {
+    const text = readmeText();
+    expect(text).toMatch(/-90 and 90/);
+    expect(text).toMatch(/-180 and 180/);
+  });
+
+  it("documents create vs update semantics for the id column", () => {
+    const text = readmeText();
+    expect(text.toLowerCase()).toMatch(/leave blank to create/);
+    expect(text.toLowerCase()).toMatch(/set to an existing id to update/);
+  });
+
+  it("gives the LLM-editing instruction", () => {
+    const text = readmeText();
+    expect(text).toMatch(/preserving its schema/i);
   });
 });
 
 describe("guideExportFilename", () => {
-  it("is deterministic and dated", () => {
-    const date = new Date("2026-08-18T12:00:00Z");
-    expect(guideExportFilename(date)).toBe("sodoit-guides-2026-08-18.xlsx");
+  it("formats a dated xlsx filename", () => {
+    const date = new Date("2026-03-05T00:00:00Z");
+    expect(guideExportFilename(date)).toBe("sodoit-guides-2026-03-05.xlsx");
   });
 });
