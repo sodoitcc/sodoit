@@ -9,13 +9,10 @@ export default function ContactPage() {
       active="/contact"
     >
       <LegalSection title="Get in touch">
-        <p>
-          Questions, feedback, or issues with the product? Reach out and
-          we&apos;ll get back to you.
-        </p>
+        <p>Questions, feedback, or issues with the product?</p>
         <a
           href="mailto:hello@sodoit.cc"
-          className="w-fit font-semibold text-accent transition-colors hover:text-accent-dark"
+          className="w-fit font-semibold text-accent-dark transition-colors hover:text-accent"
         >
           hello@sodoit.cc
         </a>
@@ -23,9 +20,8 @@ export default function ContactPage() {
 
       <LegalSection title="Account and privacy requests">
         <p>
-          For account access, data export, or deletion requests, email us at
-          the same address and mention what you need — we&apos;ll follow up
-          directly.
+          For account access, export, deletion, or privacy requests, use the
+          same address.
         </p>
       </LegalSection>
     </LegalLayout>
