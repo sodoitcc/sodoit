@@ -9,6 +9,18 @@ vi.mock("@/lib/guides/queries", () => ({
   getGuideResolvedImages: vi.fn().mockResolvedValue({}),
 }));
 
+vi.mock("@/lib/supabase/server", () => ({
+  createClient: vi.fn(),
+}));
+
+vi.mock("@/lib/auth/current-user", () => ({
+  getCurrentUser: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock("@/lib/guides/saved", () => ({
+  isGuideSaved: vi.fn().mockResolvedValue(false),
+}));
+
 import { generateMetadata } from "@/app/(app)/guides/[slug]/page";
 import { SITE_URL } from "@/lib/site";
 

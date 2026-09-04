@@ -3,9 +3,14 @@
 import { useRef, useState } from "react";
 import { Button } from "@/components/ui";
 import type {
+  GuideComparisonImportChange,
+  GuideComparisonImportPreviewRow,
   GuideImportChange,
   GuideImportPreview,
-  GuideItemImportChange,
+  GuideImportPreviewRow,
+  GuideImportSummary,
+  GuideSpotImportChange,
+  GuideSpotImportPreviewRow,
 } from "@/lib/admin/guides/import";
 import type { GuideApplyConflict } from "@/lib/admin/guides/apply";
 
@@ -18,7 +23,12 @@ interface ApplyEntitySummary {
 }
 
 type ApplyResponse =
-  | { ok: true; guides: ApplyEntitySummary; items: ApplyEntitySummary }
+  | {
+      ok: true;
+      guides: ApplyEntitySummary;
+      spots: ApplyEntitySummary;
+      comparisons: ApplyEntitySummary;
+    }
   | {
       ok: false;
       kind: "invalid_file" | "validation_error" | "apply_failed";
@@ -34,7 +44,12 @@ type ApplyResponse =
 type ApplyState =
   | { status: "idle" }
   | { status: "pending" }
-  | { status: "success"; guides: ApplyEntitySummary; items: ApplyEntitySummary }
+  | {
+      status: "success";
+      guides: ApplyEntitySummary;
+      spots: ApplyEntitySummary;
+      comparisons: ApplyEntitySummary;
+    }
   | { status: "stale"; conflicts: GuideApplyConflict[] }
   | { status: "error"; message: string };
 
@@ -51,6 +66,8 @@ const STATUS_BADGE: Record<
 function formatValue(value: unknown): string {
   if (value === null || value === undefined || value === "") return "(empty)";
   if (typeof value === "boolean") return value ? "TRUE" : "FALSE";
+  if (Array.isArray(value))
+    return value.length > 0 ? value.join(", ") : "(empty)";
   return String(value);
 }
 
@@ -69,11 +86,7 @@ function StatusBadge({
   );
 }
 
-function SummaryPills({
-  summary,
-}: {
-  summary: { create: number; update: number; unchanged: number; error: number };
-}) {
+function SummaryPills({ summary }: { summary: GuideImportSummary }) {
   return (
     <div className="flex flex-wrap gap-2 text-xs font-semibold">
       <span className="rounded-pill bg-success-light px-2.5 py-1 text-success">
@@ -107,18 +120,12 @@ function PreviewSection({
   );
 }
 
-function GuideChangeLine({ change }: { change: GuideImportChange }) {
-  return (
-    <div className="text-xs text-secondary">
-      <span className="font-semibold text-ink">{change.field}</span>{" "}
-      <span className="text-muted">{formatValue(change.before)}</span>
-      {" → "}
-      <span className="text-ink">{formatValue(change.after)}</span>
-    </div>
-  );
-}
-
-function ItemChangeLine({ change }: { change: GuideItemImportChange }) {
+function ChangeLine({
+  change,
+}: {
+  change:
+    GuideImportChange | GuideSpotImportChange | GuideComparisonImportChange;
+}) {
   return (
     <div className="text-xs text-secondary">
       <span className="font-semibold text-ink">{change.field}</span>{" "}
@@ -191,8 +198,13 @@ export function GuideImportPanel() {
         .filter((row) => row.status === "update")
         .map((row) => [row.id, row.baseFingerprint]),
     );
-    const itemFingerprints = Object.fromEntries(
-      preview.items
+    const spotFingerprints = Object.fromEntries(
+      preview.spots
+        .filter((row) => row.status === "update")
+        .map((row) => [row.id, row.baseFingerprint]),
+    );
+    const comparisonFingerprints = Object.fromEntries(
+      preview.comparisons
         .filter((row) => row.status === "update")
         .map((row) => [row.id, row.baseFingerprint]),
     );
@@ -200,7 +212,11 @@ export function GuideImportPanel() {
     const formData = new FormData();
     formData.set("file", file);
     formData.set("guideFingerprints", JSON.stringify(guideFingerprints));
-    formData.set("itemFingerprints", JSON.stringify(itemFingerprints));
+    formData.set("spotFingerprints", JSON.stringify(spotFingerprints));
+    formData.set(
+      "comparisonFingerprints",
+      JSON.stringify(comparisonFingerprints),
+    );
 
     try {
       const response = await fetch("/admin/imports/guides/apply", {
@@ -213,7 +229,8 @@ export function GuideImportPanel() {
         setApplyState({
           status: "success",
           guides: result.guides,
-          items: result.items,
+          spots: result.spots,
+          comparisons: result.comparisons,
         });
         setPreview(null);
         setConfirmOpen(false);
@@ -237,35 +254,78 @@ export function GuideImportPanel() {
   }
 
   const guideErrors =
-    preview?.guides.filter((row) => row.status === "error") ?? [];
+    preview?.guides.filter(
+      (row): row is Extract<GuideImportPreviewRow, { status: "error" }> =>
+        row.status === "error",
+    ) ?? [];
   const guideUpdates =
-    preview?.guides.filter((row) => row.status === "update") ?? [];
+    preview?.guides.filter(
+      (row): row is Extract<GuideImportPreviewRow, { status: "update" }> =>
+        row.status === "update",
+    ) ?? [];
   const guideCreates =
-    preview?.guides.filter((row) => row.status === "create") ?? [];
+    preview?.guides.filter(
+      (row): row is Extract<GuideImportPreviewRow, { status: "create" }> =>
+        row.status === "create",
+    ) ?? [];
 
-  const itemErrors =
-    preview?.items.filter((row) => row.status === "error") ?? [];
-  const itemUpdates =
-    preview?.items.filter((row) => row.status === "update") ?? [];
-  const itemCreates =
-    preview?.items.filter((row) => row.status === "create") ?? [];
+  const spotErrors =
+    preview?.spots.filter(
+      (row): row is Extract<GuideSpotImportPreviewRow, { status: "error" }> =>
+        row.status === "error",
+    ) ?? [];
+  const spotUpdates =
+    preview?.spots.filter(
+      (row): row is Extract<GuideSpotImportPreviewRow, { status: "update" }> =>
+        row.status === "update",
+    ) ?? [];
+  const spotCreates =
+    preview?.spots.filter(
+      (row): row is Extract<GuideSpotImportPreviewRow, { status: "create" }> =>
+        row.status === "create",
+    ) ?? [];
 
-  const canApply =
-    Boolean(preview) &&
-    preview!.summary.guides.error === 0 &&
-    preview!.summary.items.error === 0 &&
-    preview!.summary.guides.create +
-      preview!.summary.guides.update +
-      preview!.summary.items.create +
-      preview!.summary.items.update >
-      0;
+  const comparisonErrors =
+    preview?.comparisons.filter(
+      (
+        row,
+      ): row is Extract<GuideComparisonImportPreviewRow, { status: "error" }> =>
+        row.status === "error",
+    ) ?? [];
+  const comparisonUpdates =
+    preview?.comparisons.filter(
+      (
+        row,
+      ): row is Extract<
+        GuideComparisonImportPreviewRow,
+        { status: "update" }
+      > => row.status === "update",
+    ) ?? [];
+  const comparisonCreates =
+    preview?.comparisons.filter(
+      (
+        row,
+      ): row is Extract<
+        GuideComparisonImportPreviewRow,
+        { status: "create" }
+      > => row.status === "create",
+    ) ?? [];
+
+  const totalErrors =
+    (preview?.summary.guides.error ?? 0) +
+    (preview?.summary.spots.error ?? 0) +
+    (preview?.summary.comparisons.error ?? 0);
 
   const totalChanges = preview
     ? preview.summary.guides.create +
       preview.summary.guides.update +
-      preview.summary.items.create +
-      preview.summary.items.update
+      preview.summary.spots.create +
+      preview.summary.spots.update +
+      preview.summary.comparisons.create +
+      preview.summary.comparisons.update
     : 0;
+
+  const canApply = Boolean(preview) && totalErrors === 0 && totalChanges > 0;
 
   return (
     <div className="mt-6 border-t border-border pt-6">
@@ -315,16 +375,14 @@ export function GuideImportPanel() {
             Import needs review
           </p>
           <p className="mt-1 text-[13px] text-danger">
-            Some Guides or Guide Items changed since this preview was generated.
-            Choose the workbook again and review the latest diff before
-            applying.
+            Some rows changed since this preview was generated. Choose the
+            workbook again and review the latest diff before applying.
           </p>
           {applyState.conflicts.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-[13px] text-danger">
               {applyState.conflicts.map((conflict) => (
                 <li key={`${conflict.entity}-${conflict.id}`}>
-                  {conflict.entity === "guide" ? "Guide" : "Guide Item"}:{" "}
-                  {conflict.title || conflict.id}
+                  {conflict.entity}: {conflict.title || conflict.id}
                   {conflict.reason === "changed"
                     ? " — changed in the database"
                     : " — could not verify against the database"}
@@ -353,20 +411,18 @@ export function GuideImportPanel() {
               <span>Guides updated {applyState.guides.updated.length}</span>
             </div>
             <div className="flex gap-4">
-              <span>Guide Items created {applyState.items.created.length}</span>
-              <span>Guide Items updated {applyState.items.updated.length}</span>
+              <span>Spots created {applyState.spots.created.length}</span>
+              <span>Spots updated {applyState.spots.updated.length}</span>
+            </div>
+            <div className="flex gap-4">
+              <span>
+                Comparisons created {applyState.comparisons.created.length}
+              </span>
+              <span>
+                Comparisons updated {applyState.comparisons.updated.length}
+              </span>
             </div>
           </div>
-          {(applyState.guides.created.length > 0 ||
-            applyState.guides.updated.length > 0) && (
-            <ul className="mt-2 list-inside list-disc text-[13px] text-success">
-              {[...applyState.guides.created, ...applyState.guides.updated]
-                .slice(0, 8)
-                .map((row) => (
-                  <li key={row.id}>{row.title}</li>
-                ))}
-            </ul>
-          )}
           <div className="mt-3 flex items-center gap-3">
             <a
               href="/admin/imports/guides/export"
@@ -395,10 +451,19 @@ export function GuideImportPanel() {
 
           <div>
             <p className="text-sm font-semibold text-ink">
-              Guide Items — {preview.summary.items.total} analyzed
+              Spots — {preview.summary.spots.total} analyzed
             </p>
             <div className="mt-2">
-              <SummaryPills summary={preview.summary.items} />
+              <SummaryPills summary={preview.summary.spots} />
+            </div>
+          </div>
+
+          <div>
+            <p className="text-sm font-semibold text-ink">
+              Comparisons — {preview.summary.comparisons.total} analyzed
+            </p>
+            <div className="mt-2">
+              <SummaryPills summary={preview.summary.comparisons} />
             </div>
           </div>
 
@@ -412,7 +477,7 @@ export function GuideImportPanel() {
             </Button>
           )}
 
-          {!canApply && (guideErrors.length > 0 || itemErrors.length > 0) && (
+          {!canApply && totalErrors > 0 && (
             <p className="text-sm text-danger">
               Fix the errors below before this workbook can be applied.
             </p>
@@ -423,16 +488,6 @@ export function GuideImportPanel() {
               <p className="text-sm font-semibold text-ink">
                 Apply {totalChanges} changes?
               </p>
-              <div className="mt-2 text-[13px] text-secondary">
-                <p>
-                  Guides — {preview.summary.guides.create} create,{" "}
-                  {preview.summary.guides.update} update
-                </p>
-                <p>
-                  Guide Items — {preview.summary.items.create} create,{" "}
-                  {preview.summary.items.update} update
-                </p>
-              </div>
               <div className="mt-3 flex items-center gap-2">
                 <Button
                   type="button"
@@ -457,178 +512,238 @@ export function GuideImportPanel() {
 
           {guideErrors.length > 0 && (
             <PreviewSection title={`Guide errors (${guideErrors.length})`}>
-              {guideErrors.map((row) =>
-                row.status === "error" ? (
-                  <div
-                    key={row.rowNumber}
-                    className="rounded-control border border-border bg-surface p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status="error" />
-                      <span className="text-xs text-muted">
-                        Guide · Row {row.rowNumber}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm font-medium text-ink">
-                      {row.title || row.slug || row.importRef || "Untitled row"}
-                    </p>
-                    <ul className="mt-1 list-inside list-disc text-sm text-danger">
-                      {row.errors.map((message) => (
-                        <li key={message}>{message}</li>
-                      ))}
-                    </ul>
+              {guideErrors.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="error" />
+                    <span className="text-xs text-muted">
+                      Guide · Row {row.rowNumber}
+                    </span>
                   </div>
-                ) : null,
-              )}
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.title || row.slug || "Untitled row"}
+                  </p>
+                  <ul className="mt-1 list-inside list-disc text-sm text-danger">
+                    {row.errors.map((message) => (
+                      <li key={message}>{message}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </PreviewSection>
           )}
 
-          {itemErrors.length > 0 && (
-            <PreviewSection title={`Guide Item errors (${itemErrors.length})`}>
-              {itemErrors.map((row) =>
-                row.status === "error" ? (
-                  <div
-                    key={row.rowNumber}
-                    className="rounded-control border border-border bg-surface p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status="error" />
-                      <span className="text-xs text-muted">
-                        Guide Item · Row {row.rowNumber}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm font-medium text-ink">
-                      {row.title ||
-                        row.guideRef ||
-                        row.guideId ||
-                        "Untitled row"}
-                    </p>
-                    <ul className="mt-1 list-inside list-disc text-sm text-danger">
-                      {row.errors.map((message) => (
-                        <li key={message}>{message}</li>
-                      ))}
-                    </ul>
+          {spotErrors.length > 0 && (
+            <PreviewSection title={`Spot errors (${spotErrors.length})`}>
+              {spotErrors.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="error" />
+                    <span className="text-xs text-muted">
+                      Spot · Row {row.rowNumber}
+                    </span>
                   </div>
-                ) : null,
-              )}
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.title || row.guideSlug || "Untitled row"}
+                  </p>
+                  <ul className="mt-1 list-inside list-disc text-sm text-danger">
+                    {row.errors.map((message) => (
+                      <li key={message}>{message}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </PreviewSection>
+          )}
+
+          {comparisonErrors.length > 0 && (
+            <PreviewSection
+              title={`Comparison errors (${comparisonErrors.length})`}
+            >
+              {comparisonErrors.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="error" />
+                    <span className="text-xs text-muted">
+                      Comparison · Row {row.rowNumber}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.skipTitle || row.guideSlug || "Untitled row"}
+                  </p>
+                  <ul className="mt-1 list-inside list-disc text-sm text-danger">
+                    {row.errors.map((message) => (
+                      <li key={message}>{message}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </PreviewSection>
           )}
 
           {guideUpdates.length > 0 && (
             <PreviewSection title={`Guide updates (${guideUpdates.length})`}>
-              {guideUpdates.map((row) =>
-                row.status === "update" ? (
-                  <div
-                    key={row.rowNumber}
-                    className="rounded-control border border-border bg-surface p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status="update" />
-                      <span className="text-xs text-muted">
-                        Row {row.rowNumber}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm font-medium text-ink">
-                      {row.candidate.title}
-                    </p>
-                    <div className="mt-2 flex flex-col gap-1">
-                      {row.changes.map((change) => (
-                        <GuideChangeLine key={change.field} change={change} />
-                      ))}
-                    </div>
+              {guideUpdates.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="update" />
+                    <span className="text-xs text-muted">
+                      Row {row.rowNumber}
+                    </span>
                   </div>
-                ) : null,
-              )}
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.candidate.title}
+                  </p>
+                  <div className="mt-2 flex flex-col gap-1">
+                    {row.changes.map((change) => (
+                      <ChangeLine key={change.field} change={change} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </PreviewSection>
           )}
 
-          {itemUpdates.length > 0 && (
-            <PreviewSection
-              title={`Guide Item updates (${itemUpdates.length})`}
-            >
-              {itemUpdates.map((row) =>
-                row.status === "update" ? (
-                  <div
-                    key={row.rowNumber}
-                    className="rounded-control border border-border bg-surface p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status="update" />
-                      <span className="text-xs text-muted">
-                        Row {row.rowNumber}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm font-medium text-ink">
-                      {row.candidate.title}
-                    </p>
-                    <div className="mt-2 flex flex-col gap-1">
-                      {row.changes.map((change) => (
-                        <ItemChangeLine key={change.field} change={change} />
-                      ))}
-                    </div>
+          {spotUpdates.length > 0 && (
+            <PreviewSection title={`Spot updates (${spotUpdates.length})`}>
+              {spotUpdates.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="update" />
+                    <span className="text-xs text-muted">
+                      Row {row.rowNumber}
+                    </span>
                   </div>
-                ) : null,
-              )}
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.candidate.title}
+                  </p>
+                  <div className="mt-2 flex flex-col gap-1">
+                    {row.changes.map((change) => (
+                      <ChangeLine key={change.field} change={change} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </PreviewSection>
+          )}
+
+          {comparisonUpdates.length > 0 && (
+            <PreviewSection
+              title={`Comparison updates (${comparisonUpdates.length})`}
+            >
+              {comparisonUpdates.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="update" />
+                    <span className="text-xs text-muted">
+                      Row {row.rowNumber}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.candidate.skip_title} →{" "}
+                    {row.candidate.go_instead_title}
+                  </p>
+                  <div className="mt-2 flex flex-col gap-1">
+                    {row.changes.map((change) => (
+                      <ChangeLine key={change.field} change={change} />
+                    ))}
+                  </div>
+                </div>
+              ))}
             </PreviewSection>
           )}
 
           {guideCreates.length > 0 && (
             <PreviewSection title={`Guide creates (${guideCreates.length})`}>
-              {guideCreates.map((row) =>
-                row.status === "create" ? (
-                  <div
-                    key={row.rowNumber}
-                    className="rounded-control border border-border bg-surface p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status="create" />
-                      <span className="text-xs text-muted">
-                        Row {row.rowNumber}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm font-medium text-ink">
-                      {row.candidate.title}
-                    </p>
-                    <p className="text-xs text-muted">
-                      {row.candidate.slug} · {row.candidate.type || "—"} ·{" "}
-                      {row.candidate.city}
-                      {row.candidate.importRef
-                        ? ` · import_ref: ${row.candidate.importRef}`
-                        : ""}
-                    </p>
+              {guideCreates.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="create" />
+                    <span className="text-xs text-muted">
+                      Row {row.rowNumber}
+                    </span>
                   </div>
-                ) : null,
-              )}
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.candidate.title}
+                  </p>
+                  <p className="text-xs text-muted">
+                    {row.candidate.slug} · {row.candidate.type || "—"} ·{" "}
+                    {row.candidate.city}
+                  </p>
+                </div>
+              ))}
             </PreviewSection>
           )}
 
-          {itemCreates.length > 0 && (
-            <PreviewSection
-              title={`Guide Item creates (${itemCreates.length})`}
-            >
-              {itemCreates.map((row) =>
-                row.status === "create" ? (
-                  <div
-                    key={row.rowNumber}
-                    className="rounded-control border border-border bg-surface p-3"
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusBadge status="create" />
-                      <span className="text-xs text-muted">
-                        Row {row.rowNumber}
-                      </span>
-                    </div>
-                    <p className="mt-1.5 text-sm font-medium text-ink">
-                      {row.candidate.title}
-                    </p>
-                    <p className="text-xs text-muted">
-                      {row.parent.kind === "new"
-                        ? `→ New Guide: ${row.parent.importRef}`
-                        : "→ Existing guide"}
-                    </p>
+          {spotCreates.length > 0 && (
+            <PreviewSection title={`Spot creates (${spotCreates.length})`}>
+              {spotCreates.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="create" />
+                    <span className="text-xs text-muted">
+                      Row {row.rowNumber}
+                    </span>
                   </div>
-                ) : null,
-              )}
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.candidate.title}
+                  </p>
+                  <p className="text-xs text-muted">
+                    → {row.candidate.guideSlug}
+                  </p>
+                </div>
+              ))}
+            </PreviewSection>
+          )}
+
+          {comparisonCreates.length > 0 && (
+            <PreviewSection
+              title={`Comparison creates (${comparisonCreates.length})`}
+            >
+              {comparisonCreates.map((row) => (
+                <div
+                  key={row.rowNumber}
+                  className="rounded-control border border-border bg-surface p-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <StatusBadge status="create" />
+                    <span className="text-xs text-muted">
+                      Row {row.rowNumber}
+                    </span>
+                  </div>
+                  <p className="mt-1.5 text-sm font-medium text-ink">
+                    {row.candidate.skip_title} →{" "}
+                    {row.candidate.go_instead_title}
+                  </p>
+                  <p className="text-xs text-muted">
+                    → {row.candidate.guideSlug}
+                  </p>
+                </div>
+              ))}
             </PreviewSection>
           )}
 
@@ -638,10 +753,17 @@ export function GuideImportPanel() {
               {preview.summary.guides.unchanged === 1 ? "" : "s"} unchanged.
             </p>
           )}
-          {preview.summary.items.unchanged > 0 && (
+          {preview.summary.spots.unchanged > 0 && (
             <p className="text-sm text-muted">
-              {preview.summary.items.unchanged} Guide Item
-              {preview.summary.items.unchanged === 1 ? "" : "s"} unchanged.
+              {preview.summary.spots.unchanged} Spot
+              {preview.summary.spots.unchanged === 1 ? "" : "s"} unchanged.
+            </p>
+          )}
+          {preview.summary.comparisons.unchanged > 0 && (
+            <p className="text-sm text-muted">
+              {preview.summary.comparisons.unchanged} Comparison
+              {preview.summary.comparisons.unchanged === 1 ? "" : "s"}{" "}
+              unchanged.
             </p>
           )}
         </div>

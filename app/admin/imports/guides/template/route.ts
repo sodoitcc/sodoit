@@ -9,7 +9,7 @@ export async function GET() {
   const admin = await requireAdminForRequest();
   if (!admin.ok) return admin.response;
 
-  const workbook = buildGuidesWorkbook([], []);
+  const workbook = buildGuidesWorkbook([], [], []);
   const blob = await workbookToBlob(workbook);
 
   return new Response(blob, {

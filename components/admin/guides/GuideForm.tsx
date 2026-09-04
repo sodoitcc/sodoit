@@ -8,6 +8,7 @@ import { Button } from "@/components/ui";
 import { slugify } from "@/lib/admin/slug";
 import { GUIDE_TYPES } from "@/lib/admin/guides/validation";
 import { createGuide, updateGuide } from "@/lib/admin/guides/actions";
+import { GUIDE_TYPE_LABELS, GUIDE_ROUTE_MODES } from "@/lib/guides/types";
 import type { Guide } from "@/lib/guides/types";
 
 interface GuideFormProps {
@@ -110,7 +111,7 @@ export function GuideForm({ guide }: GuideFormProps) {
           >
             {GUIDE_TYPES.map((type) => (
               <option key={type} value={type}>
-                {type === "collection" ? "Collection" : "Itinerary"}
+                {GUIDE_TYPE_LABELS[type]}
               </option>
             ))}
           </select>
@@ -209,6 +210,41 @@ export function GuideForm({ guide }: GuideFormProps) {
             defaultValue={guide?.editorial_attribution ?? ""}
             className={ADMIN_INPUT_CLASS}
           />
+        </AdminField>
+
+        <AdminField label="Best time" htmlFor="best_time">
+          <input
+            id="best_time"
+            name="best_time"
+            defaultValue={guide?.best_time ?? ""}
+            placeholder="e.g. Weekday mornings"
+            className={ADMIN_INPUT_CLASS}
+          />
+        </AdminField>
+
+        <AdminField label="Local tip" htmlFor="local_tip">
+          <input
+            id="local_tip"
+            name="local_tip"
+            defaultValue={guide?.local_tip ?? ""}
+            className={ADMIN_INPUT_CLASS}
+          />
+        </AdminField>
+
+        <AdminField label="Route mode" htmlFor="route_mode">
+          <select
+            id="route_mode"
+            name="route_mode"
+            defaultValue={guide?.route_mode ?? ""}
+            className={ADMIN_INPUT_CLASS}
+          >
+            <option value="">None</option>
+            {GUIDE_ROUTE_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {mode}
+              </option>
+            ))}
+          </select>
         </AdminField>
       </AdminFormSection>
 

@@ -1,9 +1,10 @@
 import { SLUG_RE } from "@/lib/admin/slug";
-import type { GuideType } from "@/lib/guides/types";
+import { GUIDE_TYPES, isGuideType, isGuideRouteMode } from "@/lib/guides/types";
+
+export { GUIDE_TYPES };
 
 export const GUIDE_TITLE_MAX = 120;
 export const GUIDE_DESCRIPTION_MAX = 2000;
-export const GUIDE_TYPES: readonly GuideType[] = ["itinerary", "collection"];
 
 export interface GuideInput {
   title: string;
@@ -17,6 +18,9 @@ export interface GuideInput {
   cover_image_alt: string;
   duration_label: string;
   editorial_attribution: string;
+  best_time: string;
+  local_tip: string;
+  route_mode: string;
   sort_order: number;
   featured: boolean;
   is_public: boolean;
@@ -24,8 +28,8 @@ export interface GuideInput {
 
 function isValidUrl(value: string) {
   try {
-    new URL(value);
-    return true;
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:";
   } catch {
     return false;
   }
@@ -39,8 +43,10 @@ export function validateGuideInput(input: GuideInput): string | null {
   if (!SLUG_RE.test(input.slug))
     return "Slug must be lowercase letters, numbers, and hyphens.";
 
-  if (!GUIDE_TYPES.includes(input.type as GuideType))
-    return "Choose a valid guide type.";
+  if (!isGuideType(input.type)) return "Choose a valid guide type.";
+
+  if (input.route_mode && !isGuideRouteMode(input.route_mode))
+    return "Choose a valid route mode.";
 
   if (!input.city) return "City is required.";
 
@@ -76,6 +82,9 @@ export function readGuideInput(formData: FormData): GuideInput {
     editorial_attribution: String(
       formData.get("editorial_attribution") ?? "",
     ).trim(),
+    best_time: String(formData.get("best_time") ?? "").trim(),
+    local_tip: String(formData.get("local_tip") ?? "").trim(),
+    route_mode: String(formData.get("route_mode") ?? "").trim(),
     sort_order: Number(formData.get("sort_order") ?? 0),
     featured: formData.get("featured") === "on",
     is_public: formData.get("is_public") === "on",
@@ -89,6 +98,12 @@ export interface GuideItemInput {
   image_url: string;
   image_alt: string;
   external_url: string;
+  neighborhood: string;
+  address: string;
+  latitude: string;
+  longitude: string;
+  google_maps_url: string;
+  tags: string;
 }
 
 export function readGuideItemInput(formData: FormData): GuideItemInput {
@@ -99,6 +114,12 @@ export function readGuideItemInput(formData: FormData): GuideItemInput {
     image_url: String(formData.get("image_url") ?? "").trim(),
     image_alt: String(formData.get("image_alt") ?? "").trim(),
     external_url: String(formData.get("external_url") ?? "").trim(),
+    neighborhood: String(formData.get("neighborhood") ?? "").trim(),
+    address: String(formData.get("address") ?? "").trim(),
+    latitude: String(formData.get("latitude") ?? "").trim(),
+    longitude: String(formData.get("longitude") ?? "").trim(),
+    google_maps_url: String(formData.get("google_maps_url") ?? "").trim(),
+    tags: String(formData.get("tags") ?? "").trim(),
   };
 }
 
@@ -108,5 +129,126 @@ export function validateGuideItemInput(input: GuideItemInput): string | null {
     return "Image URL must be a valid URL.";
   if (input.external_url && !isValidUrl(input.external_url))
     return "External URL must be a valid URL.";
+  if (input.google_maps_url && !isValidUrl(input.google_maps_url))
+    return "Google Maps URL must be a valid URL.";
+  if (input.latitude) {
+    const latitude = Number(input.latitude);
+    if (Number.isNaN(latitude) || latitude < -90 || latitude > 90)
+      return "Latitude must be a number between -90 and 90.";
+  }
+  if (input.longitude) {
+    const longitude = Number(input.longitude);
+    if (Number.isNaN(longitude) || longitude < -180 || longitude > 180)
+      return "Longitude must be a number between -180 and 180.";
+  }
   return null;
+}
+
+export interface GuideComparisonInput {
+  skip_title: string;
+  skip_description: string;
+  skip_neighborhood: string;
+  skip_address: string;
+  skip_latitude: string;
+  skip_longitude: string;
+  skip_google_maps_url: string;
+  skip_external_url: string;
+  skip_tags: string;
+  go_instead_title: string;
+  go_instead_description: string;
+  go_instead_neighborhood: string;
+  go_instead_address: string;
+  go_instead_latitude: string;
+  go_instead_longitude: string;
+  go_instead_google_maps_url: string;
+  go_instead_external_url: string;
+  go_instead_tags: string;
+  reason: string;
+}
+
+export function readGuideComparisonInput(
+  formData: FormData,
+): GuideComparisonInput {
+  const field = (name: string) => String(formData.get(name) ?? "").trim();
+
+  return {
+    skip_title: field("skip_title"),
+    skip_description: field("skip_description"),
+    skip_neighborhood: field("skip_neighborhood"),
+    skip_address: field("skip_address"),
+    skip_latitude: field("skip_latitude"),
+    skip_longitude: field("skip_longitude"),
+    skip_google_maps_url: field("skip_google_maps_url"),
+    skip_external_url: field("skip_external_url"),
+    skip_tags: field("skip_tags"),
+    go_instead_title: field("go_instead_title"),
+    go_instead_description: field("go_instead_description"),
+    go_instead_neighborhood: field("go_instead_neighborhood"),
+    go_instead_address: field("go_instead_address"),
+    go_instead_latitude: field("go_instead_latitude"),
+    go_instead_longitude: field("go_instead_longitude"),
+    go_instead_google_maps_url: field("go_instead_google_maps_url"),
+    go_instead_external_url: field("go_instead_external_url"),
+    go_instead_tags: field("go_instead_tags"),
+    reason: field("reason"),
+  };
+}
+
+function isValidLatLng(
+  value: string,
+  min: number,
+  max: number,
+): string | null {
+  if (!value) return null;
+  const num = Number(value);
+  if (Number.isNaN(num) || num < min || num > max) {
+    return `must be a number between ${min} and ${max}`;
+  }
+  return null;
+}
+
+export function validateGuideComparisonInput(
+  input: GuideComparisonInput,
+): string | null {
+  if (!input.skip_title) return "Skip title is required.";
+  if (!input.go_instead_title) return "Instead title is required.";
+
+  if (input.skip_google_maps_url && !isValidUrl(input.skip_google_maps_url))
+    return "Skip Google Maps URL must be a valid URL.";
+  if (input.skip_external_url && !isValidUrl(input.skip_external_url))
+    return "Skip external URL must be a valid URL.";
+  if (
+    input.go_instead_google_maps_url &&
+    !isValidUrl(input.go_instead_google_maps_url)
+  )
+    return "Instead Google Maps URL must be a valid URL.";
+  if (
+    input.go_instead_external_url &&
+    !isValidUrl(input.go_instead_external_url)
+  )
+    return "Instead external URL must be a valid URL.";
+
+  const skipLatError = isValidLatLng(input.skip_latitude, -90, 90);
+  if (skipLatError) return `Skip latitude ${skipLatError}.`;
+  const skipLngError = isValidLatLng(input.skip_longitude, -180, 180);
+  if (skipLngError) return `Skip longitude ${skipLngError}.`;
+  const insteadLatError = isValidLatLng(input.go_instead_latitude, -90, 90);
+  if (insteadLatError) return `Instead latitude ${insteadLatError}.`;
+  const insteadLngError = isValidLatLng(
+    input.go_instead_longitude,
+    -180,
+    180,
+  );
+  if (insteadLngError) return `Instead longitude ${insteadLngError}.`;
+
+  return null;
+}
+
+export function parseTags(value: string): string[] | null {
+  const tags = value
+    .split(",")
+    .map((tag) => tag.trim())
+    .filter(Boolean);
+
+  return tags.length > 0 ? tags : null;
 }

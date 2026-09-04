@@ -105,6 +105,41 @@ export function GuideItemsEditor({ guideId, items }: GuideItemsEditorProps) {
             placeholder="External URL"
             className={ADMIN_INPUT_CLASS}
           />
+          <input
+            name="neighborhood"
+            placeholder="Neighborhood"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="address"
+            placeholder="Address"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="latitude"
+            type="number"
+            step="any"
+            placeholder="Latitude"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="longitude"
+            type="number"
+            step="any"
+            placeholder="Longitude"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="google_maps_url"
+            type="url"
+            placeholder="Google Maps URL override"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="tags"
+            placeholder="Tags (comma separated)"
+            className={ADMIN_INPUT_CLASS}
+          />
           <div className="sm:col-span-2">
             <Button type="submit" size="sm" disabled={isPending}>
               Add item
@@ -201,6 +236,47 @@ function GuideItemRow({
             type="url"
             defaultValue={item.external_url ?? ""}
             placeholder="External URL"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="neighborhood"
+            defaultValue={item.neighborhood ?? ""}
+            placeholder="Neighborhood"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="address"
+            defaultValue={item.address ?? ""}
+            placeholder="Address"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="latitude"
+            type="number"
+            step="any"
+            defaultValue={item.latitude ?? ""}
+            placeholder="Latitude"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="longitude"
+            type="number"
+            step="any"
+            defaultValue={item.longitude ?? ""}
+            placeholder="Longitude"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="google_maps_url"
+            type="url"
+            defaultValue={item.google_maps_url ?? ""}
+            placeholder="Google Maps URL override"
+            className={ADMIN_INPUT_CLASS}
+          />
+          <input
+            name="tags"
+            defaultValue={(item.tags ?? []).join(", ")}
+            placeholder="Tags (comma separated)"
             className={ADMIN_INPUT_CLASS}
           />
           <div className="flex items-center gap-2 sm:col-span-2">

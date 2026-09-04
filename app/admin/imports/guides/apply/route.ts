@@ -48,22 +48,32 @@ export async function POST(request: Request) {
     return badRequest("Could not read the import fingerprints.");
   }
 
-  const itemFingerprints = parseFingerprintField(formData, "itemFingerprints");
-  if (itemFingerprints === null) {
+  const spotFingerprints = parseFingerprintField(formData, "spotFingerprints");
+  if (spotFingerprints === null) {
+    return badRequest("Could not read the import fingerprints.");
+  }
+
+  const comparisonFingerprints = parseFingerprintField(
+    formData,
+    "comparisonFingerprints",
+  );
+  if (comparisonFingerprints === null) {
     return badRequest("Could not read the import fingerprints.");
   }
 
   const result = await applyGuideImport(
     upload.buffer,
     guideFingerprints,
-    itemFingerprints,
+    spotFingerprints,
+    comparisonFingerprints,
   );
 
   if (result.ok) {
     return Response.json({
       ok: true,
       guides: result.guides,
-      items: result.items,
+      spots: result.spots,
+      comparisons: result.comparisons,
     });
   }
 
@@ -90,7 +100,7 @@ export async function POST(request: Request) {
         ok: false,
         kind: result.kind,
         error:
-          "Some Guides or Guide Items changed since this preview was generated. Review the import again before applying.",
+          "Some rows changed since this preview was generated. Review the import again before applying.",
         conflicts: result.conflicts,
       },
       { status: 409 },
@@ -98,7 +108,12 @@ export async function POST(request: Request) {
   }
 
   return Response.json(
-    { ok: false, kind: result.kind, error: result.error },
+    {
+      ok: false,
+      kind: result.kind,
+      error: result.error,
+      ...(result.debug ? { debug: result.debug } : {}),
+    },
     { status: 500 },
   );
 }

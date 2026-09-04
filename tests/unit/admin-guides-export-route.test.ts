@@ -17,7 +17,7 @@ import { GET as templateRoute } from "@/app/admin/imports/guides/template/route"
 
 beforeEach(() => {
   vi.clearAllMocks();
-  listExportMock.mockResolvedValue({ guides: [], items: [] });
+  listExportMock.mockResolvedValue({ guides: [], items: [], comparisons: [] });
 });
 
 describe("guides export route", () => {

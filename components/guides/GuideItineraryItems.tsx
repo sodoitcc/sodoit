@@ -1,16 +1,17 @@
 import type { GuideItem } from "@/lib/guides/types";
-import { GuideItineraryItem } from "./GuideItineraryItem";
+import { deriveTimelineState } from "@/lib/guides/timeline";
+import { GuideItineraryStop } from "./GuideItineraryStop";
 
-export function GuideItinerary({ items }: { items: GuideItem[] }) {
+export function GuideItineraryItems({ items }: { items: GuideItem[] }) {
   if (items.length === 0) return null;
 
   return (
     <ol>
       {items.map((item, index) => (
-        <GuideItineraryItem
+        <GuideItineraryStop
           key={item.id}
           item={item}
-          index={index}
+          state={deriveTimelineState(index, items.length)}
           isLast={index === items.length - 1}
         />
       ))}

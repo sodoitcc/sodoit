@@ -1,615 +1,515 @@
 import { describe, expect, it } from "vitest";
-import ExcelJS from "exceljs";
 import {
   buildGuidesWorkbook,
-  GUIDE_EXCEL_COLUMNS,
-  GUIDE_ITEM_EXCEL_COLUMNS,
-  GUIDE_ITEMS_SHEET_NAME,
-  GUIDES_SHEET_NAME,
   workbookToBlob,
+  type GuideComparisonExcelRow,
   type GuideExcelRow,
-  type GuideItemExcelRow,
+  type GuideSpotExcelRow,
 } from "@/lib/admin/guides/excel";
 import {
   buildGuideImportPreview,
   parseGuidesWorkbook,
 } from "@/lib/admin/guides/import";
-import type { Guide, GuideItem } from "@/lib/guides/types";
+import type { Guide, GuideComparisonPair, GuideItem } from "@/lib/guides/types";
 
 function guideRow(overrides: Partial<GuideExcelRow> = {}): GuideExcelRow {
   return {
     id: "",
-    import_ref: "",
-    title: "48 Hours in Prague",
     slug: "48-hours-in-prague",
-    description: "A weekend in Prague.",
+    title: "48 Hours in Prague",
     type: "itinerary",
     city: "Prague",
     country_code: "CZ",
     city_slug: "",
+    description: "A weekend plan.",
+    duration_label: "2 days",
+    best_time: "",
+    local_tip: "",
+    route_mode: "",
     cover_image_url: "",
     cover_image_alt: "",
-    duration_label: "",
+    editorial_attribution: "",
     featured: false,
     is_public: true,
     sort_order: 0,
-    editorial_attribution: "",
     ...overrides,
   };
 }
 
-function itemRow(
-  overrides: Partial<GuideItemExcelRow> = {},
-): GuideItemExcelRow {
+function spotRow(
+  overrides: Partial<GuideSpotExcelRow> = {},
+): GuideSpotExcelRow {
   return {
     id: "",
-    guide_id: "",
-    guide_ref: "",
+    guide_slug: "48-hours-in-prague",
     position: 0,
-    title: "Explore the National Museum",
-    description: "",
-    place_id: "",
+    title: "Old Town Square",
+    neighborhood: "Staré Město",
+    address: "",
+    description: "Start here.",
+    google_maps_url: "",
+    external_url: "",
+    tags: "historic, square",
     place_name: "",
     image_url: "",
     image_alt: "",
-    external_url: "",
+    latitude: "50.087",
+    longitude: "14.421",
     ...overrides,
   };
 }
 
-function existingGuide(overrides: Partial<Guide> = {}): Guide {
+function comparisonRow(
+  overrides: Partial<GuideComparisonExcelRow> = {},
+): GuideComparisonExcelRow {
   return {
-    id: "11111111-1111-4111-8111-111111111111",
+    id: "",
+    guide_slug: "48-hours-in-prague",
+    position: 0,
+    skip_title: "Old Town tourist restaurants",
+    skip_description: "Overpriced.",
+    skip_neighborhood: "Staré Město",
+    skip_address: "",
+    skip_google_maps_url: "",
+    skip_external_url: "",
+    skip_tags: "",
+    go_instead_title: "Lokál Dlouhááá",
+    go_instead_description: "Better value.",
+    go_instead_neighborhood: "Staré Město",
+    go_instead_address: "",
+    go_instead_google_maps_url: "",
+    go_instead_external_url: "",
+    go_instead_tags: "",
+    reason: "Same neighborhood, real food.",
+    skip_latitude: "",
+    skip_longitude: "",
+    go_instead_latitude: "",
+    go_instead_longitude: "",
+    ...overrides,
+  };
+}
+
+async function workbookBuffer(
+  guides: GuideExcelRow[],
+  spots: GuideSpotExcelRow[],
+  comparisons: GuideComparisonExcelRow[],
+): Promise<ArrayBuffer> {
+  const workbook = buildGuidesWorkbook(guides, spots, comparisons);
+  const blob = await workbookToBlob(workbook);
+  return blob.arrayBuffer();
+}
+
+async function parse(
+  guides: GuideExcelRow[],
+  spots: GuideSpotExcelRow[] = [],
+  comparisons: GuideComparisonExcelRow[] = [],
+) {
+  const buffer = await workbookBuffer(guides, spots, comparisons);
+  const result = await parseGuidesWorkbook(buffer);
+  if (!result.ok) throw new Error(result.error);
+  return result;
+}
+
+function dbGuide(overrides: Partial<Guide> = {}): Guide {
+  return {
+    id: "g1",
     slug: "48-hours-in-prague",
     title: "48 Hours in Prague",
-    description: "A weekend in Prague.",
+    description: "A weekend plan.",
     city: "Prague",
     country_code: "CZ",
     cover_image_url: null,
     cover_image_alt: null,
-    duration_label: null,
+    duration_label: "2 days",
     is_public: true,
     featured: false,
     type: "itinerary",
     city_slug: null,
     sort_order: 0,
     editorial_attribution: null,
+    best_time: null,
+    local_tip: null,
+    route_mode: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
 
-function existingItem(overrides: Partial<GuideItem> = {}): GuideItem {
+function dbSpot(overrides: Partial<GuideItem> = {}): GuideItem {
   return {
-    id: "22222222-2222-4222-8222-222222222222",
-    guide_id: "11111111-1111-4111-8111-111111111111",
+    id: "s1",
+    guide_id: "g1",
     position: 0,
-    title: "Explore the National Museum",
-    description: null,
+    title: "Old Town Square",
+    description: "Start here.",
     place_name: null,
     image_url: null,
     image_alt: null,
     external_url: null,
     place_id: null,
+    neighborhood: "Staré Město",
+    address: null,
+    latitude: 50.087,
+    longitude: 14.421,
+    google_maps_url: null,
+    tags: ["historic", "square"],
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
 
-async function bufferFromSheets(
-  guides: GuideExcelRow[],
-  items: GuideItemExcelRow[],
-): Promise<ArrayBuffer> {
-  const workbook = buildGuidesWorkbook(guides, items);
-  const blob = await workbookToBlob(workbook);
-  return blob.arrayBuffer();
+function dbComparison(
+  overrides: Partial<GuideComparisonPair> = {},
+): GuideComparisonPair {
+  return {
+    id: "c1",
+    guide_id: "g1",
+    position: 0,
+    skip_title: "Old Town tourist restaurants",
+    skip_description: "Overpriced.",
+    skip_neighborhood: "Staré Město",
+    skip_address: null,
+    skip_latitude: null,
+    skip_longitude: null,
+    skip_google_maps_url: null,
+    skip_external_url: null,
+    skip_tags: null,
+    go_instead_title: "Lokál Dlouhááá",
+    go_instead_description: "Better value.",
+    go_instead_neighborhood: "Staré Město",
+    go_instead_address: null,
+    go_instead_latitude: null,
+    go_instead_longitude: null,
+    go_instead_google_maps_url: null,
+    go_instead_external_url: null,
+    go_instead_tags: null,
+    reason: "Same neighborhood, real food.",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
 }
 
-async function bufferFromWorkbook(
-  workbook: ExcelJS.Workbook,
-): Promise<ArrayBuffer> {
-  const blob = await workbookToBlob(workbook);
-  return blob.arrayBuffer();
-}
-
-async function parseRows(guides: GuideExcelRow[], items: GuideItemExcelRow[]) {
-  const buffer = await bufferFromSheets(guides, items);
-  const result = await parseGuidesWorkbook(buffer);
-  if (!result.ok) throw new Error(result.error);
-  return result;
-}
-
-describe("parseGuidesWorkbook — contract", () => {
-  it("parses a valid exported workbook successfully", async () => {
-    const result = await parseRows([guideRow()], [itemRow()]);
-    expect(result.guideRows).toHaveLength(1);
-    expect(result.itemRows).toHaveLength(1);
-  });
-
-  it("requires both sheets to exist — missing Guides", async () => {
-    const workbook = new ExcelJS.Workbook();
-    workbook.addWorksheet(GUIDE_ITEMS_SHEET_NAME);
-    const buffer = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(buffer);
+describe("parseGuidesWorkbook headers", () => {
+  it("rejects a workbook missing the Spots sheet", async () => {
+    const workbook = buildGuidesWorkbook([], [], []);
+    workbook.removeWorksheet(workbook.getWorksheet("Spots")!.id);
+    const blob = await workbookToBlob(workbook);
+    const result = await parseGuidesWorkbook(await blob.arrayBuffer());
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/Guides/);
-  });
-
-  it("requires both sheets to exist — missing Guide Items", async () => {
-    const workbook = new ExcelJS.Workbook();
-    const sheet = workbook.addWorksheet(GUIDES_SHEET_NAME);
-    sheet.addRow(GUIDE_EXCEL_COLUMNS.map((c) => c.header));
-    const buffer = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(buffer);
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toMatch(/Guide Items/);
-  });
-
-  it("rejects bad Guide headers", async () => {
-    const workbook = new ExcelJS.Workbook();
-    const guides = workbook.addWorksheet(GUIDES_SHEET_NAME);
-    guides.addRow(["id", "name"]);
-    const items = workbook.addWorksheet(GUIDE_ITEMS_SHEET_NAME);
-    items.addRow(GUIDE_ITEM_EXCEL_COLUMNS.map((c) => c.header));
-    const buffer = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(buffer);
-    expect(result.ok).toBe(false);
-  });
-
-  it("rejects bad Guide Item headers", async () => {
-    const workbook = new ExcelJS.Workbook();
-    const guides = workbook.addWorksheet(GUIDES_SHEET_NAME);
-    guides.addRow(GUIDE_EXCEL_COLUMNS.map((c) => c.header));
-    const items = workbook.addWorksheet(GUIDE_ITEMS_SHEET_NAME);
-    items.addRow(["id", "name"]);
-    const buffer = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(buffer);
-    expect(result.ok).toBe(false);
-  });
-
-  it("ignores fully blank rows on both sheets", async () => {
-    const workbook = buildGuidesWorkbook([guideRow()], [itemRow()]);
-    workbook.getWorksheet(GUIDES_SHEET_NAME)!.addRow({});
-    workbook.getWorksheet(GUIDE_ITEMS_SHEET_NAME)!.addRow({});
-    const buffer = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(buffer);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.guideRows).toHaveLength(1);
-    expect(result.itemRows).toHaveLength(1);
-  });
-
-  it("rejects a formula cell on the Guides sheet", async () => {
-    const buffer = await bufferFromSheets([guideRow()], []);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    workbook.getWorksheet(GUIDES_SHEET_NAME)!.getRow(2).getCell(3).value = {
-      formula: "A1",
-      result: "x",
-    };
-    const rebuilt = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(rebuilt);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.guideRows[0].kind).toBe("error");
-  });
-
-  it("rejects a formula cell on the Guide Items sheet", async () => {
-    const buffer = await bufferFromSheets([guideRow()], [itemRow()]);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    workbook.getWorksheet(GUIDE_ITEMS_SHEET_NAME)!.getRow(2).getCell(5).value =
-      {
-        formula: "A1",
-        result: "x",
-      };
-    const rebuilt = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(rebuilt);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.itemRows[0].kind).toBe("error");
-  });
-
-  it("parses booleans deterministically", async () => {
-    const result = await parseRows(
-      [guideRow({ featured: true, is_public: false })],
-      [],
-    );
-    const [row] = result.guideRows;
-    expect(row.kind).toBe("candidate");
-    if (row.kind === "candidate") {
-      expect(row.candidate.featured).toBe(true);
-      expect(row.candidate.is_public).toBe(false);
-    }
-  });
-
-  it("keeps position and sort_order numeric", async () => {
-    const result = await parseRows(
-      [guideRow({ sort_order: 4 })],
-      [itemRow({ position: 2 })],
-    );
-    const [guide] = result.guideRows;
-    const [item] = result.itemRows;
-    expect(guide.kind).toBe("candidate");
-    expect(item.kind).toBe("candidate");
-    if (guide.kind === "candidate") expect(guide.candidate.sort_order).toBe(4);
-    if (item.kind === "candidate") expect(item.candidate.position).toBe(2);
-  });
-
-  it("rejects a fractional position", async () => {
-    const buffer = await bufferFromSheets([guideRow()], [itemRow()]);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    workbook.getWorksheet(GUIDE_ITEMS_SHEET_NAME)!.getRow(2).getCell(4).value =
-      1.5;
-    const rebuilt = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(rebuilt);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.itemRows[0].kind).toBe("error");
-  });
-
-  it("rejects a negative position", async () => {
-    const buffer = await bufferFromSheets([guideRow()], [itemRow()]);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    workbook.getWorksheet(GUIDE_ITEMS_SHEET_NAME)!.getRow(2).getCell(4).value =
-      -1;
-    const rebuilt = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(rebuilt);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.itemRows[0].kind).toBe("error");
-  });
-
-  it("rejects a non-numeric position", async () => {
-    const buffer = await bufferFromSheets([guideRow()], [itemRow()]);
-    const workbook = new ExcelJS.Workbook();
-    await workbook.xlsx.load(buffer);
-    workbook.getWorksheet(GUIDE_ITEMS_SHEET_NAME)!.getRow(2).getCell(4).value =
-      "first";
-    const rebuilt = await bufferFromWorkbook(workbook);
-
-    const result = await parseGuidesWorkbook(rebuilt);
-    expect(result.ok).toBe(true);
-    if (!result.ok) return;
-    expect(result.itemRows[0].kind).toBe("error");
   });
 });
 
-describe("buildGuideImportPreview — Guides classification", () => {
-  it("classifies a blank-id valid row as create", async () => {
-    const { guideRows, itemRows } = await parseRows(
-      [guideRow({ id: "", import_ref: "prague-nightlife", slug: "new-guide" })],
+describe("Roundtrip: export shape re-imports as unchanged", () => {
+  it("produces zero changes when the exact exported row is re-uploaded", async () => {
+    const parsed = await parse(
+      [guideRow({ id: "g1" })],
+      [spotRow({ id: "s1" })],
+      [comparisonRow({ id: "c1" })],
+    );
+
+    const preview = buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [dbSpot()],
+      [dbComparison()],
+    );
+
+    expect(preview.summary.guides).toMatchObject({
+      update: 0,
+      unchanged: 1,
+      error: 0,
+    });
+    expect(preview.summary.spots).toMatchObject({
+      update: 0,
+      unchanged: 1,
+      error: 0,
+    });
+    expect(preview.summary.comparisons).toMatchObject({
+      update: 0,
+      unchanged: 1,
+      error: 0,
+    });
+  });
+});
+
+describe("Guide create/update via guide_slug", () => {
+  it("creates a new guide and resolves a new spot to it by guide_slug", async () => {
+    const parsed = await parse(
+      [guideRow({ id: "", slug: "new-guide", title: "New Guide" })],
+      [spotRow({ id: "", guide_slug: "new-guide" })],
+    );
+
+    const preview = buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [],
+      [],
       [],
     );
-    const preview = buildGuideImportPreview(guideRows, itemRows, [], []);
+
     expect(preview.summary.guides.create).toBe(1);
-  });
-
-  it("classifies an existing id with changed values as update", async () => {
-    const existing = existingGuide();
-    const { guideRows, itemRows } = await parseRows(
-      [guideRow({ id: existing.id, featured: true })],
-      [],
-    );
-    const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [existing],
-      [],
-    );
-    expect(preview.summary.guides.update).toBe(1);
-    const [row] = preview.guides;
-    if (row.status === "update") {
-      expect(row.changes.map((c) => c.field)).toContain("featured");
+    expect(preview.summary.spots.create).toBe(1);
+    const spot = preview.spots[0];
+    expect(spot.status).toBe("create");
+    if (spot.status === "create") {
+      expect(spot.parent).toEqual({ kind: "new", slug: "new-guide" });
     }
   });
 
-  it("classifies an existing id with equivalent values as unchanged", async () => {
-    const existing = existingGuide({ city_slug: null, description: null });
-    const { guideRows, itemRows } = await parseRows(
-      [guideRow({ id: existing.id, city_slug: "", description: "" })],
+  it("resolves a spot to an existing guide by guide_slug", async () => {
+    const parsed = await parse(
       [],
+      [spotRow({ guide_slug: "48-hours-in-prague" })],
     );
+
     const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [existing],
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [],
       [],
     );
-    expect(preview.summary.guides.unchanged).toBe(1);
+
+    const spot = preview.spots[0];
+    expect(spot.status).toBe("create");
+    if (spot.status === "create") {
+      expect(spot.parent).toEqual({ kind: "existing", guideId: "g1" });
+    }
   });
 
-  it("errors on an unknown non-empty id", async () => {
-    const { guideRows, itemRows } = await parseRows(
-      [guideRow({ id: "99999999-9999-4999-8999-999999999999" })],
-      [],
-    );
-    const preview = buildGuideImportPreview(guideRows, itemRows, [], []);
-    expect(preview.summary.guides.error).toBe(1);
-  });
+  it("errors when guide_slug matches no guide", async () => {
+    const parsed = await parse([], [spotRow({ guide_slug: "does-not-exist" })]);
 
-  it("errors on duplicate Guide ids", async () => {
-    const existing = existingGuide();
-    const { guideRows, itemRows } = await parseRows(
-      [
-        guideRow({ id: existing.id, slug: "a" }),
-        guideRow({ id: existing.id, slug: "b", title: "Second" }),
-      ],
-      [],
-    );
     const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [existing],
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [],
+      [],
       [],
     );
-    expect(preview.summary.guides.error).toBe(2);
-  });
 
-  it("errors on duplicate import_ref", async () => {
-    const { guideRows, itemRows } = await parseRows(
-      [
-        guideRow({ import_ref: "dup", slug: "a" }),
-        guideRow({ import_ref: "dup", slug: "b", title: "Second" }),
-      ],
-      [],
-    );
-    const preview = buildGuideImportPreview(guideRows, itemRows, [], []);
-    expect(preview.summary.guides.error).toBe(2);
-  });
-
-  it("errors on duplicate Guide slugs in the workbook", async () => {
-    const { guideRows, itemRows } = await parseRows(
-      [
-        guideRow({ slug: "shared", title: "First" }),
-        guideRow({ slug: "shared", title: "Second" }),
-      ],
-      [],
-    );
-    const preview = buildGuideImportPreview(guideRows, itemRows, [], []);
-    expect(preview.summary.guides.error).toBe(2);
-  });
-
-  it("errors on a slug collision with an existing DB Guide", async () => {
-    const existing = existingGuide();
-    const { guideRows, itemRows } = await parseRows(
-      [guideRow({ id: "", slug: existing.slug, title: "Different" })],
-      [],
-    );
-    const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [existing],
-      [],
-    );
-    expect(preview.summary.guides.error).toBe(1);
+    expect(preview.spots[0].status).toBe("error");
   });
 });
 
-describe("buildGuideImportPreview — Guide Item relationship resolution", () => {
-  it("resolves an existing guide_id for a new item", async () => {
-    const existing = existingGuide();
-    const { guideRows, itemRows } = await parseRows(
+describe("Spot updates", () => {
+  it("diffs a changed field and reports it in changes", async () => {
+    const parsed = await parse(
       [],
-      [itemRow({ guide_id: existing.id, position: 5 })],
+      [spotRow({ id: "s1", title: "Old Town Square (renamed)" })],
     );
+
     const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [existing],
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [dbSpot()],
       [],
     );
-    expect(preview.summary.items.create).toBe(1);
-    const [row] = preview.items;
-    if (row.status === "create") {
-      expect(row.parent).toEqual({ kind: "existing", guideId: existing.id });
+
+    const row = preview.spots[0];
+    expect(row.status).toBe("update");
+    if (row.status === "update") {
+      expect(row.changes.some((c) => c.field === "title")).toBe(true);
     }
   });
 
-  it("resolves guide_ref to a new Guide's import_ref", async () => {
-    const { guideRows, itemRows } = await parseRows(
-      [guideRow({ import_ref: "prague-nightlife", slug: "prague-nightlife" })],
-      [itemRow({ guide_ref: "prague-nightlife", position: 0 })],
+  it("detects a tags-only change", async () => {
+    const parsed = await parse([], [spotRow({ id: "s1", tags: "historic" })]);
+
+    const preview = buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [dbSpot()],
+      [],
     );
-    const preview = buildGuideImportPreview(guideRows, itemRows, [], []);
-    expect(preview.summary.items.create).toBe(1);
-    const [row] = preview.items;
-    if (row.status === "create") {
-      expect(row.parent).toEqual({
-        kind: "new",
-        importRef: "prague-nightlife",
-      });
+
+    const row = preview.spots[0];
+    expect(row.status).toBe("update");
+    if (row.status === "update") {
+      expect(row.changes.some((c) => c.field === "tags")).toBe(true);
     }
   });
+});
 
-  it("errors on unknown guide_id", async () => {
-    const { guideRows, itemRows } = await parseRows(
+describe("Comparison updates", () => {
+  it("diffs a changed reason field", async () => {
+    const parsed = await parse(
       [],
-      [itemRow({ guide_id: "99999999-9999-4999-8999-999999999999" })],
-    );
-    const preview = buildGuideImportPreview(guideRows, itemRows, [], []);
-    expect(preview.summary.items.error).toBe(1);
-  });
-
-  it("errors on unknown guide_ref", async () => {
-    const { guideRows, itemRows } = await parseRows(
       [],
-      [itemRow({ guide_ref: "does-not-exist" })],
+      [comparisonRow({ id: "c1", reason: "A better, cheaper meal nearby." })],
     );
-    const preview = buildGuideImportPreview(guideRows, itemRows, [], []);
-    expect(preview.summary.items.error).toBe(1);
-  });
 
-  it("errors when both guide_id and guide_ref are populated", async () => {
-    const existing = existingGuide();
-    const { guideRows, itemRows } = await parseRows(
-      [guideRow({ import_ref: "ref-1", slug: "ref-1-guide" })],
-      [itemRow({ guide_id: existing.id, guide_ref: "ref-1" })],
-    );
     const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [existing],
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
       [],
+      [dbComparison()],
     );
-    expect(preview.summary.items.error).toBe(1);
-  });
 
-  it("errors when neither guide_id nor guide_ref is populated", async () => {
-    const { guideRows, itemRows } = await parseRows([], [itemRow()]);
-    const preview = buildGuideImportPreview(guideRows, itemRows, [], []);
-    expect(preview.summary.items.error).toBe(1);
-  });
-
-  it("errors on duplicate Guide Item ids", async () => {
-    const existingParent = existingGuide();
-    const existingA = existingItem({
-      id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
-    });
-    const { guideRows, itemRows } = await parseRows(
-      [],
-      [
-        itemRow({ id: existingA.id, guide_id: existingParent.id, position: 0 }),
-        itemRow({
-          id: existingA.id,
-          guide_id: existingParent.id,
-          position: 1,
-          title: "Second",
-        }),
-      ],
-    );
-    const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [existingParent],
-      [existingA],
-    );
-    expect(preview.summary.items.error).toBe(2);
-  });
-
-  it("errors on duplicate positions within the same resolved Guide", async () => {
-    const existing = existingGuide();
-    const { guideRows, itemRows } = await parseRows(
-      [],
-      [
-        itemRow({ guide_id: existing.id, position: 1, title: "First" }),
-        itemRow({ guide_id: existing.id, position: 1, title: "Second" }),
-      ],
-    );
-    const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [existing],
-      [],
-    );
-    expect(preview.summary.items.error).toBe(2);
-  });
-
-  it("allows the same position across two different resolved Guides", async () => {
-    const guideA = existingGuide();
-    const guideB = existingGuide({
-      id: "33333333-3333-4333-8333-333333333333",
-      slug: "guide-b",
-    });
-    const { guideRows, itemRows } = await parseRows(
-      [],
-      [
-        itemRow({ guide_id: guideA.id, position: 0, title: "A item" }),
-        itemRow({ guide_id: guideB.id, position: 0, title: "B item" }),
-      ],
-    );
-    const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [guideA, guideB],
-      [],
-    );
-    expect(preview.summary.items.error).toBe(0);
-    expect(preview.summary.items.create).toBe(2);
-  });
-
-  it("rejects reparenting an existing Guide Item to a different guide", async () => {
-    const originalParent = existingGuide();
-    const otherParent = existingGuide({
-      id: "44444444-4444-4444-8444-444444444444",
-      slug: "other-guide",
-    });
-    const item = existingItem({ guide_id: originalParent.id });
-    const { guideRows, itemRows } = await parseRows(
-      [],
-      [itemRow({ id: item.id, guide_id: otherParent.id, position: 0 })],
-    );
-    const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [originalParent, otherParent],
-      [item],
-    );
-    expect(preview.summary.items.error).toBe(1);
-    const [row] = preview.items;
-    if (row.status === "error") {
-      expect(row.errors.some((m) => m.includes("not supported"))).toBe(true);
+    const row = preview.comparisons[0];
+    expect(row.status).toBe("update");
+    if (row.status === "update") {
+      expect(row.changes.some((c) => c.field === "reason")).toBe(true);
     }
   });
+});
 
-  it("rejects guide_ref populated alongside an existing item id", async () => {
-    const parent = existingGuide();
-    const item = existingItem({ guide_id: parent.id });
-    const { guideRows, itemRows } = await parseRows(
-      [guideRow({ import_ref: "ref-x", slug: "ref-x-guide" })],
-      [itemRow({ id: item.id, guide_id: parent.id, guide_ref: "ref-x" })],
-    );
+describe("Validation errors", () => {
+  it("rejects an unknown guide type", async () => {
+    const parsed = await parse([guideRow({ type: "spaceship" })]);
     const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [parent],
-      [item],
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [],
+      [],
+      [],
     );
-    expect(preview.summary.items.error).toBe(1);
+    expect(preview.guides[0].status).toBe("error");
   });
 
-  it("classifies an existing item with changed values as update, keeping guide_id unchanged", async () => {
-    const parent = existingGuide();
-    const item = existingItem({ guide_id: parent.id, title: "Old title" });
-    const { guideRows, itemRows } = await parseRows(
+  it("rejects an unsafe google_maps_url on a spot", async () => {
+    const parsed = await parse(
       [],
-      [itemRow({ id: item.id, guide_id: parent.id, title: "New title" })],
+      [spotRow({ google_maps_url: "javascript:alert(1)" })],
     );
     const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [parent],
-      [item],
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [],
+      [],
     );
-    expect(preview.summary.items.update).toBe(1);
+    expect(preview.spots[0].status).toBe("error");
   });
 
-  it("classifies an existing item with equivalent values as unchanged", async () => {
-    const parent = existingGuide();
-    const item = existingItem({ guide_id: parent.id, description: null });
-    const { guideRows, itemRows } = await parseRows(
+  it("rejects an out-of-range latitude on a spot", async () => {
+    const parsed = await parse([], [spotRow({ latitude: "200" })]);
+    const preview = buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
       [],
-      [itemRow({ id: item.id, guide_id: parent.id, description: "" })],
+      [],
+    );
+    expect(preview.spots[0].status).toBe("error");
+  });
+
+  it("rejects an out-of-range longitude on a comparison side", async () => {
+    const parsed = await parse(
+      [],
+      [],
+      [comparisonRow({ skip_longitude: "200" })],
     );
     const preview = buildGuideImportPreview(
-      guideRows,
-      itemRows,
-      [parent],
-      [item],
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [],
+      [],
     );
-    expect(preview.summary.items.unchanged).toBe(1);
+    expect(preview.comparisons[0].status).toBe("error");
+  });
+
+  it("rejects duplicate positions for two spots on the same guide", async () => {
+    const parsed = await parse(
+      [],
+      [
+        spotRow({ title: "First", position: 0 }),
+        spotRow({ title: "Second", position: 0 }),
+      ],
+    );
+    const preview = buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [],
+      [],
+    );
+    expect(preview.spots.every((row) => row.status === "error")).toBe(true);
+  });
+
+  it("rejects a duplicate id within the same file", async () => {
+    const parsed = await parse([
+      guideRow({ id: "g1", slug: "a" }),
+      guideRow({ id: "g1", slug: "b" }),
+    ]);
+    const preview = buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [],
+      [],
+    );
+    expect(preview.guides.every((row) => row.status === "error")).toBe(true);
+  });
+
+  it("rejects a duplicate slug within the same file", async () => {
+    const parsed = await parse([
+      guideRow({ id: "", slug: "dup" }),
+      guideRow({ id: "", slug: "dup" }),
+    ]);
+    const preview = buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [],
+      [],
+      [],
+    );
+    expect(preview.guides.every((row) => row.status === "error")).toBe(true);
+  });
+
+  it("rejects moving an existing spot to a different guide", async () => {
+    const parsed = await parse(
+      [guideRow({ id: "", slug: "other-guide" })],
+      [spotRow({ id: "s1", guide_slug: "other-guide" })],
+    );
+    const preview = buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [dbGuide()],
+      [dbSpot()],
+      [],
+    );
+    expect(preview.spots[0].status).toBe("error");
+  });
+});
+
+describe("Preview does not mutate the database", () => {
+  it("buildGuideImportPreview is a pure function over its inputs", async () => {
+    const parsed = await parse([guideRow({ id: "g1", title: "Changed" })]);
+    const before = dbGuide();
+
+    buildGuideImportPreview(
+      parsed.guideRows,
+      parsed.spotRows,
+      parsed.comparisonRows,
+      [before],
+      [],
+      [],
+    );
+
+    expect(before.title).toBe("48 Hours in Prague");
   });
 });

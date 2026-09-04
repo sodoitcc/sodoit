@@ -8,6 +8,7 @@ import { AdminVisibilityToggle } from "@/components/admin/AdminVisibilityToggle"
 import { AdminLinkButton } from "@/components/admin/AdminLinkButton";
 import { EmptyState } from "@/components/ui";
 import { listGuidesAdmin } from "@/lib/admin/guides/queries";
+import { GUIDE_TYPE_LABELS, resolveGuideType } from "@/lib/guides/types";
 import { setGuideVisibility } from "@/lib/admin/guides/actions";
 import { GUIDE_TYPES } from "@/lib/admin/guides/validation";
 
@@ -114,7 +115,7 @@ export default async function AdminGuidesPage({
                     <p className="truncate text-xs text-muted">{guide.slug}</p>
                   </td>
                   <td className="px-4 py-3 text-secondary">
-                    {guide.type === "collection" ? "Collection" : "Itinerary"}
+                    {GUIDE_TYPE_LABELS[resolveGuideType(guide.type)]}
                   </td>
                   <td className="px-4 py-3 text-secondary">{guide.city}</td>
                   <td className="px-4 py-3 text-secondary">
