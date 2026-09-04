@@ -1,16 +1,21 @@
 import "server-only";
 import { createHash } from "node:crypto";
 import ExcelJS from "exceljs";
-import type { Guide, GuideItem } from "@/lib/guides/types";
+import type { Guide, GuideComparisonPair, GuideItem } from "@/lib/guides/types";
 import {
+  COMPARISONS_SHEET_NAME,
+  GUIDE_COMPARISON_EXCEL_COLUMNS,
   GUIDE_EXCEL_COLUMNS,
-  GUIDE_ITEM_EXCEL_COLUMNS,
-  GUIDE_ITEMS_SHEET_NAME,
+  GUIDE_SPOT_EXCEL_COLUMNS,
   GUIDES_SHEET_NAME,
+  SPOTS_SHEET_NAME,
 } from "./excel";
 import {
+  validateGuideComparisonInput,
   validateGuideInput,
   validateGuideItemInput,
+  parseTags,
+  type GuideComparisonInput,
   type GuideInput,
   type GuideItemInput,
 } from "./validation";
@@ -23,7 +28,6 @@ import {
 
 export interface GuideImportCandidate {
   id: string | null;
-  importRef: string | null;
   title: string;
   slug: string;
   description: string | null;
@@ -34,46 +38,86 @@ export interface GuideImportCandidate {
   cover_image_url: string | null;
   cover_image_alt: string | null;
   duration_label: string | null;
+  best_time: string | null;
+  local_tip: string | null;
+  route_mode: string | null;
   featured: boolean;
   is_public: boolean;
   sort_order: number;
   editorial_attribution: string | null;
 }
 
-export interface GuideItemImportCandidate {
+export interface GuideSpotImportCandidate {
   id: string | null;
-  guideIdRaw: string | null;
-  guideRefRaw: string | null;
+  guideSlug: string;
   position: number;
   title: string;
+  neighborhood: string | null;
+  address: string | null;
   description: string | null;
-  place_id: string | null;
+  google_maps_url: string | null;
+  external_url: string | null;
+  tags: string[] | null;
   place_name: string | null;
   image_url: string | null;
   image_alt: string | null;
-  external_url: string | null;
+  latitude: number | null;
+  longitude: number | null;
 }
 
-const GUIDE_FIELDS = GUIDE_EXCEL_COLUMNS.filter(
-  (c) => c.key !== "id" && c.key !== "import_ref",
+export interface GuideComparisonImportCandidate {
+  id: string | null;
+  guideSlug: string;
+  position: number;
+  skip_title: string;
+  skip_description: string | null;
+  skip_neighborhood: string | null;
+  skip_address: string | null;
+  skip_google_maps_url: string | null;
+  skip_external_url: string | null;
+  skip_tags: string[] | null;
+  go_instead_title: string;
+  go_instead_description: string | null;
+  go_instead_neighborhood: string | null;
+  go_instead_address: string | null;
+  go_instead_google_maps_url: string | null;
+  go_instead_external_url: string | null;
+  go_instead_tags: string[] | null;
+  reason: string | null;
+  skip_latitude: number | null;
+  skip_longitude: number | null;
+  go_instead_latitude: number | null;
+  go_instead_longitude: number | null;
+}
+
+const GUIDE_FIELDS = GUIDE_EXCEL_COLUMNS.filter((c) => c.key !== "id").map(
+  (c) => c.key,
+);
+
+const GUIDE_SPOT_FIELDS = GUIDE_SPOT_EXCEL_COLUMNS.filter(
+  (c) => c.key !== "id" && c.key !== "guide_slug",
 ).map((c) => c.key);
 
-const GUIDE_ITEM_FIELDS = GUIDE_ITEM_EXCEL_COLUMNS.filter(
-  (c) => c.key !== "id" && c.key !== "guide_id" && c.key !== "guide_ref",
+const GUIDE_COMPARISON_FIELDS = GUIDE_COMPARISON_EXCEL_COLUMNS.filter(
+  (c) => c.key !== "id" && c.key !== "guide_slug",
 ).map((c) => c.key);
 
 interface RawGuideDisplay {
   id: string | null;
-  importRef: string | null;
   title: string | null;
   slug: string | null;
 }
 
-interface RawGuideItemDisplay {
+interface RawSpotDisplay {
   id: string | null;
-  guideId: string | null;
-  guideRef: string | null;
+  guideSlug: string | null;
   title: string | null;
+}
+
+interface RawComparisonDisplay {
+  id: string | null;
+  guideSlug: string | null;
+  skipTitle: string | null;
 }
 
 type ParsedGuideRow =
@@ -85,21 +129,39 @@ type ParsedGuideRow =
       errors: string[];
     };
 
-type ParsedGuideItemRow =
+type ParsedSpotRow =
   | {
       rowNumber: number;
       kind: "candidate";
-      candidate: GuideItemImportCandidate;
+      candidate: GuideSpotImportCandidate;
     }
   | {
       rowNumber: number;
       kind: "error";
-      raw: RawGuideItemDisplay;
+      raw: RawSpotDisplay;
+      errors: string[];
+    };
+
+type ParsedComparisonRow =
+  | {
+      rowNumber: number;
+      kind: "candidate";
+      candidate: GuideComparisonImportCandidate;
+    }
+  | {
+      rowNumber: number;
+      kind: "error";
+      raw: RawComparisonDisplay;
       errors: string[];
     };
 
 export type ParseGuidesWorkbookResult =
-  | { ok: true; guideRows: ParsedGuideRow[]; itemRows: ParsedGuideItemRow[] }
+  | {
+      ok: true;
+      guideRows: ParsedGuideRow[];
+      spotRows: ParsedSpotRow[];
+      comparisonRows: ParsedComparisonRow[];
+    }
   | { ok: false; error: string };
 
 function parseIntegerCell(
@@ -212,6 +274,10 @@ function parseSheetRows<Candidate>(
   return rows;
 }
 
+function toNumberOrNull(value: string): number | null {
+  return value === "" ? null : Number(value);
+}
+
 export async function parseGuidesWorkbook(
   buffer: ArrayBuffer,
 ): Promise<ParseGuidesWorkbookResult> {
@@ -234,11 +300,19 @@ export async function parseGuidesWorkbook(
     };
   }
 
-  const itemsSheet = workbook.getWorksheet(GUIDE_ITEMS_SHEET_NAME);
-  if (!itemsSheet) {
+  const spotsSheet = workbook.getWorksheet(SPOTS_SHEET_NAME);
+  if (!spotsSheet) {
     return {
       ok: false,
-      error: `Missing the "${GUIDE_ITEMS_SHEET_NAME}" worksheet. Re-download the template and try again.`,
+      error: `Missing the "${SPOTS_SHEET_NAME}" worksheet. Re-download the template and try again.`,
+    };
+  }
+
+  const comparisonsSheet = workbook.getWorksheet(COMPARISONS_SHEET_NAME);
+  if (!comparisonsSheet) {
+    return {
+      ok: false,
+      error: `Missing the "${COMPARISONS_SHEET_NAME}" worksheet. Re-download the template and try again.`,
     };
   }
 
@@ -250,11 +324,19 @@ export async function parseGuidesWorkbook(
     };
   }
 
-  const itemHeaders = GUIDE_ITEM_EXCEL_COLUMNS.map((c) => c.header);
-  if (!validateSheetHeaders(itemsSheet, itemHeaders)) {
+  const spotHeaders = GUIDE_SPOT_EXCEL_COLUMNS.map((c) => c.header);
+  if (!validateSheetHeaders(spotsSheet, spotHeaders)) {
     return {
       ok: false,
-      error: `Unexpected columns on the "${GUIDE_ITEMS_SHEET_NAME}" sheet. Re-download the template and try again.`,
+      error: `Unexpected columns on the "${SPOTS_SHEET_NAME}" sheet. Re-download the template and try again.`,
+    };
+  }
+
+  const comparisonHeaders = GUIDE_COMPARISON_EXCEL_COLUMNS.map((c) => c.header);
+  if (!validateSheetHeaders(comparisonsSheet, comparisonHeaders)) {
+    return {
+      ok: false,
+      error: `Unexpected columns on the "${COMPARISONS_SHEET_NAME}" sheet. Re-download the template and try again.`,
     };
   }
 
@@ -265,7 +347,6 @@ export async function parseGuidesWorkbook(
     ["featured", "is_public"],
     (values) => ({
       id: (values.id as string) || null,
-      importRef: (values.import_ref as string) || null,
       title: values.title as string,
       slug: values.slug as string,
       description: (values.description as string) || null,
@@ -276,6 +357,9 @@ export async function parseGuidesWorkbook(
       cover_image_url: (values.cover_image_url as string) || null,
       cover_image_alt: (values.cover_image_alt as string) || null,
       duration_label: (values.duration_label as string) || null,
+      best_time: (values.best_time as string) || null,
+      local_tip: (values.local_tip as string) || null,
+      route_mode: (values.route_mode as string) || null,
       featured: values.featured as boolean,
       is_public: values.is_public as boolean,
       sort_order: values.sort_order as number,
@@ -283,39 +367,84 @@ export async function parseGuidesWorkbook(
     }),
     (values) => ({
       id: (values.id as string) || null,
-      importRef: (values.import_ref as string) || null,
       title: (values.title as string) || null,
       slug: (values.slug as string) || null,
     }),
   ) as ParsedGuideRow[];
 
-  const itemRows = parseSheetRows<GuideItemImportCandidate>(
-    itemsSheet,
-    GUIDE_ITEM_EXCEL_COLUMNS,
+  const spotRows = parseSheetRows<GuideSpotImportCandidate>(
+    spotsSheet,
+    GUIDE_SPOT_EXCEL_COLUMNS,
     ["position"],
     [],
     (values) => ({
       id: (values.id as string) || null,
-      guideIdRaw: (values.guide_id as string) || null,
-      guideRefRaw: (values.guide_ref as string) || null,
+      guideSlug: values.guide_slug as string,
       position: values.position as number,
       title: values.title as string,
+      neighborhood: (values.neighborhood as string) || null,
+      address: (values.address as string) || null,
       description: (values.description as string) || null,
-      place_id: (values.place_id as string) || null,
+      google_maps_url: (values.google_maps_url as string) || null,
+      external_url: (values.external_url as string) || null,
+      tags: parseTags((values.tags as string) || ""),
       place_name: (values.place_name as string) || null,
       image_url: (values.image_url as string) || null,
       image_alt: (values.image_alt as string) || null,
-      external_url: (values.external_url as string) || null,
+      latitude: toNumberOrNull((values.latitude as string) || ""),
+      longitude: toNumberOrNull((values.longitude as string) || ""),
     }),
     (values) => ({
       id: (values.id as string) || null,
-      guideId: (values.guide_id as string) || null,
-      guideRef: (values.guide_ref as string) || null,
+      guideSlug: (values.guide_slug as string) || null,
       title: (values.title as string) || null,
     }),
-  ) as ParsedGuideItemRow[];
+  ) as ParsedSpotRow[];
 
-  return { ok: true, guideRows, itemRows };
+  const comparisonRows = parseSheetRows<GuideComparisonImportCandidate>(
+    comparisonsSheet,
+    GUIDE_COMPARISON_EXCEL_COLUMNS,
+    ["position"],
+    [],
+    (values) => ({
+      id: (values.id as string) || null,
+      guideSlug: values.guide_slug as string,
+      position: values.position as number,
+      skip_title: values.skip_title as string,
+      skip_description: (values.skip_description as string) || null,
+      skip_neighborhood: (values.skip_neighborhood as string) || null,
+      skip_address: (values.skip_address as string) || null,
+      skip_google_maps_url: (values.skip_google_maps_url as string) || null,
+      skip_external_url: (values.skip_external_url as string) || null,
+      skip_tags: parseTags((values.skip_tags as string) || ""),
+      go_instead_title: values.go_instead_title as string,
+      go_instead_description: (values.go_instead_description as string) || null,
+      go_instead_neighborhood:
+        (values.go_instead_neighborhood as string) || null,
+      go_instead_address: (values.go_instead_address as string) || null,
+      go_instead_google_maps_url:
+        (values.go_instead_google_maps_url as string) || null,
+      go_instead_external_url:
+        (values.go_instead_external_url as string) || null,
+      go_instead_tags: parseTags((values.go_instead_tags as string) || ""),
+      reason: (values.reason as string) || null,
+      skip_latitude: toNumberOrNull((values.skip_latitude as string) || ""),
+      skip_longitude: toNumberOrNull((values.skip_longitude as string) || ""),
+      go_instead_latitude: toNumberOrNull(
+        (values.go_instead_latitude as string) || "",
+      ),
+      go_instead_longitude: toNumberOrNull(
+        (values.go_instead_longitude as string) || "",
+      ),
+    }),
+    (values) => ({
+      id: (values.id as string) || null,
+      guideSlug: (values.guide_slug as string) || null,
+      skipTitle: (values.skip_title as string) || null,
+    }),
+  ) as ParsedComparisonRow[];
+
+  return { ok: true, guideRows, spotRows, comparisonRows };
 }
 
 export interface GuideImportChange {
@@ -324,14 +453,20 @@ export interface GuideImportChange {
   after: unknown;
 }
 
-export interface GuideItemImportChange {
-  field: (typeof GUIDE_ITEM_FIELDS)[number];
+export interface GuideSpotImportChange {
+  field: (typeof GUIDE_SPOT_FIELDS)[number];
+  before: unknown;
+  after: unknown;
+}
+
+export interface GuideComparisonImportChange {
+  field: (typeof GUIDE_COMPARISON_FIELDS)[number];
   before: unknown;
   after: unknown;
 }
 
 export type GuideImportParent =
-  { kind: "existing"; guideId: string } | { kind: "new"; importRef: string };
+  { kind: "existing"; guideId: string } | { kind: "new"; slug: string };
 
 export type GuideImportPreviewRow =
   | { status: "create"; rowNumber: number; candidate: GuideImportCandidate }
@@ -348,25 +483,24 @@ export type GuideImportPreviewRow =
       status: "error";
       rowNumber: number;
       id: string | null;
-      importRef: string | null;
       title: string | null;
       slug: string | null;
       errors: string[];
     };
 
-export type GuideItemImportPreviewRow =
+export type GuideSpotImportPreviewRow =
   | {
       status: "create";
       rowNumber: number;
-      candidate: GuideItemImportCandidate;
+      candidate: GuideSpotImportCandidate;
       parent: GuideImportParent;
     }
   | {
       status: "update";
       rowNumber: number;
       id: string;
-      candidate: GuideItemImportCandidate;
-      changes: GuideItemImportChange[];
+      candidate: GuideSpotImportCandidate;
+      changes: GuideSpotImportChange[];
       baseFingerprint: string;
     }
   | { status: "unchanged"; rowNumber: number; id: string }
@@ -374,9 +508,33 @@ export type GuideItemImportPreviewRow =
       status: "error";
       rowNumber: number;
       id: string | null;
-      guideId: string | null;
-      guideRef: string | null;
+      guideSlug: string | null;
       title: string | null;
+      errors: string[];
+    };
+
+export type GuideComparisonImportPreviewRow =
+  | {
+      status: "create";
+      rowNumber: number;
+      candidate: GuideComparisonImportCandidate;
+      parent: GuideImportParent;
+    }
+  | {
+      status: "update";
+      rowNumber: number;
+      id: string;
+      candidate: GuideComparisonImportCandidate;
+      changes: GuideComparisonImportChange[];
+      baseFingerprint: string;
+    }
+  | { status: "unchanged"; rowNumber: number; id: string }
+  | {
+      status: "error";
+      rowNumber: number;
+      id: string | null;
+      guideSlug: string | null;
+      skipTitle: string | null;
       errors: string[];
     };
 
@@ -390,8 +548,13 @@ export interface GuideImportSummary {
 
 export interface GuideImportPreview {
   guides: GuideImportPreviewRow[];
-  items: GuideItemImportPreviewRow[];
-  summary: { guides: GuideImportSummary; items: GuideImportSummary };
+  spots: GuideSpotImportPreviewRow[];
+  comparisons: GuideComparisonImportPreviewRow[];
+  summary: {
+    guides: GuideImportSummary;
+    spots: GuideImportSummary;
+    comparisons: GuideImportSummary;
+  };
 }
 
 function toGuideValidationInput(candidate: GuideImportCandidate): GuideInput {
@@ -407,17 +570,17 @@ function toGuideValidationInput(candidate: GuideImportCandidate): GuideInput {
     cover_image_alt: candidate.cover_image_alt ?? "",
     duration_label: candidate.duration_label ?? "",
     editorial_attribution: candidate.editorial_attribution ?? "",
-    best_time: "",
-    local_tip: "",
-    route_mode: "",
+    best_time: candidate.best_time ?? "",
+    local_tip: candidate.local_tip ?? "",
+    route_mode: candidate.route_mode ?? "",
     sort_order: candidate.sort_order,
     featured: candidate.featured,
     is_public: candidate.is_public,
   };
 }
 
-function toGuideItemValidationInput(
-  candidate: GuideItemImportCandidate,
+function toGuideSpotValidationInput(
+  candidate: GuideSpotImportCandidate,
 ): GuideItemInput {
   return {
     title: candidate.title,
@@ -426,12 +589,46 @@ function toGuideItemValidationInput(
     image_url: candidate.image_url ?? "",
     image_alt: candidate.image_alt ?? "",
     external_url: candidate.external_url ?? "",
-    neighborhood: "",
-    address: "",
-    latitude: "",
-    longitude: "",
-    google_maps_url: "",
-    tags: "",
+    neighborhood: candidate.neighborhood ?? "",
+    address: candidate.address ?? "",
+    latitude: candidate.latitude === null ? "" : String(candidate.latitude),
+    longitude: candidate.longitude === null ? "" : String(candidate.longitude),
+    google_maps_url: candidate.google_maps_url ?? "",
+    tags: (candidate.tags ?? []).join(", "),
+  };
+}
+
+function toGuideComparisonValidationInput(
+  candidate: GuideComparisonImportCandidate,
+): GuideComparisonInput {
+  return {
+    skip_title: candidate.skip_title,
+    skip_description: candidate.skip_description ?? "",
+    skip_neighborhood: candidate.skip_neighborhood ?? "",
+    skip_address: candidate.skip_address ?? "",
+    skip_latitude:
+      candidate.skip_latitude === null ? "" : String(candidate.skip_latitude),
+    skip_longitude:
+      candidate.skip_longitude === null ? "" : String(candidate.skip_longitude),
+    skip_google_maps_url: candidate.skip_google_maps_url ?? "",
+    skip_external_url: candidate.skip_external_url ?? "",
+    skip_tags: (candidate.skip_tags ?? []).join(", "),
+    go_instead_title: candidate.go_instead_title,
+    go_instead_description: candidate.go_instead_description ?? "",
+    go_instead_neighborhood: candidate.go_instead_neighborhood ?? "",
+    go_instead_address: candidate.go_instead_address ?? "",
+    go_instead_latitude:
+      candidate.go_instead_latitude === null
+        ? ""
+        : String(candidate.go_instead_latitude),
+    go_instead_longitude:
+      candidate.go_instead_longitude === null
+        ? ""
+        : String(candidate.go_instead_longitude),
+    go_instead_google_maps_url: candidate.go_instead_google_maps_url ?? "",
+    go_instead_external_url: candidate.go_instead_external_url ?? "",
+    go_instead_tags: (candidate.go_instead_tags ?? []).join(", "),
+    reason: candidate.reason ?? "",
   };
 }
 
@@ -442,10 +639,27 @@ export function fingerprintGuide(existing: Guide): string {
   return createHash("sha256").update(canonical).digest("hex");
 }
 
-export function fingerprintGuideItem(existing: GuideItem): string {
-  const canonical = GUIDE_ITEM_FIELDS.map((field) =>
-    JSON.stringify(existing[field as keyof GuideItem] ?? null),
-  ).join("|");
+function fingerprintTags(tags: string[] | null | undefined): string {
+  return JSON.stringify((tags ?? []).slice().sort());
+}
+
+export function fingerprintGuideSpot(existing: GuideItem): string {
+  const canonical = GUIDE_SPOT_FIELDS.map((field) => {
+    if (field === "tags") return fingerprintTags(existing.tags);
+    return JSON.stringify(existing[field as keyof GuideItem] ?? null);
+  }).join("|");
+  return createHash("sha256").update(canonical).digest("hex");
+}
+
+export function fingerprintGuideComparison(
+  existing: GuideComparisonPair,
+): string {
+  const canonical = GUIDE_COMPARISON_FIELDS.map((field) => {
+    if (field === "skip_tags") return fingerprintTags(existing.skip_tags);
+    if (field === "go_instead_tags")
+      return fingerprintTags(existing.go_instead_tags);
+    return JSON.stringify(existing[field as keyof GuideComparisonPair] ?? null);
+  }).join("|");
   return createHash("sha256").update(canonical).digest("hex");
 }
 
@@ -462,31 +676,96 @@ function diffGuide(
   return changes;
 }
 
-function diffGuideItem(
-  candidate: GuideItemImportCandidate,
+function diffGuideSpot(
+  candidate: GuideSpotImportCandidate,
   existing: GuideItem,
-): GuideItemImportChange[] {
-  const changes: GuideItemImportChange[] = [];
-  for (const field of GUIDE_ITEM_FIELDS) {
-    const after = candidate[field as keyof GuideItemImportCandidate];
+): GuideSpotImportChange[] {
+  const changes: GuideSpotImportChange[] = [];
+  for (const field of GUIDE_SPOT_FIELDS) {
+    if (field === "tags") {
+      const after = fingerprintTags(candidate.tags);
+      const before = fingerprintTags(existing.tags);
+      if (before !== after)
+        changes.push({ field, before: existing.tags, after: candidate.tags });
+      continue;
+    }
+    const after = candidate[field as keyof GuideSpotImportCandidate];
     const before = existing[field as keyof GuideItem] ?? null;
     if (before !== after) changes.push({ field, before, after });
   }
   return changes;
 }
 
+function diffGuideComparison(
+  candidate: GuideComparisonImportCandidate,
+  existing: GuideComparisonPair,
+): GuideComparisonImportChange[] {
+  const changes: GuideComparisonImportChange[] = [];
+  for (const field of GUIDE_COMPARISON_FIELDS) {
+    if (field === "skip_tags" || field === "go_instead_tags") {
+      const candidateTags = candidate[field as "skip_tags" | "go_instead_tags"];
+      const existingTags = existing[field as "skip_tags" | "go_instead_tags"];
+      const after = fingerprintTags(candidateTags);
+      const before = fingerprintTags(existingTags);
+      if (before !== after)
+        changes.push({ field, before: existingTags, after: candidateTags });
+      continue;
+    }
+    const after = candidate[field as keyof GuideComparisonImportCandidate];
+    const before = existing[field as keyof GuideComparisonPair] ?? null;
+    if (before !== after) changes.push({ field, before, after });
+  }
+  return changes;
+}
+
+function buildGuideParentIndex(
+  guidePreviewRows: GuideImportPreviewRow[],
+  existingGuides: Guide[],
+): Map<string, GuideImportParent> {
+  const index = new Map<string, GuideImportParent>();
+
+  for (const guide of existingGuides) {
+    index.set(guide.slug, { kind: "existing", guideId: guide.id });
+  }
+
+  for (const row of guidePreviewRows) {
+    if (row.status === "create") {
+      index.set(row.candidate.slug, { kind: "new", slug: row.candidate.slug });
+    } else if (row.status === "update" || row.status === "unchanged") {
+      const slug = row.status === "update" ? row.candidate.slug : undefined;
+      if (slug) index.set(slug, { kind: "existing", guideId: row.id });
+    }
+  }
+
+  return index;
+}
+
+function summarize(rows: { status: string }[]): GuideImportSummary {
+  return {
+    total: rows.length,
+    create: rows.filter((r) => r.status === "create").length,
+    update: rows.filter((r) => r.status === "update").length,
+    unchanged: rows.filter((r) => r.status === "unchanged").length,
+    error: rows.filter((r) => r.status === "error").length,
+  };
+}
+
 export function buildGuideImportPreview(
   guideRows: ParsedGuideRow[],
-  itemRows: ParsedGuideItemRow[],
+  spotRows: ParsedSpotRow[],
+  comparisonRows: ParsedComparisonRow[],
   existingGuides: Guide[],
-  existingItems: GuideItem[],
+  existingSpots: GuideItem[],
+  existingComparisons: GuideComparisonPair[],
 ): GuideImportPreview {
   const existingGuideById = new Map(existingGuides.map((g) => [g.id, g]));
   const existingGuideBySlug = new Map(existingGuides.map((g) => [g.slug, g]));
-  const existingItemById = new Map(existingItems.map((i) => [i.id, i]));
+  const existingSpotById = new Map(existingSpots.map((i) => [i.id, i]));
+  const existingComparisonById = new Map(
+    existingComparisons.map((c) => [c.id, c]),
+  );
 
   const guideIdCounts = new Map<string, number>();
-  const importRefCounts = new Map<string, number>();
   const guideSlugCounts = new Map<string, number>();
 
   for (const row of guideRows) {
@@ -495,12 +774,6 @@ export function buildGuideImportPreview(
       guideIdCounts.set(
         row.candidate.id,
         (guideIdCounts.get(row.candidate.id) ?? 0) + 1,
-      );
-    }
-    if (row.candidate.importRef) {
-      importRefCounts.set(
-        row.candidate.importRef,
-        (importRefCounts.get(row.candidate.importRef) ?? 0) + 1,
       );
     }
     guideSlugCounts.set(
@@ -515,7 +788,6 @@ export function buildGuideImportPreview(
         status: "error",
         rowNumber: row.rowNumber,
         id: row.raw.id,
-        importRef: row.raw.importRef,
         title: row.raw.title,
         slug: row.raw.slug,
         errors: row.errors,
@@ -527,12 +799,6 @@ export function buildGuideImportPreview(
 
     if (candidate.id && (guideIdCounts.get(candidate.id) ?? 0) > 1) {
       errors.push("This id appears more than once in this file.");
-    }
-    if (
-      candidate.importRef &&
-      (importRefCounts.get(candidate.importRef) ?? 0) > 1
-    ) {
-      errors.push("This import_ref appears more than once in this file.");
     }
     if ((guideSlugCounts.get(candidate.slug) ?? 0) > 1) {
       errors.push("This slug appears more than once in this file.");
@@ -557,7 +823,6 @@ export function buildGuideImportPreview(
         status: "error",
         rowNumber: row.rowNumber,
         id: candidate.id,
-        importRef: candidate.importRef,
         title: candidate.title || null,
         slug: candidate.slug || null,
         errors,
@@ -587,151 +852,154 @@ export function buildGuideImportPreview(
     };
   });
 
-  const validCreateImportRefs = new Set(
-    guidePreviewRows
-      .filter((row) => row.status === "create")
-      .map((row) => row.candidate.importRef)
-      .filter((ref): ref is string => Boolean(ref)),
+  const guideParentIndex = buildGuideParentIndex(
+    guidePreviewRows,
+    existingGuides,
   );
 
-  const itemIdCounts = new Map<string, number>();
-  for (const row of itemRows) {
-    if (row.kind !== "candidate" || !row.candidate.id) continue;
-    itemIdCounts.set(
-      row.candidate.id,
-      (itemIdCounts.get(row.candidate.id) ?? 0) + 1,
-    );
+  function resolveParent(guideSlug: string): GuideImportParent | null {
+    if (!guideSlug) return null;
+    return guideParentIndex.get(guideSlug) ?? null;
   }
 
-  interface Resolved {
-    row: ParsedGuideItemRow & { kind: "candidate" };
-    errors: string[];
-    resolvedKey: string | null;
-    parent: GuideImportParent | null;
-    existingItem?: GuideItem;
-  }
-
-  const resolved: Resolved[] = [];
-
-  for (const row of itemRows) {
-    if (row.kind === "error") continue;
-    const candidate = row.candidate;
-    const errors: string[] = [];
-    let parent: GuideImportParent | null = null;
-    let existingItem: GuideItem | undefined;
-
-    if (candidate.id && (itemIdCounts.get(candidate.id) ?? 0) > 1) {
-      errors.push("This id appears more than once in this file.");
+  function resolveChildErrors<
+    Candidate extends {
+      id: string | null;
+      guideSlug: string;
+      position: number;
+    },
+  >(
+    rows: (
+      | { rowNumber: number; kind: "candidate"; candidate: Candidate }
+      | { rowNumber: number; kind: "error" }
+    )[],
+    existingById: Map<string, { guide_id: string }>,
+    domainError: (candidate: Candidate) => string | null,
+  ) {
+    const idCounts = new Map<string, number>();
+    for (const row of rows) {
+      if (row.kind !== "candidate" || !row.candidate.id) continue;
+      idCounts.set(row.candidate.id, (idCounts.get(row.candidate.id) ?? 0) + 1);
     }
 
-    const hasGuideId = Boolean(candidate.guideIdRaw);
-    const hasGuideRef = Boolean(candidate.guideRefRaw);
+    interface Resolved {
+      rowNumber: number;
+      candidate: Candidate;
+      errors: string[];
+      parent: GuideImportParent | null;
+      existing?: { guide_id: string };
+    }
 
-    if (candidate.id) {
-      existingItem = existingItemById.get(candidate.id);
-      if (!existingItem) {
-        errors.push("No guide item exists with this id.");
+    const resolved: Resolved[] = [];
+
+    for (const row of rows) {
+      if (row.kind !== "candidate") continue;
+      const candidate = row.candidate;
+      const errors: string[] = [];
+      let parent: GuideImportParent | null = null;
+      let existing: { guide_id: string } | undefined;
+
+      if (candidate.id && (idCounts.get(candidate.id) ?? 0) > 1) {
+        errors.push("This id appears more than once in this file.");
+      }
+
+      if (!candidate.guideSlug) {
+        errors.push("guide_slug is required.");
       } else {
-        if (hasGuideRef) {
-          errors.push("guide_ref must be blank for existing Guide Items.");
-        }
-        if (!hasGuideId) {
-          errors.push("guide_id is required for existing Guide Items.");
-        } else if (candidate.guideIdRaw !== existingItem.guide_id) {
+        parent = resolveParent(candidate.guideSlug);
+        if (!parent) errors.push("No guide exists with this guide_slug.");
+      }
+
+      if (candidate.id) {
+        existing = existingById.get(candidate.id);
+        if (!existing) {
+          errors.push("No row exists with this id.");
+        } else if (
+          parent &&
+          (parent.kind !== "existing" || parent.guideId !== existing.guide_id)
+        ) {
           errors.push(
-            "Moving Guide Items between guides is not supported. Keep guide_id unchanged.",
+            "Moving rows between guides is not supported. Keep guide_slug pointed at the current guide.",
           );
-        } else {
-          parent = { kind: "existing", guideId: existingItem.guide_id };
         }
       }
-    } else {
-      if (hasGuideId && hasGuideRef) {
-        errors.push("Provide either guide_id or guide_ref, not both.");
-      } else if (!hasGuideId && !hasGuideRef) {
-        errors.push("guide_id or guide_ref is required.");
-      } else if (hasGuideId) {
-        const targetGuide = existingGuideById.get(candidate.guideIdRaw!);
-        if (!targetGuide) errors.push("No guide exists with this guide_id.");
-        else parent = { kind: "existing", guideId: candidate.guideIdRaw! };
-      } else if (hasGuideRef) {
-        if (!validCreateImportRefs.has(candidate.guideRefRaw!)) {
-          errors.push("No new guide in this file has that guide_ref.");
-        } else {
-          parent = { kind: "new", importRef: candidate.guideRefRaw! };
-        }
+
+      const err = domainError(candidate);
+      if (err) errors.push(err);
+
+      resolved.push({
+        rowNumber: row.rowNumber,
+        candidate,
+        errors,
+        parent,
+        existing,
+      });
+    }
+
+    const positionGroups = new Map<string, Map<number, number[]>>();
+    for (const entry of resolved) {
+      if (entry.errors.length > 0 || !entry.parent) continue;
+      const key =
+        entry.parent.kind === "existing"
+          ? `existing:${entry.parent.guideId}`
+          : `new:${entry.parent.slug}`;
+      const byPosition = positionGroups.get(key) ?? new Map<number, number[]>();
+      const list = byPosition.get(entry.candidate.position) ?? [];
+      list.push(entry.rowNumber);
+      byPosition.set(entry.candidate.position, list);
+      positionGroups.set(key, byPosition);
+    }
+
+    for (const entry of resolved) {
+      if (entry.errors.length > 0 || !entry.parent) continue;
+      const key =
+        entry.parent.kind === "existing"
+          ? `existing:${entry.parent.guideId}`
+          : `new:${entry.parent.slug}`;
+      const rowsAtPosition = positionGroups
+        .get(key)!
+        .get(entry.candidate.position)!;
+      if (rowsAtPosition.length > 1) {
+        entry.errors.push(
+          `Duplicate position ${entry.candidate.position} within this guide.`,
+        );
       }
     }
 
-    const domainError = validateGuideItemInput(
-      toGuideItemValidationInput(candidate),
-    );
-    if (domainError) errors.push(domainError);
-
-    const resolvedKey = parent
-      ? parent.kind === "existing"
-        ? `existing:${parent.guideId}`
-        : `new:${parent.importRef}`
-      : null;
-
-    resolved.push({
-      row: row as ParsedGuideItemRow & { kind: "candidate" },
-      errors,
-      resolvedKey,
-      parent,
-      existingItem,
-    });
+    return resolved;
   }
 
-  const positionGroups = new Map<string, Map<number, number[]>>();
-  for (const entry of resolved) {
-    if (entry.errors.length > 0 || !entry.resolvedKey) continue;
-    const byPosition =
-      positionGroups.get(entry.resolvedKey) ?? new Map<number, number[]>();
-    const list = byPosition.get(entry.row.candidate.position) ?? [];
-    list.push(entry.row.rowNumber);
-    byPosition.set(entry.row.candidate.position, list);
-    positionGroups.set(entry.resolvedKey, byPosition);
-  }
+  const resolvedSpots = resolveChildErrors(
+    spotRows,
+    existingSpotById,
+    (candidate) =>
+      validateGuideItemInput(toGuideSpotValidationInput(candidate)),
+  );
 
-  for (const entry of resolved) {
-    if (entry.errors.length > 0 || !entry.resolvedKey) continue;
-    const rowsAtPosition = positionGroups
-      .get(entry.resolvedKey)!
-      .get(entry.row.candidate.position)!;
-    if (rowsAtPosition.length > 1) {
-      entry.errors.push(
-        `Duplicate position ${entry.row.candidate.position} within this guide.`,
-      );
-    }
-  }
+  const spotPreviewRows: GuideSpotImportPreviewRow[] = [];
 
-  const itemPreviewRows: GuideItemImportPreviewRow[] = [];
-
-  for (const row of itemRows) {
+  for (const row of spotRows) {
     if (row.kind === "error") {
-      itemPreviewRows.push({
+      spotPreviewRows.push({
         status: "error",
         rowNumber: row.rowNumber,
         id: row.raw.id,
-        guideId: row.raw.guideId,
-        guideRef: row.raw.guideRef,
+        guideSlug: row.raw.guideSlug,
         title: row.raw.title,
         errors: row.errors,
       });
       continue;
     }
 
-    const entry = resolved.find((r) => r.row.rowNumber === row.rowNumber)!;
+    const entry = resolvedSpots.find((r) => r.rowNumber === row.rowNumber)!;
     const { candidate } = row;
 
     if (entry.errors.length > 0) {
-      itemPreviewRows.push({
+      spotPreviewRows.push({
         status: "error",
         rowNumber: row.rowNumber,
         id: candidate.id,
-        guideId: candidate.guideIdRaw,
-        guideRef: candidate.guideRefRaw,
+        guideSlug: candidate.guideSlug || null,
         title: candidate.title || null,
         errors: entry.errors,
       });
@@ -739,7 +1007,7 @@ export function buildGuideImportPreview(
     }
 
     if (!candidate.id) {
-      itemPreviewRows.push({
+      spotPreviewRows.push({
         status: "create",
         rowNumber: row.rowNumber,
         candidate,
@@ -748,41 +1016,103 @@ export function buildGuideImportPreview(
       continue;
     }
 
-    const changes = diffGuideItem(candidate, entry.existingItem!);
+    const existingSpot = existingSpotById.get(candidate.id)!;
+    const changes = diffGuideSpot(candidate, existingSpot);
     if (changes.length === 0) {
-      itemPreviewRows.push({
+      spotPreviewRows.push({
         status: "unchanged",
         rowNumber: row.rowNumber,
         id: candidate.id,
       });
     } else {
-      itemPreviewRows.push({
+      spotPreviewRows.push({
         status: "update",
         rowNumber: row.rowNumber,
         id: candidate.id,
         candidate,
         changes,
-        baseFingerprint: fingerprintGuideItem(entry.existingItem!),
+        baseFingerprint: fingerprintGuideSpot(existingSpot),
       });
     }
   }
 
-  function summarize(rows: { status: string }[]): GuideImportSummary {
-    return {
-      total: rows.length,
-      create: rows.filter((r) => r.status === "create").length,
-      update: rows.filter((r) => r.status === "update").length,
-      unchanged: rows.filter((r) => r.status === "unchanged").length,
-      error: rows.filter((r) => r.status === "error").length,
-    };
+  const resolvedComparisons = resolveChildErrors(
+    comparisonRows,
+    existingComparisonById,
+    (candidate) =>
+      validateGuideComparisonInput(toGuideComparisonValidationInput(candidate)),
+  );
+
+  const comparisonPreviewRows: GuideComparisonImportPreviewRow[] = [];
+
+  for (const row of comparisonRows) {
+    if (row.kind === "error") {
+      comparisonPreviewRows.push({
+        status: "error",
+        rowNumber: row.rowNumber,
+        id: row.raw.id,
+        guideSlug: row.raw.guideSlug,
+        skipTitle: row.raw.skipTitle,
+        errors: row.errors,
+      });
+      continue;
+    }
+
+    const entry = resolvedComparisons.find(
+      (r) => r.rowNumber === row.rowNumber,
+    )!;
+    const { candidate } = row;
+
+    if (entry.errors.length > 0) {
+      comparisonPreviewRows.push({
+        status: "error",
+        rowNumber: row.rowNumber,
+        id: candidate.id,
+        guideSlug: candidate.guideSlug || null,
+        skipTitle: candidate.skip_title || null,
+        errors: entry.errors,
+      });
+      continue;
+    }
+
+    if (!candidate.id) {
+      comparisonPreviewRows.push({
+        status: "create",
+        rowNumber: row.rowNumber,
+        candidate,
+        parent: entry.parent!,
+      });
+      continue;
+    }
+
+    const existingComparison = existingComparisonById.get(candidate.id)!;
+    const changes = diffGuideComparison(candidate, existingComparison);
+    if (changes.length === 0) {
+      comparisonPreviewRows.push({
+        status: "unchanged",
+        rowNumber: row.rowNumber,
+        id: candidate.id,
+      });
+    } else {
+      comparisonPreviewRows.push({
+        status: "update",
+        rowNumber: row.rowNumber,
+        id: candidate.id,
+        candidate,
+        changes,
+        baseFingerprint: fingerprintGuideComparison(existingComparison),
+      });
+    }
   }
 
   return {
     guides: guidePreviewRows,
-    items: itemPreviewRows,
+    spots: spotPreviewRows,
+    comparisons: comparisonPreviewRows,
     summary: {
       guides: summarize(guidePreviewRows),
-      items: summarize(itemPreviewRows),
+      spots: summarize(spotPreviewRows),
+      comparisons: summarize(comparisonPreviewRows),
     },
   };
 }

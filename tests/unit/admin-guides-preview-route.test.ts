@@ -16,7 +16,7 @@ import { POST as previewRoute } from "@/app/admin/imports/guides/preview/route";
 import { buildGuidesWorkbook, workbookToBlob } from "@/lib/admin/guides/excel";
 
 async function xlsxFile(name = "upload.xlsx"): Promise<File> {
-  const workbook = buildGuidesWorkbook([], []);
+  const workbook = buildGuidesWorkbook([], [], []);
   const blob = await workbookToBlob(workbook);
   return new File([blob], name, {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -35,7 +35,7 @@ function requestWithFile(file: File | Blob | null): Request {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  listExportMock.mockResolvedValue({ guides: [], items: [] });
+  listExportMock.mockResolvedValue({ guides: [], items: [], comparisons: [] });
 });
 
 describe("guides import preview route — authorization", () => {
@@ -72,7 +72,8 @@ describe("guides import preview route — authorization", () => {
     expect(response.status).toBe(200);
     expect(body.ok).toBe(true);
     expect(body.preview.summary.guides.total).toBe(0);
-    expect(body.preview.summary.items.total).toBe(0);
+    expect(body.preview.summary.spots.total).toBe(0);
+    expect(body.preview.summary.comparisons.total).toBe(0);
     expect(listExportMock).toHaveBeenCalledOnce();
   });
 });

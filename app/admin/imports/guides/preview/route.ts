@@ -31,12 +31,14 @@ export async function POST(request: Request) {
   }
 
   try {
-    const { guides, items } = await listGuidesForExport();
+    const { guides, items, comparisons } = await listGuidesForExport();
     const preview = buildGuideImportPreview(
       parseResult.guideRows,
-      parseResult.itemRows,
+      parseResult.spotRows,
+      parseResult.comparisonRows,
       guides,
       items,
+      comparisons,
     );
     return Response.json({ ok: true, preview });
   } catch (error) {
