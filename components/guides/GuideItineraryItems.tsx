@@ -1,4 +1,5 @@
 import type { GuideItem } from "@/lib/guides/types";
+import { deriveTimelineState } from "@/lib/guides/timeline";
 import { GuideItineraryStop } from "./GuideItineraryStop";
 
 export function GuideItineraryItems({ items }: { items: GuideItem[] }) {
@@ -10,7 +11,7 @@ export function GuideItineraryItems({ items }: { items: GuideItem[] }) {
         <GuideItineraryStop
           key={item.id}
           item={item}
-          index={index}
+          state={deriveTimelineState(index, items.length)}
           isLast={index === items.length - 1}
         />
       ))}
