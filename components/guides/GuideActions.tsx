@@ -36,7 +36,8 @@ export function GuideActions({
           rel="noopener noreferrer"
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-control bg-accent px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-accent-dark focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30"
         >
-          Open route in Google Maps
+          <span className="sm:hidden">Open route</span>
+          <span className="hidden sm:inline">Open route in Google Maps</span>
           <ExternalLink aria-hidden="true" className="h-4 w-4" />
         </a>
       )}
