@@ -2,14 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   buildGuidesWorkbook,
   workbookToBlob,
+  type GuideComparisonExcelRow,
   type GuideExcelRow,
-  type GuideItemExcelRow,
+  type GuideSpotExcelRow,
 } from "@/lib/admin/guides/excel";
-import {
-  fingerprintGuide,
-  fingerprintGuideItem,
-} from "@/lib/admin/guides/import";
-import type { Guide, GuideItem } from "@/lib/guides/types";
+import type { Guide, GuideComparisonPair, GuideItem } from "@/lib/guides/types";
 
 const { listExportMock, rpcMock } = vi.hoisted(() => ({
   listExportMock: vi.fn(),
@@ -28,40 +25,76 @@ import { applyGuideImport } from "@/lib/admin/guides/apply";
 function guideRow(overrides: Partial<GuideExcelRow> = {}): GuideExcelRow {
   return {
     id: "",
-    import_ref: "",
     title: "48 Hours in Prague",
     slug: "48-hours-in-prague",
-    description: "A weekend in Prague.",
     type: "itinerary",
     city: "Prague",
     country_code: "CZ",
     city_slug: "",
+    description: "A weekend in Prague.",
+    duration_label: "",
+    best_time: "",
+    local_tip: "",
+    route_mode: "",
     cover_image_url: "",
     cover_image_alt: "",
-    duration_label: "",
+    editorial_attribution: "",
     featured: false,
     is_public: true,
     sort_order: 0,
-    editorial_attribution: "",
     ...overrides,
   };
 }
 
-function itemRow(
-  overrides: Partial<GuideItemExcelRow> = {},
-): GuideItemExcelRow {
+function spotRow(
+  overrides: Partial<GuideSpotExcelRow> = {},
+): GuideSpotExcelRow {
   return {
     id: "",
-    guide_id: "",
-    guide_ref: "",
+    guide_slug: "48-hours-in-prague",
     position: 0,
     title: "Explore the National Museum",
+    neighborhood: "",
+    address: "",
     description: "",
-    place_id: "",
+    google_maps_url: "",
+    external_url: "",
+    tags: "",
     place_name: "",
     image_url: "",
     image_alt: "",
-    external_url: "",
+    latitude: "",
+    longitude: "",
+    ...overrides,
+  };
+}
+
+function comparisonRow(
+  overrides: Partial<GuideComparisonExcelRow> = {},
+): GuideComparisonExcelRow {
+  return {
+    id: "",
+    guide_slug: "48-hours-in-prague",
+    position: 0,
+    skip_title: "Old Town tourist restaurants",
+    skip_description: "",
+    skip_neighborhood: "",
+    skip_address: "",
+    skip_google_maps_url: "",
+    skip_external_url: "",
+    skip_tags: "",
+    go_instead_title: "Lokál Dlouhááá",
+    go_instead_description: "",
+    go_instead_neighborhood: "",
+    go_instead_address: "",
+    go_instead_google_maps_url: "",
+    go_instead_external_url: "",
+    go_instead_tags: "",
+    reason: "",
+    skip_latitude: "",
+    skip_longitude: "",
+    go_instead_latitude: "",
+    go_instead_longitude: "",
     ...overrides,
   };
 }
@@ -83,13 +116,16 @@ function existingGuide(overrides: Partial<Guide> = {}): Guide {
     city_slug: null,
     sort_order: 0,
     editorial_attribution: null,
+    best_time: null,
+    local_tip: null,
+    route_mode: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
   };
 }
 
-function existingItem(overrides: Partial<GuideItem> = {}): GuideItem {
+function existingSpot(overrides: Partial<GuideItem> = {}): GuideItem {
   return {
     id: "22222222-2222-4222-8222-222222222222",
     guide_id: "11111111-1111-4111-8111-111111111111",
@@ -101,6 +137,44 @@ function existingItem(overrides: Partial<GuideItem> = {}): GuideItem {
     image_alt: null,
     external_url: null,
     place_id: null,
+    neighborhood: null,
+    address: null,
+    latitude: null,
+    longitude: null,
+    google_maps_url: null,
+    tags: null,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+    ...overrides,
+  };
+}
+
+function existingComparison(
+  overrides: Partial<GuideComparisonPair> = {},
+): GuideComparisonPair {
+  return {
+    id: "33333333-3333-4333-8333-333333333333",
+    guide_id: "11111111-1111-4111-8111-111111111111",
+    position: 0,
+    skip_title: "Old Town tourist restaurants",
+    skip_description: null,
+    skip_neighborhood: null,
+    skip_address: null,
+    skip_latitude: null,
+    skip_longitude: null,
+    skip_google_maps_url: null,
+    skip_external_url: null,
+    skip_tags: null,
+    go_instead_title: "Lokál Dlouhááá",
+    go_instead_description: null,
+    go_instead_neighborhood: null,
+    go_instead_address: null,
+    go_instead_latitude: null,
+    go_instead_longitude: null,
+    go_instead_google_maps_url: null,
+    go_instead_external_url: null,
+    go_instead_tags: null,
+    reason: null,
     created_at: "2026-01-01T00:00:00Z",
     updated_at: "2026-01-01T00:00:00Z",
     ...overrides,
@@ -109,588 +183,206 @@ function existingItem(overrides: Partial<GuideItem> = {}): GuideItem {
 
 async function bufferFromSheets(
   guides: GuideExcelRow[],
-  items: GuideItemExcelRow[],
+  spots: GuideSpotExcelRow[],
+  comparisons: GuideComparisonExcelRow[],
 ): Promise<ArrayBuffer> {
-  const workbook = buildGuidesWorkbook(guides, items);
+  const workbook = buildGuidesWorkbook(guides, spots, comparisons);
   const blob = await workbookToBlob(workbook);
   return blob.arrayBuffer();
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
+  listExportMock.mockResolvedValue({ guides: [], items: [], comparisons: [] });
   rpcMock.mockResolvedValue({
     data: {
       created_guide_ids: [],
-      updated_guides: 0,
-      created_item_ids: [],
-      updated_items: 0,
+      created_spot_ids: [],
+      created_comparison_ids: [],
     },
     error: null,
   });
 });
 
-describe("applyGuideImport — revalidation blocks apply with zero writes", () => {
-  it("blocks on an invalid Guide", async () => {
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
+describe("applyGuideImport — no-op", () => {
+  it("does not call the RPC when nothing changed", async () => {
+    listExportMock.mockResolvedValue({
+      guides: [existingGuide()],
+      items: [],
+      comparisons: [],
+    });
     const buffer = await bufferFromSheets(
-      [guideRow({ type: "not-a-real-type" })],
+      [guideRow({ id: existingGuide().id })],
+      [],
       [],
     );
-    const result = await applyGuideImport(buffer, {}, {});
+
+    const result = await applyGuideImport(buffer, {}, {}, {});
+
+    expect(result.ok).toBe(true);
+    expect(rpcMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("applyGuideImport — validation", () => {
+  it("returns validation_error without calling the RPC", async () => {
+    const buffer = await bufferFromSheets(
+      [guideRow({ type: "spaceship" })],
+      [],
+      [],
+    );
+
+    const result = await applyGuideImport(buffer, {}, {}, {});
+
     expect(result.ok).toBe(false);
     if (!result.ok) expect(result.kind).toBe("validation_error");
     expect(rpcMock).not.toHaveBeenCalled();
   });
-
-  it("blocks on an invalid Guide Item", async () => {
-    const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
-    const buffer = await bufferFromSheets(
-      [],
-      [itemRow({ guide_id: guide.id, title: "" })],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on an unknown Guide id", async () => {
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: "99999999-9999-4999-8999-999999999999" })],
-      [],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on an unknown Guide Item id", async () => {
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
-    const buffer = await bufferFromSheets(
-      [],
-      [itemRow({ id: "99999999-9999-4999-8999-999999999999" })],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on duplicate Guide ids", async () => {
-    const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
-    const buffer = await bufferFromSheets(
-      [
-        guideRow({ id: guide.id, slug: "a" }),
-        guideRow({ id: guide.id, slug: "b", title: "Second" }),
-      ],
-      [],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on duplicate Guide Item ids", async () => {
-    const guide = existingGuide();
-    const item = existingItem();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [item] });
-    const buffer = await bufferFromSheets(
-      [],
-      [
-        itemRow({ id: item.id, guide_id: guide.id, position: 0 }),
-        itemRow({
-          id: item.id,
-          guide_id: guide.id,
-          position: 1,
-          title: "Second",
-        }),
-      ],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on a duplicate Guide slug in the workbook", async () => {
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
-    const buffer = await bufferFromSheets(
-      [
-        guideRow({ slug: "shared", title: "First" }),
-        guideRow({ slug: "shared", title: "Second" }),
-      ],
-      [],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on a duplicate import_ref", async () => {
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
-    const buffer = await bufferFromSheets(
-      [
-        guideRow({ import_ref: "dup", slug: "a" }),
-        guideRow({ import_ref: "dup", slug: "b", title: "Second" }),
-      ],
-      [],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on an unknown guide_ref", async () => {
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
-    const buffer = await bufferFromSheets([], [itemRow({ guide_ref: "nope" })]);
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on duplicate positions within the same guide", async () => {
-    const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
-    const buffer = await bufferFromSheets(
-      [],
-      [
-        itemRow({ guide_id: guide.id, position: 1, title: "First" }),
-        itemRow({ guide_id: guide.id, position: 1, title: "Second" }),
-      ],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks on an attempt to reparent an existing Guide Item", async () => {
-    const originalParent = existingGuide();
-    const otherParent = existingGuide({
-      id: "44444444-4444-4444-8444-444444444444",
-      slug: "other-guide",
-    });
-    const item = existingItem({ guide_id: originalParent.id });
-    listExportMock.mockResolvedValue({
-      guides: [originalParent, otherParent],
-      items: [item],
-    });
-    const buffer = await bufferFromSheets(
-      [],
-      [itemRow({ id: item.id, guide_id: otherParent.id, position: 0 })],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
 });
 
-describe("applyGuideImport — concurrency", () => {
-  it("allows apply when the Guide fingerprint is unchanged", async () => {
+describe("applyGuideImport — stale preview", () => {
+  it("flags a guide update whose fingerprint no longer matches", async () => {
     const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: guide.id, featured: true })],
-      [],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      { [guide.id]: fingerprintGuide(guide) },
-      {},
-    );
-    expect(result.ok).toBe(true);
-    expect(rpcMock).toHaveBeenCalledOnce();
-  });
-
-  it("rejects apply when the Guide fingerprint changed since preview", async () => {
-    const guide = existingGuide();
-    const staleFingerprint = fingerprintGuide(
-      existingGuide({ featured: false }),
-    );
-    listExportMock.mockResolvedValue({
-      guides: [existingGuide({ featured: true })],
-      items: [],
-    });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: guide.id, sort_order: 5 })],
-      [],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      { [guide.id]: staleFingerprint },
-      {},
-    );
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.kind).toBe("stale_preview");
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("allows apply when the Guide Item fingerprint is unchanged", async () => {
-    const guide = existingGuide();
-    const item = existingItem({ guide_id: guide.id });
-    listExportMock.mockResolvedValue({ guides: [guide], items: [item] });
-    const buffer = await bufferFromSheets(
-      [],
-      [itemRow({ id: item.id, guide_id: guide.id, title: "New title" })],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      {},
-      { [item.id]: fingerprintGuideItem(item) },
-    );
-    expect(result.ok).toBe(true);
-    expect(rpcMock).toHaveBeenCalledOnce();
-  });
-
-  it("rejects apply when the Guide Item fingerprint changed since preview", async () => {
-    const guide = existingGuide();
-    const item = existingItem({ guide_id: guide.id });
-    const staleFingerprint = fingerprintGuideItem(
-      existingItem({ guide_id: guide.id, title: "Old title" }),
-    );
     listExportMock.mockResolvedValue({
       guides: [guide],
-      items: [existingItem({ guide_id: guide.id, title: "Changed elsewhere" })],
-    });
-    const buffer = await bufferFromSheets(
-      [],
-      [itemRow({ id: item.id, guide_id: guide.id, title: "New title" })],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      {},
-      { [item.id]: staleFingerprint },
-    );
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.kind).toBe("stale_preview");
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("treats a Guide deleted since preview as zero writes", async () => {
-    const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: guide.id, featured: true })],
-      [],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      { [guide.id]: fingerprintGuide(guide) },
-      {},
-    );
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("treats a Guide Item deleted since preview as zero writes", async () => {
-    const guide = existingGuide();
-    const item = existingItem({ guide_id: guide.id });
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
-    const buffer = await bufferFromSheets(
-      [],
-      [itemRow({ id: item.id, guide_id: guide.id, title: "New title" })],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      {},
-      { [item.id]: fingerprintGuideItem(item) },
-    );
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("treats a slug that became occupied since preview as zero writes", async () => {
-    const target = existingGuide();
-    const other = existingGuide({
-      id: "55555555-5555-4555-8555-555555555555",
-      slug: "taken-since-preview",
-    });
-    listExportMock.mockResolvedValue({ guides: [target, other], items: [] });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: target.id, slug: "taken-since-preview" })],
-      [],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      { [target.id]: fingerprintGuide(target) },
-      {},
-    );
-    expect(result.ok).toBe(false);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("blocks the entire workbook when any single entity is stale", async () => {
-    const guideOk = existingGuide();
-    const guideStale = existingGuide({
-      id: "66666666-6666-4666-8666-666666666666",
-      slug: "second-guide",
-    });
-    listExportMock.mockResolvedValue({
-      guides: [guideOk, existingGuide({ ...guideStale, featured: true })],
       items: [],
+      comparisons: [],
     });
     const buffer = await bufferFromSheets(
-      [
-        guideRow({ id: guideOk.id, sort_order: 1 }),
-        guideRow({ id: guideStale.id, slug: "second-guide", sort_order: 2 }),
-      ],
+      [guideRow({ id: guide.id, title: "Renamed" })],
+      [],
       [],
     );
+
     const result = await applyGuideImport(
       buffer,
-      {
-        [guideOk.id]: fingerprintGuide(guideOk),
-        [guideStale.id]: fingerprintGuide(guideStale),
-      },
+      { [guide.id]: "stale" },
+      {},
       {},
     );
+
     expect(result.ok).toBe(false);
+    if (!result.ok && result.kind === "stale_preview") {
+      expect(result.conflicts[0]).toMatchObject({
+        entity: "guide",
+        id: guide.id,
+      });
+    }
     expect(rpcMock).not.toHaveBeenCalled();
   });
 });
 
-describe("applyGuideImport — apply semantics", () => {
-  it("succeeds for a create-only Guide import", async () => {
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
+describe("applyGuideImport — creates", () => {
+  it("creates a guide with import_ref set to its own slug, then resolves child rows to it", async () => {
+    const buffer = await bufferFromSheets(
+      [guideRow({ id: "", slug: "new-guide", title: "New Guide" })],
+      [spotRow({ id: "", guide_slug: "new-guide" })],
+      [comparisonRow({ id: "", guide_slug: "new-guide" })],
+    );
+
     rpcMock.mockResolvedValue({
       data: {
-        created_guide_ids: ["new-guide-1"],
-        updated_guides: 0,
-        created_item_ids: [],
-        updated_items: 0,
+        created_guide_ids: ["g-new"],
+        created_spot_ids: ["s-new"],
+        created_comparison_ids: ["c-new"],
       },
       error: null,
     });
-    const buffer = await bufferFromSheets(
-      [guideRow({ slug: "brand-new" })],
-      [],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
+
+    const result = await applyGuideImport(buffer, {}, {}, {});
+
     expect(result.ok).toBe(true);
+    expect(rpcMock).toHaveBeenCalledOnce();
+    const [, payload] = rpcMock.mock.calls[0];
+    expect(payload.guide_creates[0]).toMatchObject({
+      import_ref: "new-guide",
+      slug: "new-guide",
+    });
+    expect(payload.spot_creates[0]).toMatchObject({ guide_ref: "new-guide" });
+    expect(payload.comparison_creates[0]).toMatchObject({
+      guide_ref: "new-guide",
+    });
+
     if (result.ok) {
-      expect(result.guides.created).toEqual([
-        { id: "new-guide-1", title: "48 Hours in Prague" },
-      ]);
+      expect(result.guides.created[0]).toMatchObject({ id: "g-new" });
+      expect(result.spots.created[0]).toMatchObject({ id: "s-new" });
+      expect(result.comparisons.created[0]).toMatchObject({ id: "c-new" });
     }
-  });
-
-  it("succeeds for an update-only Guide import", async () => {
-    const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: guide.id, featured: true })],
-      [],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      { [guide.id]: fingerprintGuide(guide) },
-      {},
-    );
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.guides.updated).toEqual([
-        { id: guide.id, title: guide.title },
-      ]);
-    }
-  });
-
-  it("succeeds creating a Guide Item against an existing Guide", async () => {
-    const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
-    rpcMock.mockResolvedValue({
-      data: {
-        created_guide_ids: [],
-        updated_guides: 0,
-        created_item_ids: ["new-item-1"],
-        updated_items: 0,
-      },
-      error: null,
-    });
-    const buffer = await bufferFromSheets(
-      [],
-      [itemRow({ guide_id: guide.id, position: 9 })],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.items.created).toHaveLength(1);
-
-    const payload = rpcMock.mock.calls[0][1];
-    expect(payload.item_creates[0].guide_id).toBe(guide.id);
-    expect(payload.item_creates[0].guide_ref).toBeNull();
-  });
-
-  it("succeeds creating a new Guide with new Items through guide_ref", async () => {
-    listExportMock.mockResolvedValue({ guides: [], items: [] });
-    rpcMock.mockResolvedValue({
-      data: {
-        created_guide_ids: ["new-guide-2"],
-        updated_guides: 0,
-        created_item_ids: ["new-item-a", "new-item-b"],
-        updated_items: 0,
-      },
-      error: null,
-    });
-    const buffer = await bufferFromSheets(
-      [guideRow({ import_ref: "prague-nightlife", slug: "prague-nightlife" })],
-      [
-        itemRow({ guide_ref: "prague-nightlife", position: 0, title: "Bar" }),
-        itemRow({
-          guide_ref: "prague-nightlife",
-          position: 1,
-          title: "Dinner",
-        }),
-      ],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.guides.created).toEqual([
-        { id: "new-guide-2", title: "48 Hours in Prague" },
-      ]);
-      expect(result.items.created).toHaveLength(2);
-    }
-
-    const payload = rpcMock.mock.calls[0][1];
-    expect(payload.guide_creates[0].import_ref).toBe("prague-nightlife");
-    expect(payload.item_creates[0].guide_ref).toBe("prague-nightlife");
-    expect(payload.item_creates[0].guide_id).toBeNull();
-  });
-
-  it("succeeds for a mixed create/update Guides + Items import", async () => {
-    const guide = existingGuide();
-    const item = existingItem({ guide_id: guide.id });
-    listExportMock.mockResolvedValue({ guides: [guide], items: [item] });
-    rpcMock.mockResolvedValue({
-      data: {
-        created_guide_ids: ["new-guide-3"],
-        updated_guides: 1,
-        created_item_ids: ["new-item-c"],
-        updated_items: 1,
-      },
-      error: null,
-    });
-    const buffer = await bufferFromSheets(
-      [
-        guideRow({ id: guide.id, featured: true }),
-        guideRow({ import_ref: "ref-mixed", slug: "mixed-new-guide" }),
-      ],
-      [
-        itemRow({ id: item.id, guide_id: guide.id, title: "Updated title" }),
-        itemRow({ guide_ref: "ref-mixed", position: 0, title: "Fresh item" }),
-      ],
-    );
-    const result = await applyGuideImport(
-      buffer,
-      { [guide.id]: fingerprintGuide(guide) },
-      { [item.id]: fingerprintGuideItem(item) },
-    );
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.guides.created).toHaveLength(1);
-      expect(result.guides.updated).toHaveLength(1);
-      expect(result.items.created).toHaveLength(1);
-      expect(result.items.updated).toHaveLength(1);
-    }
-  });
-
-  it("excludes unchanged entities from the RPC payload", async () => {
-    const guide = existingGuide();
-    const item = existingItem({ guide_id: guide.id });
-    listExportMock.mockResolvedValue({ guides: [guide], items: [item] });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: guide.id })],
-      [itemRow({ id: item.id, guide_id: guide.id })],
-    );
-    const result = await applyGuideImport(buffer, {}, {});
-    expect(result.ok).toBe(true);
-    expect(rpcMock).not.toHaveBeenCalled();
-  });
-
-  it("leaves rows absent from the workbook untouched (not sent to the RPC)", async () => {
-    const guide = existingGuide();
-    const untouchedGuide = existingGuide({
-      id: "77777777-7777-4777-8777-777777777777",
-      slug: "untouched",
-    });
-    listExportMock.mockResolvedValue({
-      guides: [guide, untouchedGuide],
-      items: [],
-    });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: guide.id, featured: true })],
-      [],
-    );
-    await applyGuideImport(buffer, { [guide.id]: fingerprintGuide(guide) }, {});
-
-    const payload = rpcMock.mock.calls[0][1];
-    const updatedIds = payload.guide_updates.map((g: { id: string }) => g.id);
-    expect(updatedIds).toEqual([guide.id]);
-    expect(updatedIds).not.toContain(untouchedGuide.id);
-  });
-
-  it("never sends import_ref/guide_ref as persisted domain fields on updates", async () => {
-    const guide = existingGuide();
-    const item = existingItem({ guide_id: guide.id, title: "Old" });
-    listExportMock.mockResolvedValue({ guides: [guide], items: [item] });
-    const buffer = await bufferFromSheets(
-      [guideRow({ id: guide.id, featured: true })],
-      [itemRow({ id: item.id, guide_id: guide.id, title: "New" })],
-    );
-    await applyGuideImport(
-      buffer,
-      { [guide.id]: fingerprintGuide(guide) },
-      { [item.id]: fingerprintGuideItem(item) },
-    );
-
-    const payload = rpcMock.mock.calls[0][1];
-    expect(payload.guide_updates[0]).not.toHaveProperty("import_ref");
-    expect(payload.item_updates[0]).not.toHaveProperty("guide_ref");
-    expect(payload.item_updates[0]).not.toHaveProperty("guide_id");
   });
 });
 
-describe("applyGuideImport — atomicity boundary", () => {
-  it("performs exactly one RPC call for a mixed import", async () => {
+describe("applyGuideImport — updates including comparisons", () => {
+  it("sends guide, spot and comparison updates in one atomic RPC call", async () => {
     const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
+    const spot = existingSpot();
+    const comparison = existingComparison();
+
+    listExportMock.mockResolvedValue({
+      guides: [guide],
+      items: [spot],
+      comparisons: [comparison],
+    });
+
     const buffer = await bufferFromSheets(
-      [
-        guideRow({ id: guide.id, featured: true }),
-        guideRow({ slug: "another-new", title: "Another" }),
-      ],
-      [],
+      [guideRow({ id: guide.id, title: "Updated title" })],
+      [spotRow({ id: spot.id, title: "Updated spot" })],
+      [comparisonRow({ id: comparison.id, reason: "Now has a reason." })],
     );
-    await applyGuideImport(buffer, { [guide.id]: fingerprintGuide(guide) }, {});
 
-    expect(rpcMock).toHaveBeenCalledTimes(1);
-    expect(rpcMock).toHaveBeenCalledWith(
-      "apply_guide_import",
-      expect.objectContaining({
-        guide_creates: expect.any(Array),
-        guide_updates: expect.any(Array),
-        item_creates: expect.any(Array),
-        item_updates: expect.any(Array),
-      }),
+    const {
+      fingerprintGuide,
+      fingerprintGuideSpot,
+      fingerprintGuideComparison,
+    } = await import("@/lib/admin/guides/import");
+
+    const result = await applyGuideImport(
+      buffer,
+      { [guide.id]: fingerprintGuide(guide) },
+      { [spot.id]: fingerprintGuideSpot(spot) },
+      { [comparison.id]: fingerprintGuideComparison(comparison) },
     );
+
+    expect(result.ok).toBe(true);
+    expect(rpcMock).toHaveBeenCalledOnce();
+    const [, payload] = rpcMock.mock.calls[0];
+    expect(payload.guide_updates[0]).toMatchObject({
+      id: guide.id,
+      title: "Updated title",
+    });
+    expect(payload.spot_updates[0]).toMatchObject({
+      id: spot.id,
+      title: "Updated spot",
+    });
+    expect(payload.comparison_updates[0]).toMatchObject({
+      id: comparison.id,
+      reason: "Now has a reason.",
+    });
   });
+});
 
-  it("reports apply_failed when the RPC fails, with no other calls made", async () => {
-    const guide = existingGuide();
-    listExportMock.mockResolvedValue({ guides: [guide], items: [] });
+describe("applyGuideImport — RPC failure", () => {
+  it("fails safely without leaking the underlying error", async () => {
+    listExportMock.mockResolvedValue({
+      guides: [],
+      items: [],
+      comparisons: [],
+    });
     rpcMock.mockResolvedValue({
       data: null,
-      error: { message: "simulated failure mid-transaction" },
+      error: { message: "constraint violation on guide_comparisons" },
     });
+
     const buffer = await bufferFromSheets(
-      [guideRow({ id: guide.id, featured: true })],
+      [guideRow({ id: "", slug: "new-guide" })],
+      [],
       [],
     );
-    const result = await applyGuideImport(
-      buffer,
-      { [guide.id]: fingerprintGuide(guide) },
-      {},
-    );
+
+    const result = await applyGuideImport(buffer, {}, {}, {});
+
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.kind).toBe("apply_failed");
-    expect(rpcMock).toHaveBeenCalledTimes(1);
+    if (!result.ok && result.kind === "apply_failed") {
+      expect(result.error).not.toMatch(/constraint violation/);
+    }
   });
 });

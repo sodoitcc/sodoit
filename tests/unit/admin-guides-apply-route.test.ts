@@ -16,7 +16,7 @@ import { POST as applyRoute } from "@/app/admin/imports/guides/apply/route";
 import { buildGuidesWorkbook, workbookToBlob } from "@/lib/admin/guides/excel";
 
 async function xlsxFile(name = "upload.xlsx"): Promise<File> {
-  const workbook = buildGuidesWorkbook([], []);
+  const workbook = buildGuidesWorkbook([], [], []);
   const blob = await workbookToBlob(workbook);
   return new File([blob], name, {
     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -26,14 +26,17 @@ async function xlsxFile(name = "upload.xlsx"): Promise<File> {
 function requestWithFile(
   file: File | null,
   guideFingerprints?: string,
-  itemFingerprints?: string,
+  spotFingerprints?: string,
+  comparisonFingerprints?: string,
 ): Request {
   const formData = new FormData();
   if (file) formData.set("file", file);
   if (guideFingerprints !== undefined)
     formData.set("guideFingerprints", guideFingerprints);
-  if (itemFingerprints !== undefined)
-    formData.set("itemFingerprints", itemFingerprints);
+  if (spotFingerprints !== undefined)
+    formData.set("spotFingerprints", spotFingerprints);
+  if (comparisonFingerprints !== undefined)
+    formData.set("comparisonFingerprints", comparisonFingerprints);
   return new Request("http://localhost/admin/imports/guides/apply", {
     method: "POST",
     body: formData,
@@ -45,7 +48,8 @@ beforeEach(() => {
   applyMock.mockResolvedValue({
     ok: true,
     guides: { created: [], updated: [] },
-    items: { created: [], updated: [] },
+    spots: { created: [], updated: [] },
+    comparisons: { created: [], updated: [] },
   });
 });
 
@@ -120,10 +124,18 @@ describe("guides import apply route — response mapping", () => {
       kind: "validation_error",
       preview: {
         guides: [],
-        items: [],
+        spots: [],
+        comparisons: [],
         summary: {
           guides: { total: 0, create: 0, update: 0, unchanged: 0, error: 1 },
-          items: { total: 0, create: 0, update: 0, unchanged: 0, error: 0 },
+          spots: { total: 0, create: 0, update: 0, unchanged: 0, error: 0 },
+          comparisons: {
+            total: 0,
+            create: 0,
+            update: 0,
+            unchanged: 0,
+            error: 0,
+          },
         },
       },
     });
@@ -146,19 +158,21 @@ describe("guides import apply route — response mapping", () => {
     expect(body.error).not.toMatch(/postgres|stack|at Object/i);
   });
 
-  it("parses both fingerprint fields and forwards them to applyGuideImport", async () => {
+  it("parses all three fingerprint fields and forwards them to applyGuideImport", async () => {
     await applyRoute(
       requestWithFile(
         await xlsxFile(),
         JSON.stringify({ "guide-1": "abc" }),
-        JSON.stringify({ "item-1": "def" }),
+        JSON.stringify({ "spot-1": "def" }),
+        JSON.stringify({ "comparison-1": "ghi" }),
       ),
     );
 
     expect(applyMock).toHaveBeenCalledWith(
       expect.any(ArrayBuffer),
       { "guide-1": "abc" },
-      { "item-1": "def" },
+      { "spot-1": "def" },
+      { "comparison-1": "ghi" },
     );
   });
 

@@ -5,16 +5,17 @@ import { listGuidesForExport } from "./queries";
 import {
   buildGuideImportPreview,
   parseGuidesWorkbook,
+  type GuideComparisonImportCandidate,
   type GuideImportCandidate,
   type GuideImportParent,
   type GuideImportPreview,
-  type GuideItemImportCandidate,
+  type GuideSpotImportCandidate,
 } from "./import";
 
 export type ApplyFingerprints = Record<string, string>;
 
 export interface GuideApplyConflict {
-  entity: "guide" | "item";
+  entity: "guide" | "spot" | "comparison";
   id: string;
   title: string | null;
   reason: "changed" | "missing_fingerprint";
@@ -26,7 +27,12 @@ interface ApplyEntitySummary {
 }
 
 export type GuideApplyResult =
-  | { ok: true; guides: ApplyEntitySummary; items: ApplyEntitySummary }
+  | {
+      ok: true;
+      guides: ApplyEntitySummary;
+      spots: ApplyEntitySummary;
+      comparisons: ApplyEntitySummary;
+    }
   | { ok: false; kind: "invalid_file"; error: string }
   | { ok: false; kind: "validation_error"; preview: GuideImportPreview }
   | { ok: false; kind: "stale_preview"; conflicts: GuideApplyConflict[] }
@@ -44,6 +50,9 @@ function toGuideRow(candidate: GuideImportCandidate) {
     cover_image_url: candidate.cover_image_url,
     cover_image_alt: candidate.cover_image_alt,
     duration_label: candidate.duration_label,
+    best_time: candidate.best_time,
+    local_tip: candidate.local_tip,
+    route_mode: candidate.route_mode,
     featured: candidate.featured,
     is_public: candidate.is_public,
     sort_order: candidate.sort_order,
@@ -51,50 +60,87 @@ function toGuideRow(candidate: GuideImportCandidate) {
   };
 }
 
-function toGuideItemUpdateRow(candidate: GuideItemImportCandidate) {
+function toGuideSpotRow(candidate: GuideSpotImportCandidate) {
   return {
     position: candidate.position,
     title: candidate.title,
     description: candidate.description,
-    place_id: candidate.place_id,
+    neighborhood: candidate.neighborhood,
+    address: candidate.address,
+    google_maps_url: candidate.google_maps_url,
+    external_url: candidate.external_url,
+    tags: candidate.tags,
     place_name: candidate.place_name,
     image_url: candidate.image_url,
     image_alt: candidate.image_alt,
-    external_url: candidate.external_url,
+    latitude: candidate.latitude,
+    longitude: candidate.longitude,
   };
 }
 
-function toGuideItemCreateRow(
-  candidate: GuideItemImportCandidate,
-  parent: GuideImportParent,
-) {
+function toGuideComparisonRow(candidate: GuideComparisonImportCandidate) {
+  return {
+    position: candidate.position,
+    skip_title: candidate.skip_title,
+    skip_description: candidate.skip_description,
+    skip_neighborhood: candidate.skip_neighborhood,
+    skip_address: candidate.skip_address,
+    skip_google_maps_url: candidate.skip_google_maps_url,
+    skip_external_url: candidate.skip_external_url,
+    skip_tags: candidate.skip_tags,
+    go_instead_title: candidate.go_instead_title,
+    go_instead_description: candidate.go_instead_description,
+    go_instead_neighborhood: candidate.go_instead_neighborhood,
+    go_instead_address: candidate.go_instead_address,
+    go_instead_google_maps_url: candidate.go_instead_google_maps_url,
+    go_instead_external_url: candidate.go_instead_external_url,
+    go_instead_tags: candidate.go_instead_tags,
+    reason: candidate.reason,
+    skip_latitude: candidate.skip_latitude,
+    skip_longitude: candidate.skip_longitude,
+    go_instead_latitude: candidate.go_instead_latitude,
+    go_instead_longitude: candidate.go_instead_longitude,
+  };
+}
+
+function parentPayload(parent: GuideImportParent) {
   return {
     guide_id: parent.kind === "existing" ? parent.guideId : null,
-    guide_ref: parent.kind === "new" ? parent.importRef : null,
-    ...toGuideItemUpdateRow(candidate),
+    guide_ref: parent.kind === "new" ? parent.slug : null,
   };
 }
 
 export async function applyGuideImport(
   buffer: ArrayBuffer,
   guideFingerprints: ApplyFingerprints,
-  itemFingerprints: ApplyFingerprints,
+  spotFingerprints: ApplyFingerprints,
+  comparisonFingerprints: ApplyFingerprints,
 ): Promise<GuideApplyResult> {
   const parseResult = await parseGuidesWorkbook(buffer);
   if (!parseResult.ok) {
     return { ok: false, kind: "invalid_file", error: parseResult.error };
   }
 
-  const { guides: existingGuides, items: existingItems } =
-    await listGuidesForExport();
+  const {
+    guides: existingGuides,
+    items: existingSpots,
+    comparisons: existingComparisons,
+  } = await listGuidesForExport();
+
   const preview = buildGuideImportPreview(
     parseResult.guideRows,
-    parseResult.itemRows,
+    parseResult.spotRows,
+    parseResult.comparisonRows,
     existingGuides,
-    existingItems,
+    existingSpots,
+    existingComparisons,
   );
 
-  if (preview.summary.guides.error > 0 || preview.summary.items.error > 0) {
+  if (
+    preview.summary.guides.error > 0 ||
+    preview.summary.spots.error > 0 ||
+    preview.summary.comparisons.error > 0
+  ) {
     return { ok: false, kind: "validation_error", preview };
   }
 
@@ -120,21 +166,41 @@ export async function applyGuideImport(
     }
   }
 
-  for (const row of preview.items) {
+  for (const row of preview.spots) {
     if (row.status !== "update") continue;
-    const supplied = itemFingerprints[row.id];
+    const supplied = spotFingerprints[row.id];
     if (!supplied) {
       conflicts.push({
-        entity: "item",
+        entity: "spot",
         id: row.id,
         title: row.candidate.title,
         reason: "missing_fingerprint",
       });
     } else if (supplied !== row.baseFingerprint) {
       conflicts.push({
-        entity: "item",
+        entity: "spot",
         id: row.id,
         title: row.candidate.title,
+        reason: "changed",
+      });
+    }
+  }
+
+  for (const row of preview.comparisons) {
+    if (row.status !== "update") continue;
+    const supplied = comparisonFingerprints[row.id];
+    if (!supplied) {
+      conflicts.push({
+        entity: "comparison",
+        id: row.id,
+        title: row.candidate.skip_title,
+        reason: "missing_fingerprint",
+      });
+    } else if (supplied !== row.baseFingerprint) {
+      conflicts.push({
+        entity: "comparison",
+        id: row.id,
+        title: row.candidate.skip_title,
         reason: "changed",
       });
     }
@@ -146,38 +212,56 @@ export async function applyGuideImport(
 
   const guideCreates = preview.guides.filter((r) => r.status === "create");
   const guideUpdates = preview.guides.filter((r) => r.status === "update");
-  const itemCreates = preview.items.filter((r) => r.status === "create");
-  const itemUpdates = preview.items.filter((r) => r.status === "update");
+  const spotCreates = preview.spots.filter((r) => r.status === "create");
+  const spotUpdates = preview.spots.filter((r) => r.status === "update");
+  const comparisonCreates = preview.comparisons.filter(
+    (r) => r.status === "create",
+  );
+  const comparisonUpdates = preview.comparisons.filter(
+    (r) => r.status === "update",
+  );
 
   if (
     guideCreates.length === 0 &&
     guideUpdates.length === 0 &&
-    itemCreates.length === 0 &&
-    itemUpdates.length === 0
+    spotCreates.length === 0 &&
+    spotUpdates.length === 0 &&
+    comparisonCreates.length === 0 &&
+    comparisonUpdates.length === 0
   ) {
     return {
       ok: true,
       guides: { created: [], updated: [] },
-      items: { created: [], updated: [] },
+      spots: { created: [], updated: [] },
+      comparisons: { created: [], updated: [] },
     };
   }
 
   const client = createAdminClient();
   const { data, error } = await client.rpc("apply_guide_import", {
     guide_creates: guideCreates.map((r) => ({
-      import_ref: r.candidate.importRef,
+      import_ref: r.candidate.slug,
       ...toGuideRow(r.candidate),
     })),
     guide_updates: guideUpdates.map((r) => ({
       id: r.id,
       ...toGuideRow(r.candidate),
     })),
-    item_creates: itemCreates.map((r) =>
-      toGuideItemCreateRow(r.candidate, r.parent),
-    ),
-    item_updates: itemUpdates.map((r) => ({
+    spot_creates: spotCreates.map((r) => ({
+      ...parentPayload(r.parent),
+      ...toGuideSpotRow(r.candidate),
+    })),
+    spot_updates: spotUpdates.map((r) => ({
       id: r.id,
-      ...toGuideItemUpdateRow(r.candidate),
+      ...toGuideSpotRow(r.candidate),
+    })),
+    comparison_creates: comparisonCreates.map((r) => ({
+      ...parentPayload(r.parent),
+      ...toGuideComparisonRow(r.candidate),
+    })),
+    comparison_updates: comparisonUpdates.map((r) => ({
+      id: r.id,
+      ...toGuideComparisonRow(r.candidate),
     })),
   });
 
@@ -195,8 +279,13 @@ export async function applyGuideImport(
   const createdGuideIds: string[] = Array.isArray(data?.created_guide_ids)
     ? data.created_guide_ids
     : [];
-  const createdItemIds: string[] = Array.isArray(data?.created_item_ids)
-    ? data.created_item_ids
+  const createdSpotIds: string[] = Array.isArray(data?.created_spot_ids)
+    ? data.created_spot_ids
+    : [];
+  const createdComparisonIds: string[] = Array.isArray(
+    data?.created_comparison_ids,
+  )
+    ? data.created_comparison_ids
     : [];
 
   return {
@@ -211,12 +300,25 @@ export async function applyGuideImport(
         title: r.candidate.title,
       })),
     },
-    items: {
-      created: itemCreates.map((r, index) => ({
-        id: createdItemIds[index] ?? "",
+    spots: {
+      created: spotCreates.map((r, index) => ({
+        id: createdSpotIds[index] ?? "",
         title: r.candidate.title,
       })),
-      updated: itemUpdates.map((r) => ({ id: r.id, title: r.candidate.title })),
+      updated: spotUpdates.map((r) => ({
+        id: r.id,
+        title: r.candidate.title,
+      })),
+    },
+    comparisons: {
+      created: comparisonCreates.map((r, index) => ({
+        id: createdComparisonIds[index] ?? "",
+        title: r.candidate.skip_title,
+      })),
+      updated: comparisonUpdates.map((r) => ({
+        id: r.id,
+        title: r.candidate.skip_title,
+      })),
     },
   };
 }
