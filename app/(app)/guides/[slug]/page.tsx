@@ -2,13 +2,11 @@ import { cache } from "react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Clock3, ListOrdered, MapPin } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 
-import { GuideCover } from "@/components/guides/GuideCover";
-import { GuideComparisonItems } from "@/components/guides/GuideComparisonItems";
 import { GuideCollectionDetail } from "@/components/guides/GuideCollectionDetail";
+import { GuideComparisonDetail } from "@/components/guides/GuideComparisonDetail";
 import { GuideItineraryDetail } from "@/components/guides/GuideItineraryDetail";
-import { ShareGuideButton } from "@/components/guides/ShareGuideButton";
 import { getGuideBySlug, getGuideResolvedImages } from "@/lib/guides/queries";
 import { getGuideRenderer } from "@/lib/guides/types";
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -95,6 +93,16 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
   const imageUrl = resolvedImage?.url ?? guide.cover_image_url;
   const imageAlt = resolvedImage?.alt ?? guide.cover_image_alt;
 
+  const user = await getCurrentUser();
+  let initialSaved = false;
+
+  if (user) {
+    const supabase = await createClient();
+    initialSaved = await isGuideSaved(supabase, user.id, guide.id);
+  }
+
+  const signedIn = Boolean(user);
+
   const backLink = (
     <Link
       href="/discovery"
@@ -105,155 +113,39 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
     </Link>
   );
 
-  if (renderer === "itinerary" || renderer === "collection") {
-    const user = await getCurrentUser();
-    let initialSaved = false;
-
-    if (user) {
-      const supabase = await createClient();
-      initialSaved = await isGuideSaved(supabase, user.id, guide.id);
-    }
-
-    return (
-      <article className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-        {backLink}
-
-        {renderer === "itinerary" ? (
-          <GuideItineraryDetail
-            guide={guide}
-            imageUrl={imageUrl}
-            imageAlt={imageAlt}
-            signedIn={Boolean(user)}
-            initialSaved={initialSaved}
-          />
-        ) : (
-          <GuideCollectionDetail
-            guide={guide}
-            imageUrl={imageUrl}
-            imageAlt={imageAlt}
-            signedIn={Boolean(user)}
-            initialSaved={initialSaved}
-          />
-        )}
-      </article>
-    );
-  }
-
-  const comparisons = guide.comparisons ?? [];
-  const stopCount = comparisons.length;
-  const stopWord = "comparisons";
-  const stopWordCapitalized = "Comparisons";
-  const sectionTitle = "Worth it or skip it";
-
   return (
     <article className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
       {backLink}
 
-      <div className="mx-auto mt-8 max-w-[1440px]">
-        <header className="flex flex-wrap items-start justify-between gap-6">
-          <div className="min-w-0 max-w-2xl">
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted">
-              <span className="inline-flex items-center gap-1 text-accent-dark">
-                <MapPin aria-hidden="true" className="h-3.5 w-3.5" />
-                {guide.city}
-              </span>
-
-              {guide.duration_label && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span>{guide.duration_label}</span>
-                </>
-              )}
-
-              <span aria-hidden="true">·</span>
-
-              <span>
-                {stopCount} {stopWord}
-              </span>
-            </div>
-
-            <h1 className="mt-3 text-3xl font-extrabold tracking-[-0.025em] text-ink sm:text-4xl lg:text-5xl">
-              {guide.title}
-            </h1>
-          </div>
-
-          <div className="flex shrink-0 items-center gap-2">
-            <ShareGuideButton title={guide.title} />
-          </div>
-        </header>
-
-        <GuideCover
+      {renderer === "itinerary" && (
+        <GuideItineraryDetail
+          guide={guide}
           imageUrl={imageUrl}
           imageAlt={imageAlt}
-          title={guide.title}
-          priority
-          sizes="(min-width: 900px) 900px, 100vw"
-          className="mt-7 aspect-[16/9] w-full rounded-media object-cover"
+          signedIn={signedIn}
+          initialSaved={initialSaved}
         />
+      )}
 
-        <div className="mt-6 flex items-center gap-8 border-y border-border py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-surface-subtle text-secondary">
-              <ListOrdered aria-hidden="true" className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
-                {stopWordCapitalized}
-              </p>
-              <p className="text-sm font-bold text-ink">{stopCount}</p>
-            </div>
-          </div>
+      {renderer === "collection" && (
+        <GuideCollectionDetail
+          guide={guide}
+          imageUrl={imageUrl}
+          imageAlt={imageAlt}
+          signedIn={signedIn}
+          initialSaved={initialSaved}
+        />
+      )}
 
-          {guide.duration_label && (
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-control bg-surface-subtle text-secondary">
-                <Clock3 aria-hidden="true" className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.1em] text-muted">
-                  Duration
-                </p>
-                <p className="text-sm font-bold text-ink">
-                  {guide.duration_label}
-                </p>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {guide.description && (
-          <section className="mt-10 rounded-media bg-accent-wash px-6 py-7 sm:px-8">
-            <p className="text-xs font-bold uppercase tracking-[0.16em] text-accent-dark">
-              The plan
-            </p>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-ink sm:text-lg">
-              {guide.description}
-            </p>
-          </section>
-        )}
-
-        {stopCount > 0 && (
-          <section id="itinerary" className="mt-12 scroll-mt-24">
-            <div className="mb-5 flex items-end justify-between gap-4 border-b border-border pb-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted">
-                  Your route
-                </p>
-
-                <h2 className="mt-1 text-2xl font-bold tracking-tight text-ink">
-                  {sectionTitle}
-                </h2>
-              </div>
-
-              <span className="shrink-0 text-sm text-muted">
-                {stopCount} {stopWord}
-              </span>
-            </div>
-
-            <GuideComparisonItems pairs={comparisons} />
-          </section>
-        )}
-      </div>
+      {renderer === "comparison" && (
+        <GuideComparisonDetail
+          guide={guide}
+          imageUrl={imageUrl}
+          imageAlt={imageAlt}
+          signedIn={signedIn}
+          initialSaved={initialSaved}
+        />
+      )}
     </article>
   );
 }
