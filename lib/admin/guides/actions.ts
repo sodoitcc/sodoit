@@ -9,8 +9,10 @@ import { isGuideSlugTaken } from "./queries";
 import {
   readGuideInput,
   readGuideItemInput,
+  readGuideComparisonInput,
   validateGuideInput,
   validateGuideItemInput,
+  validateGuideComparisonInput,
   parseTags,
 } from "./validation";
 
@@ -309,6 +311,184 @@ export async function moveGuideItem(
     .update({ position: swap.position })
     .eq("id", current.id);
   if (step3.error) return { success: false, error: "Could not reorder items." };
+
+  revalidateGuidePaths(guideId);
+  return { success: true, id: guideId };
+}
+
+function toComparisonRow(input: ReturnType<typeof readGuideComparisonInput>) {
+  return {
+    skip_title: input.skip_title,
+    skip_description: input.skip_description || null,
+    skip_neighborhood: input.skip_neighborhood || null,
+    skip_address: input.skip_address || null,
+    skip_latitude: input.skip_latitude ? Number(input.skip_latitude) : null,
+    skip_longitude: input.skip_longitude ? Number(input.skip_longitude) : null,
+    skip_google_maps_url: input.skip_google_maps_url || null,
+    skip_external_url: input.skip_external_url || null,
+    skip_tags: parseTags(input.skip_tags),
+    go_instead_title: input.go_instead_title,
+    go_instead_description: input.go_instead_description || null,
+    go_instead_neighborhood: input.go_instead_neighborhood || null,
+    go_instead_address: input.go_instead_address || null,
+    go_instead_latitude: input.go_instead_latitude
+      ? Number(input.go_instead_latitude)
+      : null,
+    go_instead_longitude: input.go_instead_longitude
+      ? Number(input.go_instead_longitude)
+      : null,
+    go_instead_google_maps_url: input.go_instead_google_maps_url || null,
+    go_instead_external_url: input.go_instead_external_url || null,
+    go_instead_tags: parseTags(input.go_instead_tags),
+    reason: input.reason || null,
+  };
+}
+
+export async function addGuideComparison(
+  guideId: string,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  if (!UUID_RE.test(guideId))
+    return { success: false, error: "Invalid guide." };
+
+  const admin = await requireAdmin();
+  if (!admin.ok) return { success: false, error: admin.error };
+
+  const input = readGuideComparisonInput(formData);
+  const validationError = validateGuideComparisonInput(input);
+  if (validationError) return { success: false, error: validationError };
+
+  const client = createAdminClient();
+  const existing = await client
+    .from("guide_comparisons")
+    .select("position")
+    .eq("guide_id", guideId)
+    .order("position", { ascending: false })
+    .limit(1);
+
+  if (existing.error)
+    return { success: false, error: "Could not add the comparison." };
+
+  const nextPosition = (existing.data?.[0]?.position ?? -1) + 1;
+
+  const { error } = await client.from("guide_comparisons").insert({
+    guide_id: guideId,
+    position: nextPosition,
+    ...toComparisonRow(input),
+  });
+
+  if (error) return { success: false, error: "Could not add the comparison." };
+
+  revalidateGuidePaths(guideId);
+  return { success: true, id: guideId };
+}
+
+export async function updateGuideComparison(
+  guideId: string,
+  comparisonId: string,
+  formData: FormData,
+): Promise<AdminActionResult> {
+  if (!UUID_RE.test(guideId) || !UUID_RE.test(comparisonId))
+    return { success: false, error: "Invalid comparison." };
+
+  const admin = await requireAdmin();
+  if (!admin.ok) return { success: false, error: admin.error };
+
+  const input = readGuideComparisonInput(formData);
+  const validationError = validateGuideComparisonInput(input);
+  if (validationError) return { success: false, error: validationError };
+
+  const client = createAdminClient();
+  const { error } = await client
+    .from("guide_comparisons")
+    .update(toComparisonRow(input))
+    .eq("id", comparisonId)
+    .eq("guide_id", guideId);
+
+  if (error)
+    return { success: false, error: "Could not update the comparison." };
+
+  revalidateGuidePaths(guideId);
+  return { success: true, id: guideId };
+}
+
+export async function deleteGuideComparison(
+  guideId: string,
+  comparisonId: string,
+): Promise<AdminActionResult> {
+  if (!UUID_RE.test(guideId) || !UUID_RE.test(comparisonId))
+    return { success: false, error: "Invalid comparison." };
+
+  const admin = await requireAdmin();
+  if (!admin.ok) return { success: false, error: admin.error };
+
+  const client = createAdminClient();
+  const { error } = await client
+    .from("guide_comparisons")
+    .delete()
+    .eq("id", comparisonId)
+    .eq("guide_id", guideId);
+
+  if (error)
+    return { success: false, error: "Could not remove the comparison." };
+
+  revalidateGuidePaths(guideId);
+  return { success: true, id: guideId };
+}
+
+export async function moveGuideComparison(
+  guideId: string,
+  comparisonId: string,
+  direction: "up" | "down",
+): Promise<AdminActionResult> {
+  if (!UUID_RE.test(guideId) || !UUID_RE.test(comparisonId))
+    return { success: false, error: "Invalid comparison." };
+
+  const admin = await requireAdmin();
+  if (!admin.ok) return { success: false, error: admin.error };
+
+  const client = createAdminClient();
+  const comparisons = await client
+    .from("guide_comparisons")
+    .select("id, position")
+    .eq("guide_id", guideId)
+    .order("position");
+
+  if (comparisons.error)
+    return { success: false, error: "Could not reorder comparisons." };
+
+  const ordered = comparisons.data ?? [];
+  const index = ordered.findIndex((row) => row.id === comparisonId);
+  const swapIndex = direction === "up" ? index - 1 : index + 1;
+
+  if (index === -1 || swapIndex < 0 || swapIndex >= ordered.length) {
+    return { success: true, id: guideId };
+  }
+
+  const current = ordered[index];
+  const swap = ordered[swapIndex];
+  const tempPosition = Math.max(...ordered.map((row) => row.position)) + 1;
+
+  const step1 = await client
+    .from("guide_comparisons")
+    .update({ position: tempPosition })
+    .eq("id", current.id);
+  if (step1.error)
+    return { success: false, error: "Could not reorder comparisons." };
+
+  const step2 = await client
+    .from("guide_comparisons")
+    .update({ position: current.position })
+    .eq("id", swap.id);
+  if (step2.error)
+    return { success: false, error: "Could not reorder comparisons." };
+
+  const step3 = await client
+    .from("guide_comparisons")
+    .update({ position: swap.position })
+    .eq("id", current.id);
+  if (step3.error)
+    return { success: false, error: "Could not reorder comparisons." };
 
   revalidateGuidePaths(guideId);
   return { success: true, id: guideId };

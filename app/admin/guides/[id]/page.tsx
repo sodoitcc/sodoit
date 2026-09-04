@@ -2,7 +2,9 @@ import { notFound } from "next/navigation";
 import { AdminPageHeader } from "@/components/admin/AdminPageHeader";
 import { GuideForm } from "@/components/admin/guides/GuideForm";
 import { GuideItemsEditor } from "@/components/admin/guides/GuideItemsEditor";
+import { GuideComparisonsEditor } from "@/components/admin/guides/GuideComparisonsEditor";
 import { getGuideAdmin } from "@/lib/admin/guides/queries";
+import { getGuideRenderer } from "@/lib/guides/types";
 import { UUID_RE } from "@/lib/validation";
 
 interface EditGuidePageProps {
@@ -16,6 +18,8 @@ export default async function EditGuidePage({ params }: EditGuidePageProps) {
   const guide = await getGuideAdmin(id);
   if (!guide) notFound();
 
+  const renderer = getGuideRenderer(guide.type);
+
   return (
     <div className="flex flex-col gap-10">
       <div>
@@ -27,7 +31,14 @@ export default async function EditGuidePage({ params }: EditGuidePageProps) {
       </div>
 
       <div className="border-t border-border pt-8">
-        <GuideItemsEditor guideId={guide.id} items={guide.items} />
+        {renderer === "comparison" ? (
+          <GuideComparisonsEditor
+            guideId={guide.id}
+            comparisons={guide.comparisons ?? []}
+          />
+        ) : (
+          <GuideItemsEditor guideId={guide.id} items={guide.items} />
+        )}
       </div>
     </div>
   );

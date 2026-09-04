@@ -144,6 +144,106 @@ export function validateGuideItemInput(input: GuideItemInput): string | null {
   return null;
 }
 
+export interface GuideComparisonInput {
+  skip_title: string;
+  skip_description: string;
+  skip_neighborhood: string;
+  skip_address: string;
+  skip_latitude: string;
+  skip_longitude: string;
+  skip_google_maps_url: string;
+  skip_external_url: string;
+  skip_tags: string;
+  go_instead_title: string;
+  go_instead_description: string;
+  go_instead_neighborhood: string;
+  go_instead_address: string;
+  go_instead_latitude: string;
+  go_instead_longitude: string;
+  go_instead_google_maps_url: string;
+  go_instead_external_url: string;
+  go_instead_tags: string;
+  reason: string;
+}
+
+export function readGuideComparisonInput(
+  formData: FormData,
+): GuideComparisonInput {
+  const field = (name: string) => String(formData.get(name) ?? "").trim();
+
+  return {
+    skip_title: field("skip_title"),
+    skip_description: field("skip_description"),
+    skip_neighborhood: field("skip_neighborhood"),
+    skip_address: field("skip_address"),
+    skip_latitude: field("skip_latitude"),
+    skip_longitude: field("skip_longitude"),
+    skip_google_maps_url: field("skip_google_maps_url"),
+    skip_external_url: field("skip_external_url"),
+    skip_tags: field("skip_tags"),
+    go_instead_title: field("go_instead_title"),
+    go_instead_description: field("go_instead_description"),
+    go_instead_neighborhood: field("go_instead_neighborhood"),
+    go_instead_address: field("go_instead_address"),
+    go_instead_latitude: field("go_instead_latitude"),
+    go_instead_longitude: field("go_instead_longitude"),
+    go_instead_google_maps_url: field("go_instead_google_maps_url"),
+    go_instead_external_url: field("go_instead_external_url"),
+    go_instead_tags: field("go_instead_tags"),
+    reason: field("reason"),
+  };
+}
+
+function isValidLatLng(
+  value: string,
+  min: number,
+  max: number,
+): string | null {
+  if (!value) return null;
+  const num = Number(value);
+  if (Number.isNaN(num) || num < min || num > max) {
+    return `must be a number between ${min} and ${max}`;
+  }
+  return null;
+}
+
+export function validateGuideComparisonInput(
+  input: GuideComparisonInput,
+): string | null {
+  if (!input.skip_title) return "Skip title is required.";
+  if (!input.go_instead_title) return "Instead title is required.";
+
+  if (input.skip_google_maps_url && !isValidUrl(input.skip_google_maps_url))
+    return "Skip Google Maps URL must be a valid URL.";
+  if (input.skip_external_url && !isValidUrl(input.skip_external_url))
+    return "Skip external URL must be a valid URL.";
+  if (
+    input.go_instead_google_maps_url &&
+    !isValidUrl(input.go_instead_google_maps_url)
+  )
+    return "Instead Google Maps URL must be a valid URL.";
+  if (
+    input.go_instead_external_url &&
+    !isValidUrl(input.go_instead_external_url)
+  )
+    return "Instead external URL must be a valid URL.";
+
+  const skipLatError = isValidLatLng(input.skip_latitude, -90, 90);
+  if (skipLatError) return `Skip latitude ${skipLatError}.`;
+  const skipLngError = isValidLatLng(input.skip_longitude, -180, 180);
+  if (skipLngError) return `Skip longitude ${skipLngError}.`;
+  const insteadLatError = isValidLatLng(input.go_instead_latitude, -90, 90);
+  if (insteadLatError) return `Instead latitude ${insteadLatError}.`;
+  const insteadLngError = isValidLatLng(
+    input.go_instead_longitude,
+    -180,
+    180,
+  );
+  if (insteadLngError) return `Instead longitude ${insteadLngError}.`;
+
+  return null;
+}
+
 export function parseTags(value: string): string[] | null {
   const tags = value
     .split(",")
