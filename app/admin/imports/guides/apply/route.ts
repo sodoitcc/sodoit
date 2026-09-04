@@ -108,7 +108,12 @@ export async function POST(request: Request) {
   }
 
   return Response.json(
-    { ok: false, kind: result.kind, error: result.error },
+    {
+      ok: false,
+      kind: result.kind,
+      error: result.error,
+      ...(result.debug ? { debug: result.debug } : {}),
+    },
     { status: 500 },
   );
 }

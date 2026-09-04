@@ -36,7 +36,19 @@ export type GuideApplyResult =
   | { ok: false; kind: "invalid_file"; error: string }
   | { ok: false; kind: "validation_error"; preview: GuideImportPreview }
   | { ok: false; kind: "stale_preview"; conflicts: GuideApplyConflict[] }
-  | { ok: false; kind: "apply_failed"; error: string };
+  | {
+      ok: false;
+      kind: "apply_failed";
+      error: string;
+      debug?: RpcErrorDebug;
+    };
+
+export interface RpcErrorDebug {
+  code: string | null;
+  message: string;
+  details: string | null;
+  hint: string | null;
+}
 
 function toGuideRow(candidate: GuideImportCandidate) {
   return {
@@ -237,8 +249,7 @@ export async function applyGuideImport(
     };
   }
 
-  const client = createAdminClient();
-  const { data, error } = await client.rpc("apply_guide_import", {
+  const rpcPayload = {
     guide_creates: guideCreates.map((r) => ({
       import_ref: r.candidate.slug,
       ...toGuideRow(r.candidate),
@@ -263,16 +274,51 @@ export async function applyGuideImport(
       id: r.id,
       ...toGuideComparisonRow(r.candidate),
     })),
-  });
+  };
+
+  if (process.env.NODE_ENV === "development") {
+    logger.info("admin.guides.import_apply_payload_summary", {
+      guide_creates: rpcPayload.guide_creates.length,
+      guide_updates: rpcPayload.guide_updates.length,
+      spot_creates: rpcPayload.spot_creates.length,
+      spot_updates: rpcPayload.spot_updates.length,
+      comparison_creates: rpcPayload.comparison_creates.length,
+      comparison_updates: rpcPayload.comparison_updates.length,
+      spot_creates_unresolved_parent: rpcPayload.spot_creates.filter(
+        (r) => !r.guide_id && !r.guide_ref,
+      ).length,
+      comparison_creates_unresolved_parent:
+        rpcPayload.comparison_creates.filter((r) => !r.guide_id && !r.guide_ref)
+          .length,
+    });
+  }
+
+  const client = createAdminClient();
+  const { data, error } = await client.rpc("apply_guide_import", rpcPayload);
 
   if (error) {
     logger.error("admin.guides.import_apply_failed", {
+      code: error.code ?? null,
       message: error.message,
+      details: error.details ?? null,
+      hint: error.hint ?? null,
     });
+
+    const debug: RpcErrorDebug | undefined =
+      process.env.NODE_ENV === "development"
+        ? {
+            code: error.code ?? null,
+            message: error.message,
+            details: error.details ?? null,
+            hint: error.hint ?? null,
+          }
+        : undefined;
+
     return {
       ok: false,
       kind: "apply_failed",
       error: "Could not apply the import. No changes were made.",
+      ...(debug ? { debug } : {}),
     };
   }
 
