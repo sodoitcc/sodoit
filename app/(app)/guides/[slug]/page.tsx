@@ -5,8 +5,8 @@ import { notFound } from "next/navigation";
 import { ChevronLeft, Clock3, ListOrdered, MapPin } from "lucide-react";
 
 import { GuideCover } from "@/components/guides/GuideCover";
-import { GuideCollectionItems } from "@/components/guides/GuideCollectionItems";
 import { GuideComparisonItems } from "@/components/guides/GuideComparisonItems";
+import { GuideCollectionDetail } from "@/components/guides/GuideCollectionDetail";
 import { GuideItineraryDetail } from "@/components/guides/GuideItineraryDetail";
 import { ShareGuideButton } from "@/components/guides/ShareGuideButton";
 import { getGuideBySlug, getGuideResolvedImages } from "@/lib/guides/queries";
@@ -105,7 +105,7 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
     </Link>
   );
 
-  if (renderer === "itinerary") {
+  if (renderer === "itinerary" || renderer === "collection") {
     const user = await getCurrentUser();
     let initialSaved = false;
 
@@ -118,28 +118,32 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
       <article className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
         {backLink}
 
-        <GuideItineraryDetail
-          guide={guide}
-          imageUrl={imageUrl}
-          imageAlt={imageAlt}
-          signedIn={Boolean(user)}
-          initialSaved={initialSaved}
-        />
+        {renderer === "itinerary" ? (
+          <GuideItineraryDetail
+            guide={guide}
+            imageUrl={imageUrl}
+            imageAlt={imageAlt}
+            signedIn={Boolean(user)}
+            initialSaved={initialSaved}
+          />
+        ) : (
+          <GuideCollectionDetail
+            guide={guide}
+            imageUrl={imageUrl}
+            imageAlt={imageAlt}
+            signedIn={Boolean(user)}
+            initialSaved={initialSaved}
+          />
+        )}
       </article>
     );
   }
 
   const comparisons = guide.comparisons ?? [];
-  const stopCount =
-    renderer === "comparison" ? comparisons.length : guide.items.length;
-
-  const stopWord = renderer === "comparison" ? "comparisons" : "places";
-  const stopWordCapitalized =
-    renderer === "comparison" ? "Comparisons" : "Places";
-  const sectionTitle =
-    renderer === "comparison"
-      ? "Worth it or skip it"
-      : "Explore this collection";
+  const stopCount = comparisons.length;
+  const stopWord = "comparisons";
+  const stopWordCapitalized = "Comparisons";
+  const sectionTitle = "Worth it or skip it";
 
   return (
     <article className="mx-auto w-full max-w-[1440px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
@@ -246,12 +250,7 @@ export default async function GuideDetailPage({ params }: GuidePageProps) {
               </span>
             </div>
 
-            {renderer === "collection" && (
-              <GuideCollectionItems items={guide.items} />
-            )}
-            {renderer === "comparison" && (
-              <GuideComparisonItems pairs={comparisons} />
-            )}
+            <GuideComparisonItems pairs={comparisons} />
           </section>
         )}
       </div>
