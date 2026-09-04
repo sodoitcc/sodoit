@@ -1,11 +1,19 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
-import type { Guide, GuideItem, GuideWithItems } from "@/lib/guides/types";
+import { getGuideRenderer } from "@/lib/guides/types";
+import type {
+  Guide,
+  GuideComparisonPair,
+  GuideItem,
+  GuideWithItems,
+} from "@/lib/guides/types";
 
 const ADMIN_GUIDE_COLUMNS =
-  "id, slug, title, description, city, country_code, cover_image_url, cover_image_alt, duration_label, is_public, featured, created_at, updated_at, type, city_slug, sort_order, editorial_attribution";
+  "id, slug, title, description, city, country_code, cover_image_url, cover_image_alt, duration_label, is_public, featured, created_at, updated_at, type, city_slug, sort_order, editorial_attribution, best_time, local_tip, route_mode";
 const ADMIN_ITEM_COLUMNS =
-  "id, guide_id, position, title, description, place_name, image_url, image_alt, external_url, created_at, updated_at, place_id";
+  "id, guide_id, position, title, description, place_name, image_url, image_alt, external_url, created_at, updated_at, place_id, neighborhood, address, latitude, longitude, google_maps_url, tags";
+const ADMIN_COMPARISON_COLUMNS =
+  "id, guide_id, position, skip_title, skip_description, skip_neighborhood, skip_address, skip_latitude, skip_longitude, skip_google_maps_url, skip_external_url, skip_tags, go_instead_title, go_instead_description, go_instead_neighborhood, go_instead_address, go_instead_latitude, go_instead_longitude, go_instead_google_maps_url, go_instead_external_url, go_instead_tags, reason, created_at, updated_at";
 
 export const GUIDES_PAGE_SIZE = 20;
 
@@ -90,17 +98,30 @@ export async function getGuideAdmin(
   if (guide.error) throw guide.error;
   if (!guide.data) return null;
 
-  const items = await client
-    .from("guide_items")
-    .select(ADMIN_ITEM_COLUMNS)
-    .eq("guide_id", id)
-    .order("position");
+  const guideRow = guide.data as Guide;
+
+  const [items, comparisons] = await Promise.all([
+    client
+      .from("guide_items")
+      .select(ADMIN_ITEM_COLUMNS)
+      .eq("guide_id", id)
+      .order("position"),
+    getGuideRenderer(guideRow.type) === "comparison"
+      ? client
+          .from("guide_comparisons")
+          .select(ADMIN_COMPARISON_COLUMNS)
+          .eq("guide_id", id)
+          .order("position")
+      : Promise.resolve({ data: [] as GuideComparisonPair[], error: null }),
+  ]);
 
   if (items.error) throw items.error;
+  if (comparisons.error) throw comparisons.error;
 
   return {
-    ...(guide.data as Guide),
+    ...guideRow,
     items: (items.data ?? []) as GuideItem[],
+    comparisons: (comparisons.data ?? []) as GuideComparisonPair[],
   };
 }
 

@@ -124,8 +124,23 @@ export interface GuideComparisonPair {
   position: number;
   skip_title: string;
   skip_description: string | null;
+  skip_neighborhood?: string | null;
+  skip_address?: string | null;
+  skip_latitude?: number | null;
+  skip_longitude?: number | null;
+  skip_google_maps_url?: string | null;
+  skip_external_url?: string | null;
+  skip_tags?: string[] | null;
   go_instead_title: string;
   go_instead_description: string | null;
+  go_instead_neighborhood?: string | null;
+  go_instead_address?: string | null;
+  go_instead_latitude?: number | null;
+  go_instead_longitude?: number | null;
+  go_instead_google_maps_url?: string | null;
+  go_instead_external_url?: string | null;
+  go_instead_tags?: string[] | null;
+  reason?: string | null;
   created_at: string;
   updated_at: string;
 }

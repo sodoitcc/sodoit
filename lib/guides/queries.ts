@@ -18,7 +18,7 @@ const ITEM_COLUMNS =
 const CITY_COLUMNS =
   "slug, city, country_code, hero_image_url, hero_image_alt, eyebrow, title, description, created_at, updated_at";
 const COMPARISON_COLUMNS =
-  "id, guide_id, position, skip_title, skip_description, go_instead_title, go_instead_description, created_at, updated_at";
+  "id, guide_id, position, skip_title, skip_description, skip_neighborhood, skip_address, skip_latitude, skip_longitude, skip_google_maps_url, skip_external_url, skip_tags, go_instead_title, go_instead_description, go_instead_neighborhood, go_instead_address, go_instead_latitude, go_instead_longitude, go_instead_google_maps_url, go_instead_external_url, go_instead_tags, reason, created_at, updated_at";
 
 export async function getPublicGuides(): Promise<Guide[]> {
   const supabase = await createClient();
