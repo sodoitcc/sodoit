@@ -33,7 +33,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="flex min-h-dvh flex-col bg-background pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="flex min-h-dvh flex-col bg-background pb-[env(safe-area-inset-bottom)]">
       <PostHogIdentity userId={user?.id} username={username} />
 
       <Header
