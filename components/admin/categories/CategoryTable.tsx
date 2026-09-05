@@ -11,7 +11,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
     return (
       <EmptyState
         title="No categories yet"
-        description="Create the first Experience category to get started."
+        description="Create the first Tick category to get started."
       />
     );
   }
@@ -25,7 +25,7 @@ export function CategoryTable({ categories }: CategoryTableProps) {
             <th className="px-4 py-3">Name</th>
             <th className="px-4 py-3">Slug</th>
             <th className="px-4 py-3">Description</th>
-            <th className="px-4 py-3">Experiences</th>
+            <th className="px-4 py-3">Ticks</th>
             <th className="px-4 py-3">Status</th>
           </tr>
         </thead>

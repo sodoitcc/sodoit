@@ -10,7 +10,7 @@ export default async function AdminCategoriesPage() {
     <div>
       <AdminPageHeader
         title="Categories"
-        description="Manage the primary Experience categories used across Sodoit."
+        description="Manage the primary Tick categories used across Sodoit."
         actions={
           <AdminLinkButton href="/admin/categories/new">
             New category

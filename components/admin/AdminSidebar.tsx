@@ -22,7 +22,7 @@ const NAV = [
   },
   {
     href: "/admin/experiences",
-    label: "Experiences",
+    label: "Ticks",
     icon: Sparkles,
   },
   {

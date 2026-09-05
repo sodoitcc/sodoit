@@ -221,8 +221,8 @@ export function ExperienceImportPanel() {
             Import needs review
           </p>
           <p className="mt-1 text-[13px] text-danger">
-            Some Experiences changed since this preview was created. Choose the
-            file again to generate a fresh preview.
+            Some Ticks changed since this preview was created. Choose the file
+            again to generate a fresh preview.
           </p>
           {applyState.conflicts.length > 0 && (
             <ul className="mt-2 list-inside list-disc text-[13px] text-danger">
@@ -281,7 +281,7 @@ export function ExperienceImportPanel() {
                   .map((row) => row.id)
                   .filter((id) => id.length > 0)}
                 initialCount={applyState.created.length}
-                label={`Generate images for ${applyState.created.length} new experience${
+                label={`Generate images for ${applyState.created.length} new tick${
                   applyState.created.length === 1 ? "" : "s"
                 }`}
               />
@@ -332,8 +332,8 @@ export function ExperienceImportPanel() {
                   changes?
                 </p>
                 <p className="mt-1 text-[13px] text-secondary">
-                  {preview.summary.create} Experiences will be created.{" "}
-                  {preview.summary.update} Experiences will be updated.
+                  {preview.summary.create} Ticks will be created.{" "}
+                  {preview.summary.update} Ticks will be updated.
                 </p>
                 <div className="mt-3 flex items-center gap-2">
                   <Button

@@ -58,7 +58,7 @@ export default async function AdminExperiencesPage({
   return (
     <div>
       <AdminPageHeader
-        title="Experiences"
+        title="Ticks"
         description="Manage and publish the experience catalog."
         actions={
           <>
@@ -130,7 +130,7 @@ export default async function AdminExperiencesPage({
           <table className="w-full min-w-[720px] text-sm">
             <thead className="bg-surface-subtle text-left text-xs font-semibold uppercase tracking-wide text-muted">
               <tr>
-                <th className="px-4 py-3">Experience</th>
+                <th className="px-4 py-3">Tick</th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3">Difficulty</th>
                 <th className="px-4 py-3">Location</th>

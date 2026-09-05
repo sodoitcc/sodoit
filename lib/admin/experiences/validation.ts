@@ -1,6 +1,6 @@
-import { CATEGORIES } from "@/app/(app)/browse/types";
 import { EXPERIENCE_DIFFICULTIES } from "@/lib/experiences/difficulty.mjs";
 import { SLUG_RE } from "@/lib/admin/slug";
+import { UUID_RE } from "@/lib/validation";
 
 export const EXPERIENCE_TITLE_MAX = 120;
 export const EXPERIENCE_DESCRIPTION_MAX = 2000;
@@ -12,7 +12,8 @@ export interface ExperienceInput {
   title: string;
   slug: string;
   description: string;
-  category: string;
+  primary_category_id?: string;
+  tag_ids?: string[];
   difficulty: string;
   location_type: string;
   country_code: string;
@@ -45,7 +46,10 @@ export function validateExperienceInput(input: ExperienceInput): string | null {
   if (!SLUG_RE.test(input.slug))
     return "Slug must be lowercase letters, numbers, and hyphens.";
 
-  if (!CATEGORIES.includes(input.category as (typeof CATEGORIES)[number]))
+  if (
+    input.primary_category_id !== undefined &&
+    !UUID_RE.test(input.primary_category_id)
+  )
     return "Choose a valid category.";
 
   if (
@@ -93,7 +97,11 @@ export function readExperienceInput(formData: FormData): ExperienceInput {
     title: String(formData.get("title") ?? "").trim(),
     slug: String(formData.get("slug") ?? "").trim(),
     description: String(formData.get("description") ?? "").trim(),
-    category: String(formData.get("category") ?? ""),
+    primary_category_id: String(formData.get("primary_category_id") ?? ""),
+    tag_ids: formData
+      .getAll("tag_ids")
+      .map((value) => String(value))
+      .filter((value) => UUID_RE.test(value)),
     difficulty: String(formData.get("difficulty") ?? ""),
     location_type: String(formData.get("location_type") ?? "global"),
     country_code: String(formData.get("country_code") ?? "")

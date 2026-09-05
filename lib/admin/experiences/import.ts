@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import ExcelJS from "exceljs";
 import { EXPERIENCE_EXCEL_COLUMNS, EXPERIENCES_SHEET_NAME } from "./excel";
 import { validateExperienceInput, type ExperienceInput } from "./validation";
+import { CATEGORIES } from "@/app/(app)/browse/types";
 import type { ExperienceExportItem } from "./queries";
 import {
   cellText,
@@ -224,7 +225,6 @@ function toValidationInput(
     title: candidate.title,
     slug: candidate.slug,
     description: candidate.description ?? "",
-    category: candidate.category,
     difficulty: candidate.difficulty ?? "",
     location_type: candidate.location_type,
     country_code: candidate.country_code ?? "",
@@ -311,6 +311,10 @@ export function buildExperienceImportPreview(
 
     const domainError = validateExperienceInput(toValidationInput(candidate));
     if (domainError) errors.push(domainError);
+
+    if (!CATEGORIES.includes(candidate.category as (typeof CATEGORIES)[number])) {
+      errors.push("Choose a valid category.");
+    }
 
     let existingRow: ExperienceExportItem | undefined;
     if (candidate.id) {

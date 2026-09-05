@@ -9,7 +9,7 @@ export default async function RecategorizeExperiencesPage() {
     <div>
       <AdminPageHeader
         title="Recategorize experiences"
-        description="Review deterministic taxonomy proposals and apply them to existing Experiences."
+        description="Review deterministic taxonomy proposals and apply them to existing Ticks."
       />
       <RecategorizeTable rows={rows} categories={categories} />
     </div>

@@ -10,7 +10,7 @@ export default async function AdminTagsPage() {
     <div>
       <AdminPageHeader
         title="Tags"
-        description="Manage the controlled Experience tag vocabulary."
+        description="Manage the controlled Tick tag vocabulary."
         actions={
           <AdminLinkButton href="/admin/tags/new">New tag</AdminLinkButton>
         }

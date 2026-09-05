@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { registerSecurityFixture } from "./fixture";
 import {
   getCategoryAdmin,
+  getCategoryExperienceCount,
   isCategorySlugTaken,
   listCategoriesAdmin,
 } from "@/lib/admin/categories/queries";
@@ -137,5 +138,72 @@ describe("admin category data layer", () => {
         .delete()
         .eq("id", categoryId);
     }
+  });
+
+  it("blocks deletion of a category referenced by an experience", async () => {
+    const fixture = getFixture();
+    const slug = `delete-blocked-${fixture.runId}`;
+
+    const created = await fixture.admin
+      .from("experience_categories")
+      .insert({ slug, name: "Delete Blocked", sort_order: 503 })
+      .select("id")
+      .single();
+    const categoryId = created.data!.id as string;
+
+    try {
+      await fixture.admin
+        .from("experiences")
+        .update({ primary_category_id: categoryId })
+        .eq("id", fixture.experienceIds.main);
+
+      const count = await getCategoryExperienceCount(categoryId);
+      expect(count).toBe(1);
+
+      const deleted = await fixture.admin
+        .from("experience_categories")
+        .delete()
+        .eq("id", categoryId);
+
+      expect(deleted.error).not.toBeNull();
+      expect(deleted.error?.code).toBe("23503");
+
+      const stillThere = await getCategoryAdmin(categoryId);
+      expect(stillThere).not.toBeNull();
+    } finally {
+      await fixture.admin
+        .from("experiences")
+        .update({ primary_category_id: null })
+        .eq("id", fixture.experienceIds.main);
+      await fixture.admin
+        .from("experience_categories")
+        .delete()
+        .eq("id", categoryId);
+    }
+  });
+
+  it("allows deletion of an unused category", async () => {
+    const fixture = getFixture();
+    const slug = `delete-allowed-${fixture.runId}`;
+
+    const created = await fixture.admin
+      .from("experience_categories")
+      .insert({ slug, name: "Delete Allowed", sort_order: 504 })
+      .select("id")
+      .single();
+    const categoryId = created.data!.id as string;
+
+    const count = await getCategoryExperienceCount(categoryId);
+    expect(count).toBe(0);
+
+    const deleted = await fixture.admin
+      .from("experience_categories")
+      .delete()
+      .eq("id", categoryId);
+
+    expect(deleted.error).toBeNull();
+
+    const gone = await getCategoryAdmin(categoryId);
+    expect(gone).toBeNull();
   });
 });

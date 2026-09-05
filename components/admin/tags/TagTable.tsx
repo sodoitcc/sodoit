@@ -11,7 +11,7 @@ export function TagTable({ tags }: TagTableProps) {
     return (
       <EmptyState
         title="No tags yet"
-        description="Create the first Experience tag to get started."
+        description="Create the first Tick tag to get started."
       />
     );
   }
@@ -23,7 +23,7 @@ export function TagTable({ tags }: TagTableProps) {
           <tr>
             <th className="px-4 py-3">Name</th>
             <th className="px-4 py-3">Slug</th>
-            <th className="px-4 py-3">Experiences</th>
+            <th className="px-4 py-3">Ticks</th>
             <th className="px-4 py-3">Status</th>
           </tr>
         </thead>

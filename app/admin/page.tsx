@@ -15,7 +15,7 @@ export default async function AdminDashboardPage() {
 
   const summaryCards = [
     {
-      label: "Experiences",
+      label: "Ticks",
       value: metrics.experiencesTotal,
       href: "/admin/experiences",
     },
@@ -30,11 +30,11 @@ export default async function AdminDashboardPage() {
 
   const healthItems = [
     {
-      label: "Experiences without an image",
+      label: "Ticks without an image",
       value: metrics.experiencesWithoutImage,
     },
     {
-      label: "Experiences without a description",
+      label: "Ticks without a description",
       value: metrics.experiencesWithoutDescription,
     },
     {
@@ -89,11 +89,11 @@ export default async function AdminDashboardPage() {
           <div className="mt-4 space-y-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wide text-muted">
-                Experiences
+                Ticks
               </p>
               <ul className="mt-2 space-y-2">
                 {metrics.recentExperiences.length === 0 && (
-                  <li className="text-sm text-muted">No experiences yet.</li>
+                  <li className="text-sm text-muted">No ticks yet.</li>
                 )}
                 {metrics.recentExperiences.map((experience) => (
                   <li key={experience.id}>

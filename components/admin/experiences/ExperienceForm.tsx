@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { AdminFormSection } from "@/components/admin/AdminFormSection";
 import { AdminField, ADMIN_INPUT_CLASS } from "@/components/admin/AdminField";
 import { Button } from "@/components/ui";
-import { CATEGORIES, DIFFICULTIES } from "@/app/(app)/browse/types";
+import { DIFFICULTIES } from "@/app/(app)/browse/types";
 import { RegenerateImageButton } from "@/components/admin/experiences/RegenerateImageButton";
 import { slugify } from "@/lib/admin/slug";
 import { getExperienceHref } from "@/lib/experiences/href";
@@ -17,12 +17,21 @@ import type {
   Experience,
   ExperienceLocationType,
 } from "@/lib/experiences/types";
+import type { ExperienceTag } from "@/lib/experiences/taxonomy";
 
 interface ExperienceFormProps {
   experience?: Experience;
+  categories: { id: string; name: string }[];
+  tags: ExperienceTag[];
+  selectedTagIds?: string[];
 }
 
-export function ExperienceForm({ experience }: ExperienceFormProps) {
+export function ExperienceForm({
+  experience,
+  categories,
+  tags,
+  selectedTagIds = [],
+}: ExperienceFormProps) {
   const router = useRouter();
   const isEdit = Boolean(experience);
 
@@ -55,7 +64,7 @@ export function ExperienceForm({ experience }: ExperienceFormProps) {
         : await createExperience(formData);
 
       if (!result.success) {
-        setError(result.error ?? "Could not save the experience.");
+        setError(result.error ?? "Could not save the tick.");
         return;
       }
 
@@ -113,20 +122,20 @@ export function ExperienceForm({ experience }: ExperienceFormProps) {
           />
         </AdminField>
 
-        <AdminField label="Category" htmlFor="category">
+        <AdminField label="Category" htmlFor="primary_category_id">
           <select
-            id="category"
-            name="category"
-            defaultValue={experience?.category ?? ""}
+            id="primary_category_id"
+            name="primary_category_id"
+            defaultValue={experience?.primary_category_id ?? ""}
             required
             className={ADMIN_INPUT_CLASS}
           >
             <option value="" disabled>
               Select category
             </option>
-            {CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {category}
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
               </option>
             ))}
           </select>
@@ -146,6 +155,28 @@ export function ExperienceForm({ experience }: ExperienceFormProps) {
               </option>
             ))}
           </select>
+        </AdminField>
+      </AdminFormSection>
+
+      <AdminFormSection title="Tags">
+        <AdminField label="Tags" htmlFor="tag_ids" full>
+          <div className="flex flex-wrap gap-x-4 gap-y-2">
+            {tags.map((tag) => (
+              <label
+                key={tag.id}
+                className="flex items-center gap-2 text-sm text-ink"
+              >
+                <input
+                  type="checkbox"
+                  name="tag_ids"
+                  value={tag.id}
+                  defaultChecked={selectedTagIds.includes(tag.id)}
+                  className="h-4 w-4 rounded border-border text-accent focus:ring-accent/30"
+                />
+                {tag.name}
+              </label>
+            ))}
+          </div>
         </AdminField>
       </AdminFormSection>
 

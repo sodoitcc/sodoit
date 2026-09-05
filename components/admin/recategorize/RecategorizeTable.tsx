@@ -109,7 +109,7 @@ export function RecategorizeTable({
         return;
       }
 
-      setSummary(`Applied changes to ${result.updatedCount} experience(s).`);
+      setSummary(`Applied changes to ${result.updatedCount} tick(s).`);
     });
   }
 
@@ -158,7 +158,7 @@ export function RecategorizeTable({
 
       {visibleRows.length === 0 ? (
         <p className="rounded-control border border-dashed border-border p-6 text-center text-sm text-muted">
-          No experiences match this filter.
+          No ticks match this filter.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-panel border border-border">
@@ -166,7 +166,7 @@ export function RecategorizeTable({
             <thead className="bg-surface-subtle text-xs font-semibold uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-3 py-3">Apply</th>
-                <th className="px-3 py-3">Experience</th>
+                <th className="px-3 py-3">Tick</th>
                 <th className="px-3 py-3">Current category</th>
                 <th className="px-3 py-3">Proposed category</th>
                 <th className="px-3 py-3">Proposed type</th>

@@ -70,7 +70,7 @@ export async function POST(request: Request) {
         ok: false,
         kind: result.kind,
         error:
-          "Some Experiences changed since this preview was created. Review the import again before applying.",
+          "Some Ticks changed since this preview was created. Review the import again before applying.",
         conflicts: result.conflicts,
       },
       { status: 409 },

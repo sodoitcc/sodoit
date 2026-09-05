@@ -41,6 +41,19 @@ export async function listTagsAdmin(): Promise<AdminExperienceTag[]> {
   })) as AdminExperienceTag[];
 }
 
+export async function listActiveTags(): Promise<ExperienceTag[]> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("experience_tags")
+    .select("id, slug, name, is_active, sort_order")
+    .eq("is_active", true)
+    .order("sort_order", { ascending: true, nullsFirst: false })
+    .order("name", { ascending: true });
+
+  if (error) throw error;
+  return (data ?? []) as ExperienceTag[];
+}
+
 export async function getTagAdmin(id: string): Promise<ExperienceTag | null> {
   const client = createAdminClient();
   const { data, error } = await client

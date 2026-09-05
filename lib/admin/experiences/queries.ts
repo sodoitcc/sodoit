@@ -129,6 +129,17 @@ export async function listExperiencesForExport(): Promise<
   return (data ?? []) as ExperienceExportItem[];
 }
 
+export async function getExperienceTagIds(id: string): Promise<string[]> {
+  const client = createAdminClient();
+  const { data, error } = await client
+    .from("experience_tag_assignments")
+    .select("tag_id")
+    .eq("experience_id", id);
+
+  if (error) throw error;
+  return (data ?? []).map((row) => row.tag_id as string);
+}
+
 export async function isExperienceSlugTaken(
   slug: string,
   excludeId?: string,
