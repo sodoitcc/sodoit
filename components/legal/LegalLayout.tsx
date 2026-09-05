@@ -1,6 +1,5 @@
 import { ReactNode } from "react";
 import Link from "next/link";
-import { PageShell } from "@/components/ui";
 
 const NAV_ITEMS = [
   { href: "/privacy", label: "Privacy" },
@@ -25,19 +24,27 @@ export function LegalLayout({
   children,
 }: LegalLayoutProps) {
   return (
-    <PageShell title={title} subtitle={subtitle} maxWidth="960px">
-      <div className="mb-6 flex flex-wrap items-center gap-2 text-xs">
-        <span className="font-semibold uppercase tracking-wide text-accent">
-          Sodoit legal
-        </span>
-        <span className="text-border">·</span>
-        <span className="text-muted">Last updated: August 2026</span>
-      </div>
+    <div className="mx-auto w-full max-w-[1440px] px-4 py-8 sm:px-6 sm:py-10 xl:px-8 xl:py-12">
+      <header className="max-w-[800px]">
+        <h1 className="text-2xl font-semibold tracking-tight text-ink sm:text-3xl">
+          {title}
+        </h1>
 
-      <div className="grid gap-8 lg:grid-cols-[190px_minmax(0,1fr)]">
+        <p className="mt-2 text-sm leading-relaxed text-secondary sm:text-base">
+          {subtitle}
+        </p>
+
+        <div className="mt-4 flex items-center gap-2 text-sm text-muted">
+          <span>Sodoit Legal</span>
+          <span aria-hidden="true">·</span>
+          <span>Updated September 2026</span>
+        </div>
+      </header>
+
+      <div className="mt-10 grid items-start gap-10 xl:grid-cols-[170px_800px_1fr] xl:gap-16">
         <nav
           aria-label="Legal pages"
-          className="flex gap-1 overflow-x-auto pb-2 lg:sticky lg:top-6 lg:flex-col lg:gap-0.5 lg:self-start lg:overflow-visible lg:pb-0"
+          className="flex gap-5 overflow-x-auto pb-3 xl:sticky xl:top-24 xl:flex-col xl:gap-3 xl:overflow-visible xl:pb-0"
         >
           {NAV_ITEMS.map((item) => {
             const isActive = item.href === active;
@@ -47,20 +54,29 @@ export function LegalLayout({
                 key={item.href}
                 href={item.href}
                 aria-current={isActive ? "page" : undefined}
-                className={`shrink-0 rounded-md px-3 py-2 text-sm font-semibold transition-colors ${
+                className={`group flex shrink-0 items-center gap-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30 ${
                   isActive
-                    ? "bg-accent-light text-accent-dark"
-                    : "text-muted hover:bg-border/30 hover:text-ink"
+                    ? "font-semibold text-ink"
+                    : "text-muted hover:text-ink"
                 }`}
               >
+                <span
+                  aria-hidden="true"
+                  className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                    isActive
+                      ? "bg-accent"
+                      : "bg-transparent group-hover:bg-border"
+                  }`}
+                />
+
                 {item.label}
               </Link>
             );
           })}
         </nav>
 
-        <div className="min-w-0">{children}</div>
+        <article className="w-full min-w-0">{children}</article>
       </div>
-    </PageShell>
+    </div>
   );
 }

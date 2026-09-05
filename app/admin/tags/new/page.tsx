@@ -6,7 +6,7 @@ export default function NewTagPage() {
     <div>
       <AdminPageHeader
         title="New tag"
-        description="Create a new Experience tag."
+        description="Create a new Tick tag."
       />
       <TagForm />
     </div>

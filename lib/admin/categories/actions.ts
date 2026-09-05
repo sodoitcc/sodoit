@@ -88,3 +88,48 @@ export async function updateExperienceCategory(
   revalidateCategoryPaths(id);
   return { success: true, id };
 }
+
+export async function deleteExperienceCategory(
+  id: string,
+): Promise<AdminActionResult> {
+  if (!UUID_RE.test(id)) return { success: false, error: "Invalid category." };
+
+  const admin = await requireAdmin();
+  if (!admin.ok) return { success: false, error: admin.error };
+
+  const client = createAdminClient();
+
+  const { count, error: countError } = await client
+    .from("experiences")
+    .select("id", { count: "exact", head: true })
+    .eq("primary_category_id", id);
+
+  if (countError) {
+    return { success: false, error: "Could not delete the category." };
+  }
+
+  if ((count ?? 0) > 0) {
+    return {
+      success: false,
+      error: `This category is used by ${count} ${count === 1 ? "tick" : "ticks"} and cannot be deleted.`,
+    };
+  }
+
+  const { error } = await client
+    .from("experience_categories")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    if (error.code === "23503") {
+      return {
+        success: false,
+        error: "This category is still in use and cannot be deleted.",
+      };
+    }
+    return { success: false, error: "Could not delete the category." };
+  }
+
+  revalidateCategoryPaths(id);
+  return { success: true, id };
+}

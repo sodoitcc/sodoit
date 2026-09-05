@@ -57,6 +57,17 @@ export async function getCategoryAdmin(
   return data as ExperienceCategory | null;
 }
 
+export async function getCategoryExperienceCount(id: string): Promise<number> {
+  const client = createAdminClient();
+  const { count, error } = await client
+    .from("experiences")
+    .select("id", { count: "exact", head: true })
+    .eq("primary_category_id", id);
+
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function isCategorySlugTaken(
   slug: string,
   excludeId?: string,

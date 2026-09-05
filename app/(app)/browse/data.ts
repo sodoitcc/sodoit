@@ -85,14 +85,39 @@ export async function loadExperiences(
 ): Promise<BrowseResult> {
   const supabase = await createClient();
 
+  const offset = decodeCursor(cursor);
+  const difficultyValue =
+    difficulty && DIFFICULTY_LABELS.includes(difficulty) ? difficulty : null;
+
+  if (q) {
+    const { data } = await supabase.rpc("search_experiences", {
+      p_q: q,
+      p_category_id: categoryId,
+      p_type: type,
+      p_difficulty: difficultyValue,
+      p_location_scope: locationScope,
+      p_status: status,
+      p_completed_ids: completedIds,
+      p_sort: sort,
+      p_limit: BATCH_SIZE + 1,
+      p_offset: offset,
+    });
+
+    const rows = (data ?? []) as Experience[];
+    const hasMore = rows.length > BATCH_SIZE;
+    const experiences = hasMore ? rows.slice(0, BATCH_SIZE) : rows;
+
+    return {
+      experiences,
+      nextCursor: hasMore ? String(offset + BATCH_SIZE) : null,
+      hasMore,
+    };
+  }
+
   let query = supabase
     .from("experiences")
     .select(EXPERIENCE_COLUMNS)
     .eq("is_public", true);
-
-  if (q) {
-    query = query.ilike("title", `%${q}%`);
-  }
 
   if (categoryId) {
     query = query.eq("primary_category_id", categoryId);
@@ -106,8 +131,8 @@ export async function loadExperiences(
     query = query.eq("location_scope", locationScope);
   }
 
-  if (difficulty && DIFFICULTY_LABELS.includes(difficulty)) {
-    query = query.eq("difficulty", difficulty as ExperienceDifficulty);
+  if (difficultyValue) {
+    query = query.eq("difficulty", difficultyValue as ExperienceDifficulty);
   }
 
   if (status === "completed") {
@@ -130,7 +155,6 @@ export async function loadExperiences(
 
   query = query.order("id", { ascending: false });
 
-  const offset = decodeCursor(cursor);
   const { data } = await query.range(offset, offset + BATCH_SIZE);
 
   const rows = (data ?? []) as Experience[];
@@ -157,14 +181,27 @@ export async function loadExperiencesCount(
 ): Promise<number> {
   const supabase = await createClient();
 
+  const difficultyValue =
+    difficulty && DIFFICULTY_LABELS.includes(difficulty) ? difficulty : null;
+
+  if (q) {
+    const { data } = await supabase.rpc("search_experiences_count", {
+      p_q: q,
+      p_category_id: categoryId,
+      p_type: type,
+      p_difficulty: difficultyValue,
+      p_location_scope: locationScope,
+      p_status: status,
+      p_completed_ids: completedIds,
+    });
+
+    return typeof data === "number" ? data : 0;
+  }
+
   let query = supabase
     .from("experiences")
     .select("id", { count: "exact", head: true })
     .eq("is_public", true);
-
-  if (q) {
-    query = query.ilike("title", `%${q}%`);
-  }
 
   if (categoryId) {
     query = query.eq("primary_category_id", categoryId);
@@ -178,8 +215,8 @@ export async function loadExperiencesCount(
     query = query.eq("location_scope", locationScope);
   }
 
-  if (difficulty && DIFFICULTY_LABELS.includes(difficulty)) {
-    query = query.eq("difficulty", difficulty as ExperienceDifficulty);
+  if (difficultyValue) {
+    query = query.eq("difficulty", difficultyValue as ExperienceDifficulty);
   }
 
   if (status === "completed") {

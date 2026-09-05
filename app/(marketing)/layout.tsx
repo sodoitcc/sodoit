@@ -7,7 +7,7 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh bg-background">
       <header className="fixed top-0 left-0 right-0 z-50 h-16 bg-white border-b border-border flex items-center justify-between px-10">
         <Link href="/">
           <Logo size="lg" />

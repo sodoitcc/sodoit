@@ -88,7 +88,7 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
               aria-label="Primary navigation"
               className={[
                 "absolute left-1/2 hidden h-16 -translate-x-1/2",
-                "items-center gap-1 lg:flex",
+                "items-center gap-5 lg:flex",
               ].join(" ")}
             >
               {nav.map((item) => {
@@ -100,25 +100,22 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                     href={item.href}
                     aria-current={active ? "page" : undefined}
                     className={[
-                      "relative inline-flex h-11 items-center justify-center px-3",
-                      "rounded-control text-sm font-semibold",
-                      "outline-none transition-colors",
+                      "inline-flex h-11 items-center gap-1.5",
+                      "text-[15px] outline-none transition-colors",
                       "focus-visible:ring-2 focus-visible:ring-accent/30",
                       active
-                        ? "text-ink"
-                        : "text-secondary hover:bg-surface-subtle hover:text-ink",
+                        ? "font-semibold text-ink"
+                        : "font-medium text-secondary hover:text-ink",
                     ].join(" ")}
                   >
                     {item.label}
 
-                    <span
-                      aria-hidden="true"
-                      className={[
-                        "absolute bottom-0 left-3 right-3 h-0.5 rounded-pill bg-accent",
-                        "origin-center transition-transform duration-200",
-                        active ? "scale-x-100" : "scale-x-0",
-                      ].join(" ")}
-                    />
+                    {active && (
+                      <span
+                        aria-hidden="true"
+                        className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
+                      />
+                    )}
                   </Link>
                 );
               })}
@@ -258,12 +255,12 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                       aria-current={active ? "page" : undefined}
                       onClick={() => setMobileMenuOpen(false)}
                       className={[
-                        "flex min-h-14 items-center justify-between px-3",
-                        "rounded-control text-base font-bold tracking-[-0.015em]",
+                        "flex min-h-14 items-center gap-2 px-3",
+                        "rounded-control text-base tracking-[-0.015em]",
                         "outline-none transition-colors",
                         active
-                          ? "bg-accent-wash text-accent-dark"
-                          : "text-ink hover:bg-surface-subtle",
+                          ? "font-semibold text-ink"
+                          : "font-medium text-secondary hover:text-ink",
                         "focus-visible:ring-2 focus-visible:ring-accent/30",
                       ].join(" ")}
                     >
@@ -272,7 +269,7 @@ export function Header({ signedIn, username, avatarUrl }: HeaderProps) {
                       {active && (
                         <span
                           aria-hidden="true"
-                          className="h-2 w-2 rounded-full bg-accent"
+                          className="h-1.5 w-1.5 rounded-full bg-accent"
                         />
                       )}
                     </Link>

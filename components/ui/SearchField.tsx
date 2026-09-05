@@ -11,6 +11,7 @@ interface SearchFieldProps {
   name?: string;
   className?: string;
   size?: "default" | "large";
+  enableShortcut?: boolean;
 }
 
 export function SearchField({
@@ -21,10 +22,13 @@ export function SearchField({
   name,
   className = "",
   size = "default",
+  enableShortcut = true,
 }: SearchFieldProps) {
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    if (!enableShortcut) return;
+
     function focusSearch(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key === "k") {
         event.preventDefault();
@@ -37,9 +41,10 @@ export function SearchField({
     return () => {
       window.removeEventListener("keydown", focusSearch);
     };
-  }, []);
+  }, [enableShortcut]);
 
-  const heightClass = size === "large" ? "h-12" : "h-10";
+  const heightClass = size === "large" ? "h-12 sm:h-[52px]" : "h-10";
+  const iconClass = size === "large" ? "h-[18px] w-[18px]" : "h-4 w-4";
 
   return (
     <label className={`relative block w-full ${className}`}>
@@ -47,7 +52,7 @@ export function SearchField({
 
       <Search
         aria-hidden="true"
-        className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted"
+        className={`pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-muted ${iconClass}`}
       />
 
       <input
@@ -58,33 +63,18 @@ export function SearchField({
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
         autoComplete="off"
-        aria-keyshortcuts="Meta+K Control+K"
+        aria-keyshortcuts={enableShortcut ? "Meta+K Control+K" : undefined}
         className={[
           heightClass,
           "w-full rounded-control border border-border bg-surface",
-          "pl-10 pr-3.5 text-sm text-ink",
+          "pl-11 pr-4 text-ink",
+          size === "large" ? "text-[15px]" : "text-sm",
           "placeholder:text-muted",
           "transition-colors",
           "hover:border-border-strong",
-          "focus:border-accent/50 focus:outline-none focus:ring-2 focus:ring-accent/10",
-          "sm:pr-16",
+          "focus:border-accent/40 focus:outline-none focus:ring-2 focus:ring-accent/15",
         ].join(" ")}
       />
-
-      <div className="pointer-events-none absolute inset-y-0 right-3 hidden items-center gap-0.5 sm:flex">
-        <kbd
-          aria-hidden="true"
-          className="rounded border border-border bg-surface-subtle px-1.5 py-0.5 text-[10px] font-semibold text-muted"
-        >
-          ⌘
-        </kbd>
-        <kbd
-          aria-hidden="true"
-          className="rounded border border-border bg-surface-subtle px-1.5 py-0.5 text-[10px] font-semibold text-muted"
-        >
-          K
-        </kbd>
-      </div>
     </label>
   );
 }

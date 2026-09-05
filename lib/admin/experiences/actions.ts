@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+type AdminClient = ReturnType<typeof createAdminClient>;
 import { requireAdmin } from "@/lib/admin/requireAdmin";
 import { slugify } from "@/lib/admin/slug";
 import { UUID_RE } from "@/lib/validation";
@@ -14,12 +16,54 @@ export interface AdminActionResult {
   id?: string;
 }
 
-function toRow(input: ReturnType<typeof readExperienceInput>) {
+async function resolveCategoryName(
+  client: AdminClient,
+  categoryId: string,
+): Promise<string | null> {
+  const { data, error } = await client
+    .from("experience_categories")
+    .select("name")
+    .eq("id", categoryId)
+    .eq("is_active", true)
+    .maybeSingle();
+
+  if (error) return null;
+  return (data?.name as string | undefined) ?? null;
+}
+
+async function syncExperienceTags(
+  client: AdminClient,
+  experienceId: string,
+  tagIds: string[],
+): Promise<boolean> {
+  const { error: deleteError } = await client
+    .from("experience_tag_assignments")
+    .delete()
+    .eq("experience_id", experienceId);
+
+  if (deleteError) return false;
+  if (tagIds.length === 0) return true;
+
+  const { error: insertError } = await client
+    .from("experience_tag_assignments")
+    .insert(
+      tagIds.map((tagId) => ({ experience_id: experienceId, tag_id: tagId })),
+    );
+
+  return !insertError;
+}
+
+function toRow(
+  input: ReturnType<typeof readExperienceInput>,
+  categoryName: string,
+  categoryId: string,
+) {
   return {
     title: input.title,
     slug: input.slug,
     description: input.description || null,
-    category: input.category,
+    category: categoryName,
+    primary_category_id: categoryId,
     difficulty: input.difficulty || null,
     location_type: input.location_type,
     country_code: input.country_code || null,
@@ -59,9 +103,17 @@ export async function createExperience(
   }
 
   const client = createAdminClient();
+
+  const categoryName = await resolveCategoryName(
+    client,
+    input.primary_category_id ?? "",
+  );
+  if (!categoryName)
+    return { success: false, error: "Choose a valid category." };
+
   const { data, error } = await client
     .from("experiences")
-    .insert(toRow(input))
+    .insert(toRow(input, categoryName, input.primary_category_id ?? ""))
     .select("id")
     .single();
 
@@ -69,6 +121,10 @@ export async function createExperience(
     if (error.code === "23505")
       return { success: false, error: "That slug is already in use." };
     return { success: false, error: "Could not create the experience." };
+  }
+
+  if (!(await syncExperienceTags(client, data.id, input.tag_ids ?? []))) {
+    return { success: false, error: "Could not save the selected tags." };
   }
 
   revalidateExperiencePaths(data.id);
@@ -96,15 +152,27 @@ export async function updateExperience(
   }
 
   const client = createAdminClient();
+
+  const categoryName = await resolveCategoryName(
+    client,
+    input.primary_category_id ?? "",
+  );
+  if (!categoryName)
+    return { success: false, error: "Choose a valid category." };
+
   const { error } = await client
     .from("experiences")
-    .update(toRow(input))
+    .update(toRow(input, categoryName, input.primary_category_id ?? ""))
     .eq("id", id);
 
   if (error) {
     if (error.code === "23505")
       return { success: false, error: "That slug is already in use." };
     return { success: false, error: "Could not update the experience." };
+  }
+
+  if (!(await syncExperienceTags(client, id, input.tag_ids ?? []))) {
+    return { success: false, error: "Could not save the selected tags." };
   }
 
   revalidateExperiencePaths(id);

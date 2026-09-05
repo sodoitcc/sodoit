@@ -25,6 +25,7 @@ vi.mock("next/cache", () => ({
 
 import {
   createExperienceCategory,
+  deleteExperienceCategory,
   updateExperienceCategory,
 } from "@/lib/admin/categories/actions";
 
@@ -164,5 +165,85 @@ describe("updateExperienceCategory", () => {
 
     expect(result).toEqual({ success: true, id: VALID_UUID });
     expect(capturedPayload).not.toHaveProperty("slug");
+  });
+});
+
+describe("deleteExperienceCategory", () => {
+  const VALID_UUID = "11111111-1111-4111-8111-111111111111";
+
+  function fakeDeleteClient(options: {
+    count: number;
+    deleteError?: { code?: string } | null;
+  }) {
+    return {
+      from: (table: string) => {
+        if (table === "experiences") {
+          return {
+            select: () => ({
+              eq: () => Promise.resolve({ count: options.count, error: null }),
+            }),
+          };
+        }
+        return {
+          delete: () => ({
+            eq: () => Promise.resolve({ error: options.deleteError ?? null }),
+          }),
+        };
+      },
+    };
+  }
+
+  it("rejects an invalid id before checking admin access", async () => {
+    const result = await deleteExperienceCategory("not-a-uuid");
+
+    expect(result).toEqual({ success: false, error: "Invalid category." });
+    expect(requireAdminMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the caller is not an admin", async () => {
+    requireAdminMock.mockResolvedValue({
+      ok: false,
+      error: "Admin access required.",
+    });
+
+    const result = await deleteExperienceCategory(VALID_UUID);
+
+    expect(result).toEqual({
+      success: false,
+      error: "Admin access required.",
+    });
+    expect(createAdminClientMock).not.toHaveBeenCalled();
+  });
+
+  it("blocks deletion when the category has dependent experiences", async () => {
+    createAdminClientMock.mockReturnValue(fakeDeleteClient({ count: 12 }));
+
+    const result = await deleteExperienceCategory(VALID_UUID);
+
+    expect(result).toEqual({
+      success: false,
+      error: "This category is used by 12 ticks and cannot be deleted.",
+    });
+  });
+
+  it("deletes an unused category and returns success", async () => {
+    createAdminClientMock.mockReturnValue(fakeDeleteClient({ count: 0 }));
+
+    const result = await deleteExperienceCategory(VALID_UUID);
+
+    expect(result).toEqual({ success: true, id: VALID_UUID });
+  });
+
+  it("maps a foreign-key violation from a concurrent insert to a clean error", async () => {
+    createAdminClientMock.mockReturnValue(
+      fakeDeleteClient({ count: 0, deleteError: { code: "23503" } }),
+    );
+
+    const result = await deleteExperienceCategory(VALID_UUID);
+
+    expect(result).toEqual({
+      success: false,
+      error: "This category is still in use and cannot be deleted.",
+    });
   });
 });

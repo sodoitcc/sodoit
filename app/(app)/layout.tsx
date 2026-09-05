@@ -21,6 +21,7 @@ export default async function AppLayout({
 
   if (user) {
     const supabase = await createClient();
+
     const { data: profile } = await supabase
       .from("profiles")
       .select("username, avatar_url")
@@ -32,7 +33,7 @@ export default async function AppLayout({
   }
 
   return (
-    <div className="pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
+    <div className="flex min-h-dvh flex-col bg-background pb-[env(safe-area-inset-bottom)]">
       <PostHogIdentity userId={user?.id} username={username} />
 
       <Header
@@ -41,13 +42,13 @@ export default async function AppLayout({
         avatarUrl={avatarUrl}
       />
 
-      <main className="min-h-screen bg-background pb-8">
+      <main className="flex-1">
         <AchievementUnlockProvider definitions={definitions}>
           {children}
         </AchievementUnlockProvider>
       </main>
 
-      {!user && <Footer />}
+      <Footer />
     </div>
   );
 }

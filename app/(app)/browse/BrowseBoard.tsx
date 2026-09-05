@@ -14,12 +14,15 @@ import type { CuratedSection } from "./data";
 import { ActiveFilterSummary } from "./components/ActiveFilterSummary";
 import { BrowseEditorialContent } from "./components/BrowseEditorialContent";
 import { BrowseHero } from "./components/BrowseHero";
+import { BrowseResultsToolbar } from "./components/BrowseResultsToolbar";
 import { BrowseSignupCta } from "./components/BrowseSignupCta";
+import { BrowseStickySearch } from "./components/BrowseStickySearch";
 import { BrowseToolbar } from "./components/BrowseToolbar";
 import { InfiniteExperienceResults } from "./components/InfiniteExperienceResults";
 import { useBrowseNavigation } from "./hooks/useBrowseNavigation";
 
 const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_ANCHOR_ID = "browse-hero-search-anchor";
 
 interface BrowseBoardProps {
   experiences: Experience[];
@@ -69,8 +72,22 @@ export function BrowseBoard({
   const [saved, setSaved] = useState(() => new Set(savedIds));
   const [searchText, setSearchText] = useState(q);
   const firstSearchRender = useRef(true);
+  const [stickySearchVisible, setStickySearchVisible] = useState(false);
 
-  const { navigate, clear } = useBrowseNavigation({
+  useEffect(() => {
+    const anchor = document.getElementById(SEARCH_ANCHOR_ID);
+    if (!anchor) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => setStickySearchVisible(!entry.isIntersecting),
+      { rootMargin: "-64px 0px 0px 0px" },
+    );
+
+    observer.observe(anchor);
+    return () => observer.disconnect();
+  }, []);
+
+  const { navigate } = useBrowseNavigation({
     q: searchText,
     category,
     type,
@@ -226,6 +243,16 @@ export function BrowseBoard({
     locationScope,
   });
 
+  function clearTaxonomyFilters() {
+    navigate({ type: null, difficulty: null, locationScope: null });
+  }
+
+  const resultsHeading = isDefaultView
+    ? "Explore ticks"
+    : resultCount === null
+      ? "Results"
+      : `${resultCount} ${resultCount === 1 ? "result" : "results"}`;
+
   const results = (
     <InfiniteExperienceResults
       initialExperiences={remainingExperiences}
@@ -261,6 +288,12 @@ export function BrowseBoard({
 
   return (
     <>
+      <BrowseStickySearch
+        visible={stickySearchVisible}
+        value={searchText}
+        onChange={setSearchText}
+      />
+
       <BrowseHero>
         <BrowseToolbar
           search={searchText}
@@ -268,69 +301,49 @@ export function BrowseBoard({
           categories={categories}
           category={category}
           onCategoryChange={(next) => navigate({ category: next })}
-          sort={sort}
-          onSortChange={(next) => navigate({ sort: next })}
-          type={type}
-          onTypeChange={(next) => navigate({ type: next })}
-          difficulty={difficulty}
-          onDifficultyChange={(next) => navigate({ difficulty: next })}
-          locationScope={locationScope}
-          onLocationScopeChange={(next) => navigate({ locationScope: next })}
-          activeFilterCount={activeFilterCount}
+          searchAnchorId={SEARCH_ANCHOR_ID}
+          primarySearchEnabled={!stickySearchVisible}
         />
       </BrowseHero>
 
       <div className="mx-auto w-full max-w-[1440px] px-4 pb-4 sm:px-6 lg:px-8">
         <div className="mt-4 sm:mt-6">
-          {showEditorial ? (
-            <>
-              <BrowseEditorialContent
-                featured={activeFeatured}
-                curatedSections={curatedSections}
-                completed={completed}
-                saved={saved}
-                onSave={save}
-                onRemoveSaved={removeSaved}
-                signedIn={signedIn}
-                onToggle={toggle}
-                onGuestSave={requireLogin}
-              />
+          {showEditorial && (
+            <BrowseEditorialContent
+              featured={activeFeatured}
+              curatedSections={curatedSections}
+              completed={completed}
+              saved={saved}
+              onSave={save}
+              onRemoveSaved={removeSaved}
+              signedIn={signedIn}
+              onToggle={toggle}
+              onGuestSave={requireLogin}
+            />
+          )}
 
-              <section className="mt-10">
-                <h2 className="mb-4 text-base font-bold tracking-[-0.01em] text-ink">
-                  Explore experiences
-                </h2>
-
-                {results}
-              </section>
-            </>
-          ) : isDefaultView ? (
-            results
-          ) : (
-            <>
-              <div className="mb-4 flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-3">
-                  <p
-                    className="text-sm text-secondary"
-                    role="status"
-                    aria-live="polite"
-                  >
-                    {resultCount === null
-                      ? null
-                      : `${resultCount} ${
-                          resultCount === 1 ? "result" : "results"
-                        }`}
-                  </p>
-
-                  <button
-                    type="button"
-                    onClick={clear}
-                    className="text-xs font-semibold text-accent-dark hover:text-accent"
-                  >
-                    Clear filters
-                  </button>
-                </div>
-
+          <section className={showEditorial ? "mt-10" : undefined}>
+            <BrowseResultsToolbar
+              heading={resultsHeading}
+              headingLevel={isDefaultView ? "h2" : "p"}
+              sort={sort}
+              onSortChange={(next) => navigate({ sort: next })}
+              view={view}
+              onViewChange={(next) => navigate({ view: next })}
+              type={type}
+              onTypeChange={(next) => navigate({ type: next })}
+              difficulty={difficulty}
+              onDifficultyChange={(next) => navigate({ difficulty: next })}
+              locationScope={locationScope}
+              onLocationScopeChange={(next) =>
+                navigate({ locationScope: next })
+              }
+              activeFilterCount={activeFilterCount}
+              resultCount={resultCount}
+              onClearAll={clearTaxonomyFilters}
+            />
+            {!isDefaultView && (
+              <div className="mt-3 flex flex-col gap-3">
                 <ActiveFilterSummary
                   type={type}
                   difficulty={difficulty}
@@ -342,10 +355,10 @@ export function BrowseBoard({
                   }
                 />
               </div>
+            )}
 
-              {results}
-            </>
-          )}
+            <div className="mt-4">{results}</div>
+          </section>
         </div>
       </div>
     </>

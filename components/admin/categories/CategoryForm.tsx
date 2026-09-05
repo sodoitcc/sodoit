@@ -7,19 +7,44 @@ import { AdminField, ADMIN_INPUT_CLASS } from "@/components/admin/AdminField";
 import { AdminFormSection } from "@/components/admin/AdminFormSection";
 import {
   createExperienceCategory,
+  deleteExperienceCategory,
   updateExperienceCategory,
 } from "@/lib/admin/categories/actions";
 import type { ExperienceCategory } from "@/lib/experiences/taxonomy";
 
 interface CategoryFormProps {
   category?: ExperienceCategory;
+  experienceCount?: number;
 }
 
-export function CategoryForm({ category }: CategoryFormProps) {
+export function CategoryForm({ category, experienceCount }: CategoryFormProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [isPending, startTransition] = useTransition();
+  const [isDeleting, startDeleteTransition] = useTransition();
+
+  function handleDelete() {
+    if (!category) return;
+
+    const confirmed = window.confirm(
+      `Delete "${category.name}"? This action cannot be undone.`,
+    );
+    if (!confirmed) return;
+
+    setError(null);
+
+    startDeleteTransition(async () => {
+      const result = await deleteExperienceCategory(category.id);
+
+      if (!result.success) {
+        setError(result.error ?? "Could not delete the category.");
+        return;
+      }
+
+      router.push("/admin/categories");
+    });
+  }
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -147,6 +172,27 @@ export function CategoryForm({ category }: CategoryFormProps) {
           {isPending ? "Saving..." : "Save changes"}
         </Button>
       </div>
+
+      {category && (
+        <div className="mt-8 border-t border-border/70 pt-6">
+          <p className="text-sm font-semibold text-ink">Delete category</p>
+          <p className="mt-1 text-[13px] text-secondary">
+            {experienceCount && experienceCount > 0
+              ? `Used by ${experienceCount} ${experienceCount === 1 ? "tick" : "ticks"}. Remove it from those ticks before deleting.`
+              : "This action cannot be undone."}
+          </p>
+
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-3 border-danger/30 text-danger hover:border-danger/50 hover:bg-danger-light"
+            disabled={isDeleting}
+            onClick={handleDelete}
+          >
+            {isDeleting ? "Deleting..." : "Delete category"}
+          </Button>
+        </div>
+      )}
     </form>
   );
 }

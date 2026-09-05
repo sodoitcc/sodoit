@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #fafaf9;
+  --color-background: #ffffff;
   --color-surface: #ffffff;
   --color-surface-subtle: #f7f7f5;
   --color-card: #ffffff;
@@ -304,6 +304,7 @@
 
 html {
   scroll-behavior: smooth;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -321,4 +322,13 @@ h4,
 h5,
 h6 {
   margin: 0;
+}
+
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
 }

@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 
 interface PageShellProps {
-  title: string;
+  title?: string;
   subtitle?: string;
   actions?: ReactNode;
   toolbar?: ReactNode;
@@ -14,7 +14,7 @@ export function PageShell({
   subtitle,
   actions,
   toolbar,
-  maxWidth = "1200px",
+  maxWidth = "1440px",
   children,
 }: PageShellProps) {
   return (

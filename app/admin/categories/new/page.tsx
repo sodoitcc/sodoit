@@ -6,7 +6,7 @@ export default function NewCategoryPage() {
     <div>
       <AdminPageHeader
         title="New category"
-        description="Create a new Experience category."
+        description="Create a new Tick category."
       />
       <CategoryForm />
     </div>

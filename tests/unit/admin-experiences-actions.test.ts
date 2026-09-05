@@ -26,12 +26,15 @@ import {
   updateExperience,
 } from "@/lib/admin/experiences/actions";
 
+const VALID_CATEGORY_ID = "22222222-2222-4222-8222-222222222222";
+const VALID_TAG_ID = "33333333-3333-4333-8333-333333333333";
+
 function validFormData(overrides: Record<string, string> = {}) {
   const formData = new FormData();
   formData.set("title", "Watch a sunrise");
   formData.set("slug", "watch-a-sunrise");
   formData.set("description", "");
-  formData.set("category", "Nature");
+  formData.set("primary_category_id", VALID_CATEGORY_ID);
   formData.set("difficulty", "Easy");
   formData.set("location_type", "global");
   formData.set("country_code", "");
@@ -41,6 +44,36 @@ function validFormData(overrides: Record<string, string> = {}) {
   for (const [key, value] of Object.entries(overrides))
     formData.set(key, value);
   return formData;
+}
+
+function tableClient() {
+  return {
+    from(table: string) {
+      if (table === "experience_categories") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: () =>
+                  Promise.resolve({ data: { name: "Nature" }, error: null }),
+              }),
+            }),
+          }),
+        };
+      }
+
+      if (table === "experience_tag_assignments") {
+        return {
+          delete: () => ({
+            eq: () => Promise.resolve({ error: null }),
+          }),
+          insert: () => Promise.resolve({ error: null }),
+        };
+      }
+
+      return { insert: insertMock, update: updateMock };
+    },
+  };
 }
 
 beforeEach(() => {
@@ -55,7 +88,7 @@ beforeEach(() => {
   updateMock.mockReturnValue({
     eq: () => Promise.resolve({ error: null }),
   });
-  fromMock.mockReturnValue({ insert: insertMock, update: updateMock });
+  fromMock.mockImplementation(tableClient().from);
 });
 
 describe("createExperience authorization", () => {
@@ -79,8 +112,36 @@ describe("createExperience authorization", () => {
       expect.objectContaining({
         title: "Watch a sunrise",
         slug: "watch-a-sunrise",
+        category: "Nature",
+        primary_category_id: VALID_CATEGORY_ID,
       }),
     );
+  });
+
+  it("persists selected tag ids to the tag assignment relation", async () => {
+    const formData = validFormData();
+    formData.append("tag_ids", VALID_TAG_ID);
+
+    let insertedTagRows: unknown = null;
+    fromMock.mockImplementation((table: string) => {
+      if (table === "experience_tag_assignments") {
+        return {
+          delete: () => ({ eq: () => Promise.resolve({ error: null }) }),
+          insert: (rows: unknown) => {
+            insertedTagRows = rows;
+            return Promise.resolve({ error: null });
+          },
+        };
+      }
+      return tableClient().from(table);
+    });
+
+    const result = await createExperience(formData);
+
+    expect(result.success).toBe(true);
+    expect(insertedTagRows).toEqual([
+      { experience_id: "new-id", tag_id: VALID_TAG_ID },
+    ]);
   });
 });
 
@@ -91,12 +152,37 @@ describe("createExperience validation", () => {
     expect(fromMock).not.toHaveBeenCalled();
   });
 
-  it("rejects an invalid category", async () => {
+  it("rejects an invalid category id format", async () => {
     const result = await createExperience(
-      validFormData({ category: "Not a real category" }),
+      validFormData({ primary_category_id: "not-a-uuid" }),
     );
     expect(result.success).toBe(false);
     expect(fromMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a category id that does not resolve to an active category", async () => {
+    fromMock.mockImplementation((table: string) => {
+      if (table === "experience_categories") {
+        return {
+          select: () => ({
+            eq: () => ({
+              eq: () => ({
+                maybeSingle: () => Promise.resolve({ data: null, error: null }),
+              }),
+            }),
+          }),
+        };
+      }
+      return { insert: insertMock, update: updateMock };
+    });
+
+    const result = await createExperience(validFormData());
+
+    expect(result).toEqual({
+      success: false,
+      error: "Choose a valid category.",
+    });
+    expect(insertMock).not.toHaveBeenCalled();
   });
 
   it("rejects a duplicate slug before touching the database", async () => {
@@ -145,7 +231,10 @@ describe("updateExperience", () => {
 
     expect(result).toEqual({ success: true, id });
     expect(updateMock).toHaveBeenCalledWith(
-      expect.objectContaining({ title: "Watch a sunrise" }),
+      expect.objectContaining({
+        title: "Watch a sunrise",
+        primary_category_id: VALID_CATEGORY_ID,
+      }),
     );
   });
 });

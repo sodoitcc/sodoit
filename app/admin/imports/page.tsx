@@ -19,9 +19,9 @@ export default function AdminImportsPage() {
       />
 
       <Card>
-        <h2 className="text-sm font-semibold text-ink">Experiences</h2>
+        <h2 className="text-sm font-semibold text-ink">Ticks</h2>
         <p className="mt-1 text-sm text-muted">
-          Bulk edit and create experiences using Excel.
+          Bulk edit and create ticks using Excel.
         </p>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">

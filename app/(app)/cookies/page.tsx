@@ -10,23 +10,28 @@ export default function CookiesPage() {
     >
       <LegalSection title="Essential cookies">
         <p>
-          Sodoit uses only essential cookies required to keep you signed in and
+          Sodoit uses essential cookies required to keep you signed in and
           remember your session. Without these, sign-in would not work.
         </p>
       </LegalSection>
 
-      <LegalSection title="Analytics and advertising">
+      <LegalSection title="Product analytics">
         <p>
-          We do not currently use advertising or marketing cookies, and we do
-          not run analytics tracking that requires consent.
+          We use PostHog for product analytics, which sets its own cookies and
+          local storage to recognize your browser across visits. This helps us
+          understand which pages and features are used. Session recording is
+          disabled.
         </p>
       </LegalSection>
 
-      <LegalSection title="Future changes">
+      <LegalSection title="Advertising">
+        <p>Advertising cookies are not currently used on Sodoit.</p>
+      </LegalSection>
+
+      <LegalSection title="As the product develops">
         <p>
-          If we add analytics or advertising in the future, we will update this
-          policy and provide consent controls before any non-essential cookies
-          are set.
+          Cookie and analytics controls may evolve as Sodoit develops. If that
+          changes in a way that affects you, we will update this page.
         </p>
       </LegalSection>
     </LegalLayout>
