@@ -19,7 +19,9 @@ export function HeroLayout({
         className,
       ].join(" ")}
     >
-      <div className="relative z-30 max-w-[640px]">{children}</div>
+      <div className="relative z-30 min-w-0 max-w-none lg:max-w-[640px]">
+        {children}
+      </div>
 
       <div className="relative hidden h-[240px] sm:block lg:h-[330px]">
         {visual}

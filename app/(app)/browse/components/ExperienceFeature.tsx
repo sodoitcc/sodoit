@@ -32,8 +32,8 @@ export function ExperienceFeature({
   const location = experienceLocation(experience);
 
   return (
-    <section className="h-full overflow-hidden rounded-panel border border-border bg-surface md:grid md:grid-cols-[1.08fr_0.92fr]">
-      <div className="relative h-[220px] sm:h-[280px] md:h-full">
+    <section className="h-full w-full min-w-0 overflow-hidden rounded-panel border border-border bg-surface lg:grid lg:grid-cols-[1.08fr_0.92fr]">
+      <div className="relative h-[220px] sm:h-[280px] lg:h-full">
         <Link
           href={getExperienceHref(experience)}
           aria-label={`View ${experience.title}`}
@@ -45,7 +45,7 @@ export function ExperienceFeature({
           imageAlt={experience.image_alt}
           title={experience.title}
           fallbackColor={thumbnail}
-          sizes="(min-width: 768px) 55vw, 100vw"
+          sizes="(min-width: 1024px) 55vw, 100vw"
           quality={90}
           priority
           className="h-full w-full object-cover"

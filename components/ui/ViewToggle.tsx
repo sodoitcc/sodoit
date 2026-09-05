@@ -7,9 +7,21 @@ interface ViewToggleProps {
   onChange: (view: ViewMode) => void;
 }
 
-const OPTIONS: { view: ViewMode; label: string; icon: typeof LayoutGrid }[] = [
-  { view: "grid", label: "Grid view", icon: LayoutGrid },
-  { view: "list", label: "List view", icon: List },
+const OPTIONS: {
+  view: ViewMode;
+  label: string;
+  icon: typeof LayoutGrid;
+}[] = [
+  {
+    view: "grid",
+    label: "Grid view",
+    icon: LayoutGrid,
+  },
+  {
+    view: "list",
+    label: "List view",
+    icon: List,
+  },
 ];
 
 export function ViewToggle({ view, onChange }: ViewToggleProps) {
@@ -17,7 +29,7 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
     <div
       role="group"
       aria-label="Layout"
-      className="flex h-8 shrink-0 items-center gap-0.5 rounded-control border border-border bg-surface p-0.5"
+      className="flex h-10 shrink-0 items-center rounded-lg bg-surface-subtle p-0.5"
     >
       {OPTIONS.map(({ view: optionView, label, icon: Icon }) => {
         const selected = optionView === view;
@@ -30,15 +42,13 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
             aria-pressed={selected}
             onClick={() => onChange(optionView)}
             className={[
-              "flex h-7 w-7 items-center justify-center rounded-md",
+              "flex h-9 w-9 items-center justify-center rounded-[10px]",
               "transition-colors",
-              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/30",
-              selected
-                ? "bg-ink text-white"
-                : "text-secondary hover:bg-surface-subtle hover:text-ink",
+              "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25",
+              selected ? "bg-surface text-accent" : "text-muted hover:text-ink",
             ].join(" ")}
           >
-            <Icon aria-hidden="true" className="h-3.5 w-3.5" />
+            <Icon aria-hidden="true" className="h-4 w-4" strokeWidth={2} />
           </button>
         );
       })}

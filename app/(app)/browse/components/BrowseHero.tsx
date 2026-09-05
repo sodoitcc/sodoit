@@ -10,7 +10,7 @@ interface BrowseHeroProps {
 export function BrowseHero({ children }: BrowseHeroProps) {
   return (
     <section className="relative overflow-visible pb-3 pt-0 sm:py-6 lg:py-8">
-      <div className="relative -mx-4 h-[130px] overflow-hidden px-4 sm:hidden">
+      <div className="relative h-[130px] w-full overflow-hidden sm:hidden">
         <Image
           src="/illustrations/browse-hero.png"
           alt=""

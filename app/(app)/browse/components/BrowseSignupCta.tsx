@@ -15,13 +15,12 @@ export function BrowseSignupCta({
     return (
       <aside
         className={[
-          "relative overflow-hidden rounded-panel bg-[#EEF9F4]",
+          "relative w-full overflow-hidden rounded-panel bg-[#EEF9F4]",
           "flex flex-col",
-          "sm:grid sm:grid-cols-[1.05fr_0.95fr]",
           "lg:block lg:h-full",
         ].join(" ")}
       >
-        <div className="relative z-10 p-5 sm:flex sm:flex-col sm:justify-center sm:p-6 lg:block lg:p-5 lg:pb-[120px]">
+        <div className="relative z-10 p-5 lg:p-5 lg:pb-[120px]">
           <div className="flex items-center gap-2">
             <ListChecks
               aria-hidden="true"
@@ -55,7 +54,6 @@ export function BrowseSignupCta({
         <div
           className={[
             "relative h-[200px] w-full overflow-hidden",
-            "sm:h-auto sm:min-h-[240px]",
             "lg:absolute lg:inset-x-0 lg:bottom-0 lg:h-[125px] lg:min-h-0",
           ].join(" ")}
         >
@@ -63,8 +61,8 @@ export function BrowseSignupCta({
             src="/illustrations/browse-cta.png"
             alt=""
             fill
-            sizes="(min-width: 1024px) 360px, (min-width: 640px) 45vw, 100vw"
-            className="object-cover object-bottom sm:object-center lg:object-contain lg:object-bottom"
+            sizes="(min-width: 1024px) 360px, 100vw"
+            className="object-cover object-bottom lg:object-contain lg:object-bottom"
           />
         </div>
       </aside>

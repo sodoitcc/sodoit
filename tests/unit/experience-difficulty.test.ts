@@ -16,7 +16,6 @@ function validInput(overrides: Partial<ExperienceInput> = {}): ExperienceInput {
     title: "Cross Shibuya Crossing",
     slug: "cross-shibuya-crossing",
     description: "",
-    category: "Travel",
     difficulty: "Easy",
     location_type: "global",
     country_code: "",

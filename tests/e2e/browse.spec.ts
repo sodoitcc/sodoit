@@ -64,7 +64,8 @@ test.describe("browse editorial redesign", () => {
   }) => {
     await page.goto("/?category=adventure");
 
-    await page.getByRole("button", { name: "Clear filters" }).click();
+    const categoryGroup = page.getByRole("group", { name: "Categories" });
+    await categoryGroup.getByRole("button", { name: "All" }).click();
 
     await expect(page).toHaveURL(/\/$/);
     await expect(
@@ -144,7 +145,7 @@ test.describe("browse editorial redesign", () => {
     }
 
     const exploreSection = page.locator("section", {
-      has: page.getByRole("heading", { name: "Explore experiences" }),
+      has: page.getByRole("heading", { name: "Explore ticks" }),
     });
 
     const standardCard = exploreSection.locator("li").first();
@@ -237,5 +238,57 @@ test.describe("browse editorial redesign", () => {
     await expect(
       firstCard.getByText(/^(Easy|Medium|Hard|Extreme)$/),
     ).toBeVisible();
+  });
+
+  test.describe("mobile viewport", () => {
+    test.use({ viewport: { width: 390, height: 844 } });
+
+    test("no horizontal overflow at 390px", async ({ page }) => {
+      await page.goto("/");
+
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth,
+      );
+      expect(overflow).toBe(false);
+    });
+
+    test("mobile filter sheet opens, selects an option, and closes", async ({
+      page,
+    }) => {
+      await page.goto("/");
+
+      await page.getByRole("button", { name: "Filters", exact: true }).click();
+
+      const dialog = page.getByRole("dialog", { name: "Filters" });
+      await expect(dialog).toBeVisible();
+
+      await dialog.getByRole("button", { name: "Easy", exact: true }).click();
+      await expect(page).toHaveURL(/[?&]difficulty=Easy/);
+
+      await dialog.getByRole("button", { name: "Close filters" }).click();
+      await expect(dialog).toBeHidden();
+    });
+
+    test("sticky search appears after scrolling and shares query state", async ({
+      page,
+    }) => {
+      await page.goto("/");
+
+      const heroSearch = page.getByRole("searchbox", {
+        name: "Search ticks",
+        exact: true,
+      });
+      await expect(heroSearch).toBeVisible();
+
+      await page.mouse.wheel(0, 1200);
+
+      const stickySearch = page.getByRole("searchbox", {
+        name: "Search ticks (sticky)",
+      });
+      await expect(stickySearch).toBeVisible();
+
+      await stickySearch.fill("kayak");
+      await expect(page).toHaveURL(/[?&]q=kayak/);
+    });
   });
 });
